@@ -72,6 +72,33 @@ edumind-ai/
 
 ## 🚀 Getting Started
 
+### Option 1: Using Dev Container (Recommended)
+
+The fastest way to get started is using our pre-configured development container:
+
+1. **Prerequisites:**
+   - Docker Desktop
+   - VS Code with Remote-Containers extension
+
+2. **Open in Container:**
+   ```bash
+   git clone https://github.com/johnazariah/edumind-ai.git
+   cd edumind-ai
+   code .
+   ```
+   Then: `F1` → "Dev Containers: Reopen in Container"
+
+3. **Everything is pre-installed:**
+   - .NET 8.0 SDK, GitHub CLI (`gh`), Azure CLI (`az`)
+   - PostgreSQL, Redis, pgAdmin, Redis Commander
+   - All VS Code extensions and tools
+
+See [.devcontainer/README.md](.devcontainer/README.md) for details.
+
+### Option 2: Local Installation
+
+If you prefer local setup:
+
 ### Prerequisites
 
 - .NET 8 SDK or later
@@ -84,7 +111,7 @@ edumind-ai/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/edumind-ai.git
+   git clone https://github.com/johnazariah/edumind-ai.git
    cd edumind-ai
    ```
 
