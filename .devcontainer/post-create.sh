@@ -50,12 +50,17 @@ else
     echo "⚠️  Solution file not found, skipping restore"
 fi
 
-# Set up Git configuration if not already configured
-if [ ! -f ~/.gitconfig ]; then
-    echo "⚙️  Configuring Git..."
-    git config --global init.defaultBranch main
-    git config --global core.autocrlf input
-    git config --global pull.rebase false
+# Set up Git configuration
+echo "⚙️  Configuring Git..."
+git config --global init.defaultBranch main
+git config --global core.autocrlf input
+git config --global pull.rebase false
+git config --global safe.directory '*'
+
+# Create Azure CLI directory if it doesn't exist
+if [ ! -d ~/.azure ]; then
+    mkdir -p ~/.azure
+    echo "✅ Created Azure CLI directory"
 fi
 
 # Create helpful aliases
