@@ -6,23 +6,62 @@
 
 ## Overview
 
-EduMind.AI is a sophisticated **multi-agent educational assessment system** built with C# and .NET that provides personalized academic testing and progress tracking for 1000+ students across grades 8-12 in five core subjects: Mathematics, Physics, Chemistry, Biology, and English.
+EduMind.AI is a sophisticated **multi-agent educational assessment system** built with C# and .NET that provides personalized academic testing and progress tracking across grades 8-12 in five core subjects: Mathematics, Physics, Chemistry, Biology, and English.
+
+The system supports **two deployment models**:
+- **School-Based (B2B)**: White-box SaaS serving 1000+ students per school with dedicated databases
+- **Self-Service (B2C)**: Duolingo-style casual signup with freemium pricing for individual learners
 
 The system leverages specialized AI agents to evaluate student performance, identify knowledge gaps, and orchestrate adaptive learning paths using cutting-edge technologies including Azure OpenAI GPT-4o, adaptive testing algorithms, and real-time progress tracking.
 
 ## 🎯 Key Features
 
+### Educational Excellence
 - **Multi-Subject Assessment**: Comprehensive testing across Mathematics, Physics, Chemistry, Biology, and English
 - **Adaptive Testing Engine**: IRT-based question selection that adjusts difficulty in real-time
 - **AI-Powered Evaluation**: Automated scoring with 95%+ accuracy using Azure OpenAI
 - **Real-Time Progress Tracking**: Live updates via SignalR for students, teachers, and administrators
 - **Personalized Learning Paths**: ML-driven recommendations based on performance analytics
+
+### Flexible Onboarding
+- **School-Based (B2B)**: Schools purchase subscriptions, administrators manage students
+- **Self-Service (B2C)**: Duolingo-style casual signup with email/Google/Apple OAuth
+- **Freemium Model**: Free tier (5 assessments/week) + Premium upgrades
+- **Gamification**: Streaks, achievements, experience points, anonymized leaderboards
+- **COPPA Compliant**: Parental consent for students under 13
+
+See [SELF_SERVICE_ONBOARDING.md](docs/SELF_SERVICE_ONBOARDING.md) for self-service architecture.
+
+### Privacy & Security
+- **Physical Database Partitioning**: One database per school for absolute data isolation
+- **Privacy-Preserving Aggregation**: Minimum 5 students for reports to prevent identification
+- **FERPA/GDPR Compliant**: Comprehensive audit logging and right to be forgotten
+- **Defense in Depth**: Six layers of security to protect student data
+- **Anonymized Reporting**: Course administrators see no personally identifiable information
+
+See [PRIVACY_EXECUTIVE_SUMMARY.md](docs/PRIVACY_EXECUTIVE_SUMMARY.md) for complete privacy architecture.
+
+### Performance & Scale
 - **Scalable Architecture**: Supports 1000+ concurrent students with <2s response times
+- **Multi-Tenant SaaS**: White-box deployment serving multiple schools concurrently
 - **Comprehensive Analytics**: Statistical analysis and predictive modeling for intervention identification
 
 ## 🏗️ Architecture
 
-### Multi-Agent System Components
+### Six User Personas & Interfaces
+
+EduMind.AI implements a comprehensive **role-based access control (RBAC)** system with six distinct user personas:
+
+1. **👨‍🎓 Student** - Take assessments, view progress, receive recommendations
+2. **👨‍🏫 Teacher** - Monitor classes, grade assessments, provide feedback
+3. **🏫 School Administrator** - School-wide analytics, teacher management, reporting
+4. **📚 Course Administrator** - Curriculum design, question banks, content management
+5. **💼 Business Administrator** - School onboarding, subscriptions, user provisioning
+6. **⚙️ System Administrator** - Infrastructure, monitoring, security, LLM cost tracking
+
+See [RBAC_ARCHITECTURE.md](docs/RBAC_ARCHITECTURE.md) for detailed role definitions and [ARCHITECTURE_SUMMARY.md](docs/ARCHITECTURE_SUMMARY.md) for implementation overview.
+
+### Multi-Agent AI System
 
 1. **Subject Assessment Agents** - Specialized evaluators for each academic subject
 2. **Student Progress Orchestrator** - Central coordinator tracking individual student journeys

@@ -294,6 +294,56 @@ docs/                                  # Project documentation
 
 ## 🔄 Change Log
 
+### 2025-10-11
+
+#### Session 1: RBAC Architecture Definition
+- **MAJOR ARCHITECTURE UPDATE**: Defined comprehensive RBAC system with 6 user personas
+- Created `RBAC_ARCHITECTURE.md` documenting all user roles and interfaces
+- Created `IMPLEMENTATION_PLAN.md` with detailed multi-tenant implementation
+- Created `ARCHITECTURE_SUMMARY.md` as executive overview
+- Created `SYSTEM_DIAGRAM.md` with visual architecture diagrams
+- Identified need for 4 additional Blazor apps:
+  - `AcademicAssessment.ClassApp` (Teacher interface)
+  - `AcademicAssessment.SchoolAdminApp` (School administrator)
+  - `AcademicAssessment.CourseAdminApp` (Course/content administrator)
+  - `AcademicAssessment.BusinessAdminApp` (Business operations)
+  - `AcademicAssessment.SysAdminApp` (System administrator)
+- Planned shared UI component library: `AcademicAssessment.SharedUI`
+- Updated solution architecture to support 6 distinct user interfaces
+
+#### Session 2: Privacy and Security Architecture
+- **PRIVACY-FIRST DESIGN**: Created comprehensive privacy protection strategy
+- Created `PRIVACY_AND_SECURITY.md` (1025 lines) documenting:
+  - **Physical database partitioning**: One database per school for absolute isolation
+  - **Privacy-preserving aggregation**: Minimum 5 students for reports
+  - **Comprehensive audit logging**: FERPA/GDPR compliance
+  - **Right to be forgotten**: Complete data deletion capability
+  - **Differential privacy**: Noise addition for large aggregate reports
+  - **Anonymized reporting**: Course administrators see no PII
+- Defined school onboarding process (intentionally manual for safety)
+- Implemented dynamic DbContext resolution per school
+- Created privacy-preserving report generation patterns
+- Established minimum aggregation thresholds (5 students)
+- Documented complementary suppression to prevent deductive disclosure
+- **Core Principle**: "Student data is sacred and must be protected at all costs"
+
+#### Session 3: Self-Service Onboarding (Duolingo-style)
+- **DUAL ONBOARDING MODEL**: Added B2C self-service alongside B2B school-based
+- Created `SELF_SERVICE_ONBOARDING.md` (823 lines) documenting:
+  - **Two-tier architecture**: School-based (B2B) vs. Self-service (B2C)
+  - **Casual signup flow**: Email/Google/Apple OAuth like Duolingo
+  - **Virtual classes**: Auto-created classes for self-service students
+  - **COPPA compliance**: Parental consent flow for students under 13
+  - **Gamification**: Streaks, achievements, experience points, leaderboards
+  - **Freemium model**: Free tier (5 assessments/week) + Premium tiers
+  - **Privacy for self-service**: Logical isolation in shared "selfservice" tenant
+  - **Migration path**: Self-service → School account when school adopts system
+  - **Anonymized leaderboards**: No cross-student visibility, privacy-preserving
+- Self-service students use same StudentApp (unified experience)
+- Virtual school tenant: "edumind_selfservice" shared database
+- Data minimization: Collect only name, email, grade, progress
+- Parent dashboard for Premium Plus tier ($24.99/month)
+
 ### 2025-10-10
 - Initial project structure created
 - Documentation organized
@@ -302,4 +352,4 @@ docs/                                  # Project documentation
 
 ---
 
-*Last Updated: October 10, 2025*
+*Last Updated: October 11, 2025*
