@@ -36,6 +36,7 @@ This document provides a side-by-side comparison of both models.
 ### Target Users
 
 #### School-Based (B2B)
+
 - **Primary:** K-12 schools and districts
 - **Secondary:** Homeschool co-ops, tutoring centers
 - **Buyer:** School administrators, principals, district IT
@@ -43,6 +44,7 @@ This document provides a side-by-side comparison of both models.
 - **Scale:** 100-10,000 students per deployment
 
 #### Self-Service (B2C)
+
 - **Primary:** Individual students seeking extra practice
 - **Secondary:** Homeschoolers, adult learners
 - **Buyer:** Student or parent (consumer decision)
@@ -124,6 +126,7 @@ Timeline: 2-10 minutes from discovery to first assessment
 #### School-Based (B2B)
 
 **Database Strategy:**
+
 ```
 ┌────────────────────────────────────────┐
 │    PostgreSQL Cluster                  │
@@ -140,6 +143,7 @@ Physical isolation - impossible to cross-query
 ```
 
 **Privacy Model:**
+
 - ✅ FERPA compliant (strictest educational privacy law)
 - ✅ Physical database per school
 - ✅ No cross-school data access possible
@@ -149,6 +153,7 @@ Physical isolation - impossible to cross-query
 - ✅ School owns their data
 
 **Data Ownership:**
+
 - School owns student data
 - School can export all data at any time
 - School controls retention policies
@@ -157,6 +162,7 @@ Physical isolation - impossible to cross-query
 #### Self-Service (B2C)
 
 **Database Strategy:**
+
 ```
 ┌────────────────────────────────────────┐
 │    PostgreSQL Cluster                  │
@@ -177,6 +183,7 @@ Shared database with row-level security
 ```
 
 **Privacy Model:**
+
 - ✅ COPPA compliant (parental consent for <13)
 - ✅ FERPA compliant for educational records
 - ✅ Logical isolation via row-level security
@@ -186,6 +193,7 @@ Shared database with row-level security
 - ✅ Student/parent owns their data
 
 **Data Ownership:**
+
 - Student/parent owns data
 - Can export data at any time
 - Can delete account (right to be forgotten)
@@ -198,6 +206,7 @@ Shared database with row-level security
 #### School-Based (B2B) - Full Suite
 
 **Assessment Features:**
+
 - ✅ All assessment types (Diagnostic, Formative, Summative, Adaptive)
 - ✅ Teacher-assigned assessments
 - ✅ Scheduled assessments (class-wide)
@@ -209,6 +218,7 @@ Shared database with row-level security
 - ✅ Time limits and proctoring
 
 **Progress Tracking:**
+
 - ✅ Individual student progress
 - ✅ Class-level analytics
 - ✅ School-wide reports
@@ -219,6 +229,7 @@ Shared database with row-level security
 - ✅ Historical trend analysis
 
 **Teacher Tools:**
+
 - ✅ Class dashboard
 - ✅ Real-time monitoring during assessments
 - ✅ Grading interface
@@ -229,6 +240,7 @@ Shared database with row-level security
 - ✅ Bulk operations
 
 **Administrative Tools:**
+
 - ✅ School-wide dashboard
 - ✅ Teacher effectiveness metrics
 - ✅ Class performance comparison
@@ -238,6 +250,7 @@ Shared database with row-level security
 - ✅ Backup and export
 
 **Support:**
+
 - ✅ Priority support (24-48 hour response)
 - ✅ Dedicated account manager
 - ✅ Training sessions for teachers
@@ -247,6 +260,7 @@ Shared database with row-level security
 #### Self-Service (B2C) - Core + Gamification
 
 **Free Tier:**
+
 - ✅ 5 assessments per week
 - ✅ All subjects (Math, Physics, Chemistry, Biology, English)
 - ✅ Adaptive difficulty
@@ -260,6 +274,7 @@ Shared database with row-level security
 - ❌ Community support only
 
 **Premium Tier ($9.99/month):**
+
 - ✅ Everything in Free
 - ✅ Unlimited assessments
 - ✅ Detailed analytics and insights
@@ -270,6 +285,7 @@ Shared database with row-level security
 - ✅ Custom goal setting
 
 **Premium Plus Tier ($24.99/month):**
+
 - ✅ Everything in Premium
 - ✅ 1-on-1 virtual tutoring (4 hours/month)
 - ✅ Live homework help
@@ -278,6 +294,7 @@ Shared database with row-level security
 - ✅ Expedited support (48-hour response)
 
 **Gamification (All Tiers):**
+
 - ✅ Experience points (XP)
 - ✅ Daily streak tracking
 - ✅ Achievements and badges
@@ -293,6 +310,7 @@ Shared database with row-level security
 #### School-Based (B2B)
 
 **Annual Subscription (per student):**
+
 - **Basic:** $5/student/year
   - Core assessment features
   - Teacher dashboards
@@ -317,6 +335,7 @@ Shared database with row-level security
 **Volume Discounts:** 10% off for 500+ students, 20% off for 1000+
 
 **Example:**
+
 - School with 500 students on Standard plan
 - $10/student × 500 = $5,000/year
 - With 10% volume discount = **$4,500/year**
@@ -324,6 +343,7 @@ Shared database with row-level security
 #### Self-Service (B2C)
 
 **Monthly Subscription (per student):**
+
 - **Free:** $0/month
   - 5 assessments/week
   - All subjects
@@ -343,6 +363,7 @@ Shared database with row-level security
 **No minimum, no contract**
 
 **Example:**
+
 - Individual student on Premium annual plan
 - **$99/year** ($8.25/month effective rate)
 
@@ -353,6 +374,7 @@ Shared database with row-level security
 #### School-Based (B2B)
 
 **Average School (500 students):**
+
 - Revenue: $5,000/year (Standard plan)
 - Cost: ~$1,500/year (infrastructure, support)
 - Margin: ~70%
@@ -361,6 +383,7 @@ Shared database with row-level security
 - Payback: 5 months
 
 **Key Metrics:**
+
 - High contract value
 - Long sales cycle (1-3 months)
 - High retention (80%+ annual renewal)
@@ -370,6 +393,7 @@ Shared database with row-level security
 #### Self-Service (B2C)
 
 **Average Premium User:**
+
 - Revenue: $99/year
 - Cost: ~$15/year (infrastructure, support)
 - Margin: ~85%
@@ -378,6 +402,7 @@ Shared database with row-level security
 - Payback: 2 months
 
 **Key Metrics:**
+
 - Low individual value
 - Instant conversion
 - Moderate retention (60% annual renewal)
@@ -385,6 +410,7 @@ Shared database with row-level security
 - Higher churn (consumer behavior)
 
 **Conversion Funnel:**
+
 - 100 free signups
 - 5-10 convert to Premium (5-10%)
 - 1-2 convert to Premium Plus (1-2%)
@@ -396,6 +422,7 @@ Shared database with row-level security
 #### School-Based (B2B)
 
 **Support Channels:**
+
 - Dedicated account manager (Premium)
 - Phone support during business hours
 - Email support (24-48 hour SLA)
@@ -405,11 +432,13 @@ Shared database with row-level security
 - Regular check-ins
 
 **Support Team:**
+
 - Tier 1: Customer success managers
 - Tier 2: Technical support engineers
 - Tier 3: Engineering escalation
 
 **Proactive Support:**
+
 - Quarterly business reviews
 - Usage analytics sharing
 - Best practices recommendations
@@ -418,6 +447,7 @@ Shared database with row-level security
 #### Self-Service (B2C)
 
 **Support Channels:**
+
 - Email support (7-day SLA free, 48-hour SLA premium)
 - In-app help center
 - Community forum
@@ -426,10 +456,12 @@ Shared database with row-level security
 - Chatbot for common questions
 
 **Support Team:**
+
 - Tier 1: Support specialists (email)
 - Tier 2: Technical support (escalations)
 
 **Self-Service:**
+
 - Comprehensive documentation
 - Interactive tutorials
 - Community peer support
@@ -502,7 +534,7 @@ public class SelfServiceDbContext : AcademicContext
 
 ## When to Use Which Model?
 
-### Choose School-Based (B2B) When:
+### Choose School-Based (B2B) When
 
 ✅ **School or district deployment**
 ✅ **100+ students** in same institution
@@ -514,13 +546,14 @@ public class SelfServiceDbContext : AcademicContext
 ✅ **Long-term institutional commitment**
 
 **Example Use Cases:**
+
 - Public school district-wide deployment
 - Private school seeking assessment platform
 - Charter school network
 - Homeschool co-op (100+ families)
 - Tutoring center with multiple teachers
 
-### Choose Self-Service (B2C) When:
+### Choose Self-Service (B2C) When
 
 ✅ **Individual student** seeking practice
 ✅ **Casual learner** wanting flexibility
@@ -532,6 +565,7 @@ public class SelfServiceDbContext : AcademicContext
 ✅ **Flexible commitment**
 
 **Example Use Cases:**
+
 - Student preparing for exams independently
 - Homeschooler working solo
 - Adult learner refreshing skills
@@ -555,6 +589,7 @@ If a self-service student's school later adopts EduMind.AI:
 8. **Premium subscription** cancelled (school pays)
 
 **Benefits:**
+
 - Student keeps all progress and achievements
 - Seamless transition
 - No data loss
@@ -570,12 +605,14 @@ Both models can coexist for the same student:
 **Scenario:** Student has school account (forced use) but also wants personal practice
 
 **Solution:**
+
 - School account: Primary (used during school)
 - Self-service account: Secondary (personal practice)
 - Separate profiles, separate progress
 - Option to merge later if desired
 
 **Use Case:**
+
 - Student uses school account for assigned work
 - Student uses self-service for extra practice
 - School sees only school-assigned assessments

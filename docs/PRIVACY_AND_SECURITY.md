@@ -3,6 +3,7 @@
 ## Guiding Principles
 
 ### Core Privacy Principle
+
 **"Student data is sacred and must be protected at all costs."**
 
 EduMind.AI is built on the foundation that **every student's educational data is highly sensitive** and must be treated with the highest level of security and privacy. We implement a **defense-in-depth** strategy with multiple layers of protection to ensure that inadvertent data leaking is impossible.

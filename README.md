@@ -9,6 +9,7 @@
 EduMind.AI is a sophisticated **multi-agent educational assessment system** built with C# and .NET that provides personalized academic testing and progress tracking across grades 8-12 in five core subjects: Mathematics, Physics, Chemistry, Biology, and English.
 
 The system supports **two deployment models**:
+
 - **School-Based (B2B)**: White-box SaaS serving 1000+ students per school with dedicated databases
 - **Self-Service (B2C)**: Duolingo-style casual signup with freemium pricing for individual learners
 
@@ -17,6 +18,7 @@ The system leverages specialized AI agents to evaluate student performance, iden
 ## 🎯 Key Features
 
 ### Educational Excellence
+
 - **Multi-Subject Assessment**: Comprehensive testing across Mathematics, Physics, Chemistry, Biology, and English
 - **Adaptive Testing Engine**: IRT-based question selection that adjusts difficulty in real-time
 - **AI-Powered Evaluation**: Automated scoring with 95%+ accuracy using Azure OpenAI
@@ -24,6 +26,7 @@ The system leverages specialized AI agents to evaluate student performance, iden
 - **Personalized Learning Paths**: ML-driven recommendations based on performance analytics
 
 ### Flexible Onboarding
+
 - **School-Based (B2B)**: Schools purchase subscriptions, administrators manage students
 - **Self-Service (B2C)**: Duolingo-style casual signup with email/Google/Apple OAuth
 - **Freemium Model**: Free tier (5 assessments/week) + Premium upgrades
@@ -33,6 +36,7 @@ The system leverages specialized AI agents to evaluate student performance, iden
 See [SELF_SERVICE_ONBOARDING.md](docs/SELF_SERVICE_ONBOARDING.md) for self-service architecture.
 
 ### Privacy & Security
+
 - **Physical Database Partitioning**: One database per school for absolute data isolation
 - **Privacy-Preserving Aggregation**: Minimum 5 students for reports to prevent identification
 - **FERPA/GDPR Compliant**: Comprehensive audit logging and right to be forgotten
@@ -42,6 +46,7 @@ See [SELF_SERVICE_ONBOARDING.md](docs/SELF_SERVICE_ONBOARDING.md) for self-servi
 See [PRIVACY_EXECUTIVE_SUMMARY.md](docs/PRIVACY_EXECUTIVE_SUMMARY.md) for complete privacy architecture.
 
 ### Performance & Scale
+
 - **Scalable Architecture**: Supports 1000+ concurrent students with <2s response times
 - **Multi-Tenant SaaS**: White-box deployment serving multiple schools concurrently
 - **Comprehensive Analytics**: Statistical analysis and predictive modeling for intervention identification
@@ -120,11 +125,13 @@ The fastest way to get started is using our pre-configured development container
    - VS Code with Remote-Containers extension
 
 2. **Open in Container:**
+
    ```bash
    git clone https://github.com/johnazariah/edumind-ai.git
    cd edumind-ai
    code .
    ```
+
    Then: `F1` → "Dev Containers: Reopen in Container"
 
 3. **Everything is pre-installed:**
@@ -149,12 +156,14 @@ If you prefer local setup:
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/johnazariah/edumind-ai.git
    cd edumind-ai
    ```
 
 2. **Restore dependencies**
+
    ```bash
    dotnet restore
    ```
@@ -164,11 +173,13 @@ If you prefer local setup:
    - Update connection strings and API keys
 
 4. **Initialize database**
+
    ```bash
    dotnet ef database update --project src/AcademicAssessment.Infrastructure
    ```
 
 5. **Run the application**
+
    ```bash
    dotnet run --project src/AcademicAssessment.Web
    ```

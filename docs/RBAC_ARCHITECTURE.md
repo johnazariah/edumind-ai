@@ -1,6 +1,7 @@
 # Role-Based Access Control (RBAC) Architecture
 
 ## Overview
+
 EduMind.AI implements a comprehensive multi-tenant, role-based access control system with six distinct user personas, each with dedicated application interfaces and specific capabilities.
 
 ### Privacy-First Architecture
@@ -19,11 +20,13 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 ## User Personas and Interfaces
 
 ### 1. Student
+
 **Primary Interface**: `AcademicAssessment.StudentApp` (Blazor Web App)  
 **Access Level**: Individual  
 **Tenant Scope**: Self only
 
 #### Capabilities
+
 - Take assessments in assigned subjects
 - View personal progress and performance metrics
 - Access personalized study recommendations
@@ -33,6 +36,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 - Access adaptive learning resources
 
 #### Key Features
+
 - Assessment taking interface with various question types
 - Personal dashboard with progress visualization
 - Study recommendation engine
@@ -42,6 +46,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 - Accessibility features (screen readers, keyboard navigation)
 
 #### Data Access
+
 - **Read**: Own assessments, progress, recommendations, grades
 - **Write**: Submit assessment responses, update preferences
 - **No Access**: Other students' data, class/school aggregates, administrative functions
@@ -49,11 +54,13 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 ---
 
 ### 2. Class (Group of Students)
+
 **Primary Interface**: `AcademicAssessment.ClassApp` (Blazor Web App - NEW)  
 **Access Level**: Class/Teacher  
 **Tenant Scope**: Assigned classes only
 
 #### Capabilities
+
 - Monitor real-time class progress during assessments
 - View aggregated class performance analytics
 - Compare individual student performance within class
@@ -65,6 +72,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 - Manage class roster and student groupings
 
 #### Key Features
+
 - Live assessment monitoring dashboard
 - Class-level analytics and visualizations
 - Student comparison tools
@@ -75,6 +83,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 - Communication tools (announcements, feedback)
 
 #### Data Access
+
 - **Read**: All students in assigned classes, class aggregates, course materials
 - **Write**: Grades, feedback, assessment assignments, class settings
 - **No Access**: Other classes' detailed data, school-wide administration, course content management
@@ -82,11 +91,13 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 ---
 
 ### 3. School (Group of Classes)
+
 **Primary Interface**: `AcademicAssessment.SchoolAdminApp` (Blazor Web App - NEW)  
 **Access Level**: School Administrator/Principal  
 **Tenant Scope**: Single school (all classes within school)
 
 #### Capabilities
+
 - View school-wide performance analytics
 - Monitor all classes and teachers in the school
 - Compare class performance across grade levels
@@ -99,6 +110,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 - Export compliance and audit reports
 
 #### Key Features
+
 - School-wide dashboard with KPIs
 - Multi-class performance comparison
 - Teacher effectiveness analytics
@@ -110,6 +122,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 - Stakeholder report generation
 
 #### Data Access
+
 - **Read**: All classes, teachers, students within school, school aggregates
 - **Write**: School settings, teacher assignments, school-wide announcements
 - **No Access**: Other schools' data, course content management, system configuration, pricing
@@ -117,11 +130,13 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 ---
 
 ### 4. Course Administrator
+
 **Primary Interface**: `AcademicAssessment.CourseAdminApp` (Blazor Web App - NEW)  
 **Access Level**: Subject Matter Expert/Curriculum Designer  
 **Tenant Scope**: Specific courses/subjects across all schools
 
 #### Capabilities
+
 - Design and manage course curriculum and learning objectives
 - Create and curate question banks for specific courses
 - Define assessment templates and rubrics
@@ -134,6 +149,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 - Version control for course content
 
 #### Key Features
+
 - Curriculum design interface
 - Question bank management system
 - Assessment template builder
@@ -146,6 +162,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 - Difficulty calibration dashboard
 
 #### Data Access
+
 - **Read**: All assessment data for assigned courses (cross-school), question performance metrics
 - **Write**: Course content, questions, learning objectives, assessment templates, standards
 - **No Access**: Individual student PII (anonymized data only), school business operations, system infrastructure
@@ -153,11 +170,13 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 ---
 
 ### 5. Business Administrator
+
 **Primary Interface**: `AcademicAssessment.BusinessAdminApp` (Blazor Web App - NEW)  
 **Access Level**: Operations/Business Management  
 **Tenant Scope**: System-wide (multi-tenant management)
 
 #### Capabilities
+
 - Onboard new schools and districts
 - Create and manage school hierarchies
 - Add and configure classes for schools
@@ -171,6 +190,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 - Handle subscription renewals and changes
 
 #### Key Features
+
 - School onboarding wizard
 - Multi-tenant management dashboard
 - Student bulk import/enrollment tools
@@ -183,6 +203,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 - Customer relationship management
 
 #### Data Access
+
 - **Read**: All schools, classes, users, subscriptions, billing data, usage metrics
 - **Write**: School/class/user creation, subscriptions, billing, assignments
 - **No Access**: Assessment content, student assessment responses, course curriculum design, system infrastructure configuration
@@ -190,11 +211,13 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 ---
 
 ### 6. System Administrator
+
 **Primary Interface**: `AcademicAssessment.SysAdminApp` (Blazor Web App - NEW)  
 **Access Level**: Technical/DevOps  
 **Tenant Scope**: Entire system (infrastructure and operations)
 
 #### Capabilities
+
 - Monitor system health and performance
 - Manage infrastructure and deployments
 - Configure system-wide settings and features
@@ -208,6 +231,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 - Troubleshoot technical issues
 
 #### Key Features
+
 - System health monitoring dashboard
 - Infrastructure management console
 - LLM provider configuration and cost tracking
@@ -221,6 +245,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 - Environment configuration
 
 #### Data Access
+
 - **Read**: All system data, logs, metrics, configurations
 - **Write**: System configuration, infrastructure settings, feature flags, security policies
 - **No Access**: Student assessment content creation (read-only for troubleshooting)
@@ -246,6 +271,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 | Security & Compliance | ❌ | ❌ | 📊 Reports Only | ❌ | 📊 Reports Only | ✅ |
 
 **Legend:**
+
 - ✅ Full Access
 - ❌ No Access
 - 🔒 Limited Access (specific scope)
@@ -257,6 +283,7 @@ EduMind.AI uses **physical database partitioning** where each school has its own
 ## Multi-Tenant Data Isolation
 
 ### Tenant Hierarchy
+
 ```
 System (Root)
 └── Schools (Tenant Level 1)
@@ -269,11 +296,13 @@ System (Root)
 ### Data Isolation Strategy
 
 #### 1. Row-Level Security (RLS)
+
 - Every entity has `SchoolId` and/or `ClassId` for filtering
 - Database-level RLS policies enforce tenant boundaries
 - Claims-based filtering in Entity Framework Core
 
 #### 2. Claim-Based Authorization
+
 ```csharp
 public class UserClaims
 {
@@ -286,6 +315,7 @@ public class UserClaims
 ```
 
 #### 3. API Endpoint Security
+
 - All API endpoints validate tenant context
 - Automatic filtering based on user claims
 - Middleware enforces data isolation
@@ -295,12 +325,14 @@ public class UserClaims
 ## Authentication & Authorization Flow
 
 ### 1. Authentication
+
 - **Azure AD B2C** for enterprise SSO
 - **Multi-factor authentication** for administrative roles
 - **Student authentication** via school-issued credentials
 - **Password policies** based on role
 
 ### 2. Authorization Policies
+
 ```csharp
 public static class AuthorizationPolicies
 {
@@ -318,6 +350,7 @@ public static class AuthorizationPolicies
 ```
 
 ### 3. Permission Granularity
+
 - **Coarse-grained**: Role-based (Teacher, Admin, etc.)
 - **Fine-grained**: Resource-based (specific class, school, course)
 - **Dynamic**: Context-aware (time-based, location-based)
@@ -358,6 +391,7 @@ src/
 ```
 
 ### Shared Components Library (NEW)
+
 ```
 src/AcademicAssessment.SharedUI/
 ├── Components/
@@ -374,6 +408,7 @@ src/AcademicAssessment.SharedUI/
 ## API Design Principles
 
 ### 1. Unified API with Role-Based Endpoints
+
 Single API (`AcademicAssessment.Web`) with controller segmentation:
 
 ```
@@ -386,6 +421,7 @@ Single API (`AcademicAssessment.Web`) with controller segmentation:
 ```
 
 ### 2. Automatic Tenant Filtering
+
 ```csharp
 [ApiController]
 [Route("api/teacher")]
@@ -403,6 +439,7 @@ public class TeacherController : ControllerBase
 ```
 
 ### 3. Cross-Cutting Concerns
+
 - **Audit Logging**: All admin actions logged
 - **Rate Limiting**: Per-role rate limits
 - **Data Encryption**: PII encrypted at rest
@@ -415,18 +452,21 @@ public class TeacherController : ControllerBase
 ### Multi-App Deployment Options
 
 #### Option 1: Separate Deployments (Recommended for Scale)
+
 - Each Blazor app deployed independently
 - Better for different scaling requirements
 - Independent update cycles
 - Separate CDN/hosting for each persona
 
 #### Option 2: Single Deployment with Routing
+
 - One deployment, route based on authentication
 - Simpler infrastructure
 - Shared resources and caching
 - Lower operational complexity
 
 #### Option 3: Hybrid Approach
+
 - Student app separate (highest traffic)
 - Admin apps combined
 - API layer separate and scaled independently
@@ -436,18 +476,21 @@ public class TeacherController : ControllerBase
 ## Security Considerations
 
 ### 1. Student Privacy (FERPA Compliance)
+
 - PII encrypted at rest and in transit
 - Anonymized data for course administrators
 - Audit trail for all data access
 - Parental consent management
 
 ### 2. Administrative Segregation
+
 - Business admins cannot access assessment content
 - Course admins cannot access PII or billing
 - School admins limited to their school
 - System admins have read-only on business data
 
 ### 3. Data Retention Policies
+
 - Student data retention per school policy
 - Assessment history maintained for academic records
 - Audit logs retained for compliance
@@ -458,17 +501,20 @@ public class TeacherController : ControllerBase
 ## Performance Optimization
 
 ### 1. Caching Strategy by Role
+
 - **Students**: Aggressive caching of course content
 - **Teachers**: Real-time data, minimal caching
 - **Admins**: Cached aggregates, refresh on-demand
 - **Course Admins**: Long-lived question bank cache
 
 ### 2. SignalR Scaling
+
 - Separate hubs for different use cases
 - Redis backplane for horizontal scaling
 - Connection-based rate limiting
 
 ### 3. Database Optimization
+
 - Indexed tenant columns (SchoolId, ClassId)
 - Partitioning by school for large deployments
 - Read replicas for analytics queries
@@ -478,38 +524,45 @@ public class TeacherController : ControllerBase
 ## Implementation Phases
 
 ### Phase 1: Core Infrastructure (Weeks 1-2)
+
 - ✅ Multi-tenant data model
 - ✅ Authentication and authorization
 - ✅ Tenant context middleware
 - ✅ Role-based API controllers
 
 ### Phase 2: Student & Teacher Apps (Weeks 3-6)
+
 - ✅ Student assessment interface
 - ✅ Teacher class monitoring dashboard
 - ✅ Grading interface
 - ✅ Real-time progress tracking
 
 ### Phase 3: School Administration (Weeks 7-8)
+
 - ✅ School admin dashboard
 - ✅ School-wide analytics
 - ✅ Reporting tools
 
 ### Phase 4: Course & Content Management (Weeks 9-11)
+
 - ✅ Course admin interface
 - ✅ Question bank management
 - ✅ Curriculum design tools
 
 ### Phase 5: Business Operations (Weeks 12-13)
+
 - ✅ Business admin dashboard
 - ✅ School onboarding
 - ✅ Subscription management
 
 ### Phase 6: System Administration (Weeks 14-15)
+
 - ✅ System admin console
 - ✅ Monitoring and logging
 - ✅ LLM cost tracking
 
 ### Phase 7: Testing & Deployment (Week 16)
+
 - ✅ Integration testing
 - ✅ Performance testing
 - ✅ Security audit

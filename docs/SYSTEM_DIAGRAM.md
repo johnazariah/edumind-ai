@@ -145,6 +145,7 @@
 | System Admin       | ✅ Full  | ✅ Full    | ✅ Full     | ✅ Full     | ✅ Full|
 
 **Legend:**
+
 - ✅ Full Access
 - ❌ No Access
 - 📊 Anonymized/Aggregated Only

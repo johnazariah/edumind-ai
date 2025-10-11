@@ -71,11 +71,13 @@ Traditional Multi-Tenant (Shared DB):          EduMind.AI (Isolated DBs):
 ### Trade-offs
 
 **Costs:**
+
 - Slightly more infrastructure overhead per school
 - More complex connection string management
 - Onboarding takes longer (database provisioning)
 
 **Benefits:**
+
 - **Absolute data isolation** (worth the overhead)
 - Peace of mind for schools and parents
 - Simplified compliance and auditing
@@ -90,6 +92,7 @@ Traditional Multi-Tenant (Shared DB):          EduMind.AI (Isolated DBs):
 ### The Challenge
 
 Teachers and administrators need aggregate information to identify areas of improvement:
+
 - "What topics is the class struggling with?"
 - "Which learning objectives need more focus?"
 - "How does this class compare to others?"
@@ -180,12 +183,14 @@ Course administrators (curriculum designers) need to see how their content perfo
 Course administrators have access to:
 
 ✅ **Allowed:**
+
 - Question performance statistics (% correct, average time)
 - Difficulty calibration data (aggregated across schools)
 - Learning objective mastery trends (anonymized)
 - Cross-school performance comparisons (no school names)
 
 ❌ **Forbidden:**
+
 - Student names or IDs
 - Individual student responses
 - School names or locations
@@ -237,6 +242,7 @@ public record DataAccessAuditLog
 ### FERPA Compliance
 
 The Family Educational Rights and Privacy Act (FERPA) requires:
+
 - ✅ Audit trail of all access to student records
 - ✅ Ability to show parents who accessed their child's data
 - ✅ Legitimate educational interest for all access
@@ -376,26 +382,32 @@ Onboarding a new school is **intentionally not fully automated** to ensure prope
 EduMind.AI implements multiple overlapping security layers:
 
 ### Layer 1: Physical Database Partitioning
+
 - **Primary protection:** Each school has own database
 - **Effect:** Cross-school data access physically impossible
 
 ### Layer 2: Connection String Resolution
+
 - **Secondary protection:** Connection strings stored per school in Key Vault
 - **Effect:** Application must know SchoolId to get connection string
 
 ### Layer 3: Tenant Context Middleware
+
 - **Tertiary protection:** Every request tagged with SchoolId from JWT
 - **Effect:** Application code always knows which school context
 
 ### Layer 4: EF Core Query Filters
+
 - **Quaternary protection:** Database queries automatically filtered by SchoolId
 - **Effect:** Even if bug in Layer 1-3, query filters prevent cross-school access
 
 ### Layer 5: Authorization Policies
+
 - **Quinary protection:** Role-based access control enforced at API level
 - **Effect:** Teachers can only access their assigned classes
 
 ### Layer 6: Audit Logging
+
 - **Detection layer:** All data access logged immutably
 - **Effect:** Any unauthorized access attempt detected and logged
 

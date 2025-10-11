@@ -593,6 +593,7 @@ public class VirtualClassService : IVirtualClassService
 **Requirement:** Children under 13 require verifiable parental consent.
 
 **Implementation:**
+
 - Age verification during signup
 - Parent email required for under-13 users
 - Account inactive until parent approves
@@ -601,6 +602,7 @@ public class VirtualClassService : IVirtualClassService
 ### 2. Data Minimization
 
 Collect only what's necessary:
+
 - ✅ Name, email, grade level (required for service)
 - ✅ Assessment responses (core functionality)
 - ✅ Progress tracking (personalization)
@@ -663,6 +665,7 @@ public async Task<Result<List<AnonymizedLeaderboardEntry>>> GetLeaderboardAsync(
 ### Free Tier (B2C)
 
 **Included:**
+
 - ✅ 5 assessments per week
 - ✅ Core subjects (all 5)
 - ✅ Basic progress tracking
@@ -671,6 +674,7 @@ public async Task<Result<List<AnonymizedLeaderboardEntry>>> GetLeaderboardAsync(
 - ✅ Mobile app access
 
 **Limited:**
+
 - ❌ No detailed analytics
 - ❌ No personalized study plans
 - ❌ No priority support
@@ -679,6 +683,7 @@ public async Task<Result<List<AnonymizedLeaderboardEntry>>> GetLeaderboardAsync(
 ### Premium Tier ($9.99/month)
 
 **Everything in Free, plus:**
+
 - ✅ Unlimited assessments
 - ✅ Detailed analytics and insights
 - ✅ Personalized study plans
@@ -689,6 +694,7 @@ public async Task<Result<List<AnonymizedLeaderboardEntry>>> GetLeaderboardAsync(
 ### Premium Plus Tier ($24.99/month)
 
 **Everything in Premium, plus:**
+
 - ✅ 1-on-1 virtual tutoring (4 hours/month)
 - ✅ Live homework help
 - ✅ College prep resources
@@ -768,6 +774,7 @@ public class StudentMigrationService : IStudentMigrationService
 ## Summary: Dual Model Architecture
 
 ### School-Based (B2B)
+
 - **Target:** Schools with 100+ students
 - **Privacy:** Physical database per school (strictest)
 - **Features:** Full suite, teacher tools, admin dashboards
@@ -775,13 +782,15 @@ public class StudentMigrationService : IStudentMigrationService
 - **Support:** Priority, dedicated
 
 ### Self-Service (B2C)
+
 - **Target:** Individual learners
 - **Privacy:** Logical isolation in shared DB (still secure)
 - **Features:** Core features + gamification
 - **Payment:** Freemium (free + premium upgrades)
 - **Support:** Self-help + community
 
-### Both Models:
+### Both Models
+
 - ✅ FERPA/COPPA/GDPR compliant
 - ✅ Comprehensive audit logging
 - ✅ Right to be forgotten
@@ -794,24 +803,28 @@ public class StudentMigrationService : IStudentMigrationService
 ## Implementation Priority
 
 ### Phase 1: Core Self-Service (Week 1-2)
+
 - [ ] Self-service signup endpoint
 - [ ] OAuth integration (Google, Apple)
 - [ ] Virtual class management
 - [ ] COPPA parental consent flow
 
 ### Phase 2: Gamification (Week 3)
+
 - [ ] Achievement system
 - [ ] Streak tracking
 - [ ] Experience points
 - [ ] Anonymized leaderboards
 
 ### Phase 3: Freemium (Week 4)
+
 - [ ] Free tier limits (5 assessments/week)
 - [ ] Premium upgrade flow
 - [ ] Payment integration (Stripe)
 - [ ] Premium feature gates
 
 ### Phase 4: Migration (Week 5)
+
 - [ ] Self-service → School migration tool
 - [ ] Data export/import
 - [ ] Parent dashboard (Premium Plus)
