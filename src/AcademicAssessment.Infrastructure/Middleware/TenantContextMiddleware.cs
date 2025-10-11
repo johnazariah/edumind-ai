@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using AcademicAssessment.Core.Enums;
 using AcademicAssessment.Core.Interfaces;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 
 namespace AcademicAssessment.Infrastructure.Middleware;

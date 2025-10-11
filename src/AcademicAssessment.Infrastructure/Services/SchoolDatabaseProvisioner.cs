@@ -141,15 +141,15 @@ public sealed class SchoolDatabaseProvisioner : ISchoolDatabaseProvisioner
                     failure.Error.Code == "NOT_FOUND")
                 {
                     // Connection string doesn't exist, create it
-                    var connectionString = BuildSchoolConnectionString(school);
-                    await StoreConnectionStringInKeyVaultAsync(school, connectionString, cancellationToken);
-                    connectionStringResult = connectionString;
+                    var newConnectionString = BuildSchoolConnectionString(school);
+                    await StoreConnectionStringInKeyVaultAsync(school, newConnectionString, cancellationToken);
+                    connectionStringResult = newConnectionString;
                 }
                 else
                 {
-                    return connectionStringResult.Match<Result<Unit>>(
-                        _ => Unit.Value,
-                        error => error);
+                    return connectionStringResult.Match(
+                        onSuccess: _ => (Result<Unit>)Unit.Value,
+                        onFailure: error => error);
                 }
             }
 

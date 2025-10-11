@@ -96,11 +96,6 @@ public sealed record Unit
     /// The singleton instance of Unit
     /// </summary>
     public static readonly Unit Value = new();
-
-    /// <summary>
-    /// Implicitly converts Unit to Result&lt;Unit&gt; for convenience
-    /// </summary>
-    public static implicit operator Result<Unit>(Unit _) => new Result<Unit>.Success(Value);
 }
 
 /// <summary>
