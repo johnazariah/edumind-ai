@@ -1,5 +1,62 @@
 # EduMind.AI Development Task Journal
 
+## Recent Milestones
+
+### ✅ Milestone: Question Model Tests Complete (25/25 passing) - October 12, 2025
+
+**Summary**: Comprehensive test suite for Question domain model with IRT (Item Response Theory) parameters for adaptive testing
+
+**Tests Added**: 25 tests covering:
+- Constructor Tests (4): All required properties, default counters, nullable properties, empty collections
+- Computed Property Tests (4): SuccessRate calculations (never answered, partial, all correct, none correct)
+- With Method Tests (5): Question text, multiple properties, difficulty level, deactivation, timestamp-only updates
+- RecordAnswer Method Tests (4): Correct/incorrect increments, success rate updates, timestamp changes
+- UpdateIrtParameters Method Tests (3): All three IRT parameters (discrimination, difficulty, guessing), negative difficulty support, timestamp updates
+- Immutability Tests (3): With(), RecordAnswer(), and UpdateIrtParameters() don't modify originals
+- Workflow Tests (2): Complete question lifecycle (answers → calibration → content update), adaptive testing with IRT ordering
+
+**Technical Highlights**:
+- IRT Parameters: Supports Item Response Theory for adaptive assessments (discrimination, difficulty, guessing)
+- Success Tracking: Automatically calculates SuccessRate from TimesAnswered and TimesCorrect
+- Adaptive Testing: Questions can be calibrated based on performance and difficulty adjusted dynamically
+- Grade Level Support: Grade6-12 only (no elementary grades in this academic assessment system)
+
+**Fixes Applied**:
+- Corrected GradeLevel enum values (Grade3→Grade6, Grade5→Grade7)
+- Fixed nullable double comparisons for IRT parameters in FluentAssertions
+
+**Test Results**: ✅ All 25/25 passing  
+**Total Test Count**: 170 unit tests (145 previous + 25 new)
+
+---
+
+### ✅ Milestone: Core Domain Model Tests (Assessment & StudentAssessment) - October 12, 2025
+
+**Summary**: Comprehensive test suites for Assessment and StudentAssessment domain models
+
+**Tests Added**: 64 tests total
+- Assessment Model: 31 tests
+- StudentAssessment Model: 33 tests
+
+**Test Categories**:
+- Constructor tests (property initialization, defaults, nullables)
+- Computed property tests (progress, grades, status)
+- Method tests (Start(), Submit(), Grade(), UpdateProgress(), etc.)
+- State transition tests (Draft→Active→Completed→Graded)
+- Validation tests (time limits, attempt limits, permissions)
+- Immutability tests (With() methods don't modify original)
+- Workflow tests (complete student assessment lifecycle)
+
+**Technical Stack**:
+- xUnit 2.5.3 for test framework
+- FluentAssertions 6.12.1 for readable assertions
+- .NET 8.0 target framework
+- All tests using in-memory test data
+
+**Test Outcomes**: ✅ All 145 tests passing (81 previous + 64 new)
+
+---
+
 ## Project Initialization - October 10, 2025
 
 ### ✅ Completed Tasks
@@ -667,10 +724,12 @@ Test coverage for domain models (5/9 complete):
 - [ ] School model tests
 
 **Additional Tests**:
+
 - [x] **Result<T> monad tests** - 25 tests passing (Success/Failure patterns)
 - [x] **StudentAssessmentRepository k-anonymity tests** - 5 tests passing (privacy-preserving aggregates)
 
 **Progress**:
+
 - Total unit tests: 145 passing
 - Lines of test code written: ~1,500 LOC
 - Test execution time: <2 seconds
@@ -751,6 +810,7 @@ Successfully completed comprehensive unit tests for Assessment and StudentAssess
    - Workflow tests: Complete lifecycle scenarios
 
 **Outcomes**:
+
 - All 145 unit tests passing (100% success rate)
 - Test execution time: <2 seconds
 - No compilation errors or warnings (except non-blocking EF Core version conflicts)
@@ -758,6 +818,7 @@ Successfully completed comprehensive unit tests for Assessment and StudentAssess
 - Established consistent test patterns for remaining models
 
 **Technical Details**:
+
 - Framework: xUnit 2.5.3
 - Assertions: FluentAssertions 6.12.1
 - Pattern: Immutable record types with With() methods
