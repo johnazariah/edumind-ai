@@ -256,13 +256,14 @@ public class QuestionTests
     }
 
     [Fact]
-    public void With_UpdatesOnlyUpdatedAtTimestamp_WhenNoParametersProvided()
+    public async Task With_UpdatesOnlyUpdatedAtTimestamp_WhenNoParametersProvided()
     {
         // Arrange
         var original = CreateTestQuestion();
         var originalUpdatedAt = original.UpdatedAt;
 
-        // Act
+        // Act - Add small delay to ensure timestamp changes
+        await Task.Delay(10);
         var updated = original.With();
 
         // Assert
@@ -375,13 +376,14 @@ public class QuestionTests
     }
 
     [Fact]
-    public void UpdateIrtParameters_UpdatesTimestamp()
+    public async Task UpdateIrtParameters_UpdatesTimestamp()
     {
         // Arrange
         var question = CreateTestQuestion();
         var originalUpdatedAt = question.UpdatedAt;
 
-        // Act
+        // Act - Add small delay to ensure timestamp changes
+        await Task.Delay(10);
         var updated = question.UpdateIrtParameters(1.5, 0.0, 0.25);
 
         // Assert
