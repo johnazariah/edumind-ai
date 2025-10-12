@@ -1,8 +1,9 @@
 # EduMind.AI - Academic Assessment Multi-Agent System
 
+[![CI](https://github.com/johnazariah/edumind-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/johnazariah/edumind-ai/actions/workflows/ci.yml)
 [![.NET Version](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com)
+[![Coverage](https://img.shields.io/badge/coverage-53%25-yellow)](https://github.com/johnazariah/edumind-ai)
 
 ## Overview
 
