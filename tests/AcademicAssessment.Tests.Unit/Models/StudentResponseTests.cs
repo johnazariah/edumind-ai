@@ -437,13 +437,16 @@ public class StudentResponseTests
     {
         // Arrange - Series of responses showing ability progression
         var easyCorrect = CreateTestResponse(isCorrect: true, pointsEarned: 10)
-            with { AbilityAtTime = -0.5, TimeSpentSeconds = 30 };
+            with
+        { AbilityAtTime = -0.5, TimeSpentSeconds = 30 };
 
         var mediumCorrect = CreateTestResponse(isCorrect: true, pointsEarned: 10)
-            with { AbilityAtTime = 0.0, TimeSpentSeconds = 60 };
+            with
+        { AbilityAtTime = 0.0, TimeSpentSeconds = 60 };
 
         var hardIncorrect = CreateTestResponse(isCorrect: false, pointsEarned: 0)
-            with { AbilityAtTime = 0.5, TimeSpentSeconds = 120 };
+            with
+        { AbilityAtTime = 0.5, TimeSpentSeconds = 120 };
 
         // Assert - Ability estimates tracked for adaptive algorithm
         easyCorrect.AbilityAtTime.Should().Be(-0.5);

@@ -457,7 +457,7 @@ public class QuestionTests
         var after1 = question.RecordAnswer(true);
         var after2 = after1.RecordAnswer(false);
         var after3 = after2.RecordAnswer(true);
-        
+
         // Calibrate IRT parameters based on performance
         var calibrated = after3.UpdateIrtParameters(
             discrimination: 1.5,
