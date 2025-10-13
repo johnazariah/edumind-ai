@@ -29,6 +29,27 @@ public sealed class StudentAnalyticsServiceTests
         _mockAssessmentRepo = new Mock<IAssessmentRepository>();
         _mockLogger = new Mock<ILogger<StudentAnalyticsService>>();
 
+        // Setup default mock behavior: return empty successful results
+        _mockStudentAssessmentRepo
+            .Setup(x => x.GetCompletedByStudentAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken ct) =>
+                Result.Success<IReadOnlyList<StudentAssessment>>(Array.Empty<StudentAssessment>()));
+
+        _mockStudentResponseRepo
+            .Setup(x => x.GetByStudentIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken ct) =>
+                Result.Success<IReadOnlyList<StudentResponse>>(Array.Empty<StudentResponse>()));
+
+        _mockQuestionRepo
+            .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken ct) =>
+                Result.Failure<Question>(new Error("NotFound", "Question not found")));
+
+        _mockAssessmentRepo
+            .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken ct) =>
+                Result.Failure<Assessment>(new Error("NotFound", "Assessment not found")));
+
         _service = new StudentAnalyticsService(
             _mockStudentAssessmentRepo.Object,
             _mockStudentResponseRepo.Object,
