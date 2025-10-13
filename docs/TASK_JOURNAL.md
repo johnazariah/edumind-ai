@@ -92,7 +92,7 @@
 
 **Technical Decisions**:
 
-- **Repository Method Selection**: 
+- **Repository Method Selection**:
   - `GetCompletedByStudentAsync` preferred over `GetByStudentIdAsync` for completed assessments
   - More efficient (database-level filtering vs application-level)
   - More semantically correct (returns only completed assessments)
