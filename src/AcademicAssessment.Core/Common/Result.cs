@@ -99,12 +99,28 @@ public sealed record Unit
 }
 
 /// <summary>
-/// Extension methods for Result type to enable functional composition
+/// Static factory methods for Result type
+/// </summary>
+public static class Result
+{
+    /// <summary>
+    /// Creates a successful result with the given value
+    /// </summary>
+    public static Result<T> Success<T>(T value) => new Result<T>.Success(value);
+
+    /// <summary>
+    /// Creates a failed result with the given error
+    /// </summary>
+    public static Result<T> Failure<T>(Error error) => new Result<T>.Failure(error);
+}
+
+/// <summary>
+/// Extension methods for Result type
 /// </summary>
 public static class ResultExtensions
 {
     /// <summary>
-    /// Maps a function over a successful result, or propagates the failure
+    /// Maps a function over a successful result
     /// </summary>
     public static Result<TOut> Map<TIn, TOut>(
         this Result<TIn> result,
@@ -322,4 +338,40 @@ public static class ResultExtensions
         Error error) =>
         result.BindAsync(async value =>
             await predicate(value) ? result : error);
+
+    /// <summary>
+    /// LINQ Select support (alias for Map) - enables LINQ query syntax
+    /// </summary>
+    public static Result<TOut> Select<TIn, TOut>(
+        this Result<TIn> result,
+        Func<TIn, TOut> selector) =>
+        result.Map(selector);
+
+    /// <summary>
+    /// LINQ SelectMany support for query comprehension syntax
+    /// Enables from ... in ... from ... in ... select ... syntax
+    /// </summary>
+    public static Result<TOut> SelectMany<TIn, TTemp, TOut>(
+        this Result<TIn> result,
+        Func<TIn, Result<TTemp>> selector,
+        Func<TIn, TTemp, TOut> projector) =>
+        result.Bind(value =>
+            selector(value).Map(temp =>
+                projector(value, temp)));
+
+    /// <summary>
+    /// LINQ SelectMany support for async query comprehension
+    /// </summary>
+    public static async Task<Result<TOut>> SelectMany<TIn, TTemp, TOut>(
+        this Task<Result<TIn>> resultTask,
+        Func<TIn, Task<Result<TTemp>>> selector,
+        Func<TIn, TTemp, TOut> projector)
+    {
+        var result = await resultTask;
+        return await result.BindAsync(async value =>
+        {
+            var tempResult = await selector(value);
+            return tempResult.Map(temp => projector(value, temp));
+        });
+    }
 }

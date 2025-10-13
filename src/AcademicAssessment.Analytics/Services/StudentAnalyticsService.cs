@@ -24,11 +24,11 @@ public sealed class StudentAnalyticsService : IStudentAnalyticsService
         IAssessmentRepository assessmentRepository,
         ILogger<StudentAnalyticsService> logger)
     {
-        _studentAssessmentRepository = studentAssessmentRepository;
-        _studentResponseRepository = studentResponseRepository;
-        _questionRepository = questionRepository;
-        _assessmentRepository = assessmentRepository;
-        _logger = logger;
+        _studentAssessmentRepository = studentAssessmentRepository ?? throw new ArgumentNullException(nameof(studentAssessmentRepository));
+        _studentResponseRepository = studentResponseRepository ?? throw new ArgumentNullException(nameof(studentResponseRepository));
+        _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
+        _assessmentRepository = assessmentRepository ?? throw new ArgumentNullException(nameof(assessmentRepository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public Task<Result<StudentPerformanceSummary>> GetStudentPerformanceSummaryAsync(
@@ -87,10 +87,7 @@ public sealed class StudentAnalyticsService : IStudentAnalyticsService
         _logger.LogInformation("Getting learning objective mastery for student {StudentId}", studentId);
 
         // Stub implementation - returns empty list
-        IReadOnlyList<LearningObjectiveMastery> mastery = Array.Empty<LearningObjectiveMastery>();
-        Result<IReadOnlyList<LearningObjectiveMastery>> result = (Result<IReadOnlyList<LearningObjectiveMastery>>)mastery;
-
-        return Task.FromResult(result);
+        return Task.FromResult(Result.Success<IReadOnlyList<LearningObjectiveMastery>>(Array.Empty<LearningObjectiveMastery>()));
     }
 
     public Task<Result<IReadOnlyDictionary<Subject, double>>> GetAbilityEstimatesAsync(
@@ -100,10 +97,7 @@ public sealed class StudentAnalyticsService : IStudentAnalyticsService
         _logger.LogInformation("Getting ability estimates for student {StudentId}", studentId);
 
         // Stub implementation - returns empty dictionary
-        IReadOnlyDictionary<Subject, double> estimates = new Dictionary<Subject, double>();
-        Result<IReadOnlyDictionary<Subject, double>> result = (Result<IReadOnlyDictionary<Subject, double>>)estimates;
-
-        return Task.FromResult(result);
+        return Task.FromResult(Result.Success<IReadOnlyDictionary<Subject, double>>(new Dictionary<Subject, double>()));
     }
 
     public Task<Result<IReadOnlyList<ImprovementArea>>> GetImprovementAreasAsync(
@@ -112,13 +106,11 @@ public sealed class StudentAnalyticsService : IStudentAnalyticsService
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Identifying improvement areas for student {StudentId}", studentId);
-        
+
         // Stub implementation - returns empty list
-        IReadOnlyList<ImprovementArea> areas = Array.Empty<ImprovementArea>();
-        Result<IReadOnlyList<ImprovementArea>> result = (Result<IReadOnlyList<ImprovementArea>>)areas;
-        
-        return Task.FromResult(result);
-    }    public Task<Result<ProgressTimeline>> GetProgressTimelineAsync(
+        return Task.FromResult(Result.Success<IReadOnlyList<ImprovementArea>>(Array.Empty<ImprovementArea>()));
+    }
+    public Task<Result<ProgressTimeline>> GetProgressTimelineAsync(
         Guid studentId,
         DateTimeOffset? startDate = null,
         DateTimeOffset? endDate = null,
