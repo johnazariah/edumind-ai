@@ -1,0 +1,336 @@
+using System.Net;
+using System.Net.Http.Json;
+using AcademicAssessment.Core.Enums;
+using AcademicAssessment.Core.Interfaces;
+using AcademicAssessment.Core.Models;
+using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+
+namespace AcademicAssessment.Tests.Integration.Controllers;
+
+/// <summary>
+/// Integration tests for StudentAnalyticsController endpoints.
+/// Tests the full HTTP request/response cycle including routing, model binding, validation, and serialization.
+/// </summary>
+public class StudentAnalyticsControllerTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
+    private readonly Guid _testStudentId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+    public StudentAnalyticsControllerTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory;
+        _client = _factory.CreateClient();
+    }
+
+    #region Performance Summary Tests
+
+    [Fact]
+    public async Task GetPerformanceSummary_WithValidStudentId_ReturnsOk()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/performance-summary");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<StudentPerformanceSummary>();
+        content.Should().NotBeNull();
+        content!.StudentId.Should().Be(_testStudentId);
+    }
+
+    [Fact]
+    public async Task GetPerformanceSummary_WithInvalidStudentId_ReturnsBadRequest()
+    {
+        // Act
+        var response = await _client.GetAsync("/api/v1/students/invalid-guid/analytics/performance-summary");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task GetPerformanceSummary_WithNonexistentStudentId_ReturnsNotFound()
+    {
+        // Arrange
+        var nonexistentId = Guid.NewGuid();
+
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{nonexistentId}/analytics/performance-summary");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    #endregion
+
+    #region Subject Performance Tests
+
+    [Fact]
+    public async Task GetSubjectPerformance_WithoutSubjectFilter_ReturnsOk()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/subject-performance");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<SubjectPerformance>();
+        content.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetSubjectPerformance_WithValidSubject_ReturnsOk()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/subject-performance?subject=0");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<SubjectPerformance>();
+        content.Should().NotBeNull();
+        content!.Subject.Should().Be(Subject.Mathematics);
+    }
+
+    [Fact]
+    public async Task GetSubjectPerformance_WithInvalidSubject_ReturnsBadRequest()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/subject-performance?subject=999");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    #endregion
+
+    #region Learning Objectives Tests
+
+    [Fact]
+    public async Task GetLearningObjectiveMastery_WithoutSubjectFilter_ReturnsOk()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/learning-objectives");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<IReadOnlyList<LearningObjectiveMastery>>();
+        content.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetLearningObjectiveMastery_WithValidSubject_ReturnsOk()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/learning-objectives?subject=1");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<IReadOnlyList<LearningObjectiveMastery>>();
+        content.Should().NotBeNull();
+    }
+
+    #endregion
+
+    #region Ability Estimates Tests
+
+    [Fact]
+    public async Task GetAbilityEstimates_WithValidStudentId_ReturnsOk()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/ability-estimates");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<Dictionary<Subject, double>>();
+        content.Should().NotBeNull();
+    }
+
+    #endregion
+
+    #region Improvement Areas Tests
+
+    [Fact]
+    public async Task GetImprovementAreas_WithDefaultTopN_ReturnsOk()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/improvement-areas");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<IReadOnlyList<ImprovementArea>>();
+        content.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetImprovementAreas_WithValidTopN_ReturnsOk()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/improvement-areas?topN=5");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<IReadOnlyList<ImprovementArea>>();
+        content.Should().NotBeNull();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(21)]
+    [InlineData(100)]
+    public async Task GetImprovementAreas_WithInvalidTopN_ReturnsBadRequest(int topN)
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/improvement-areas?topN={topN}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("topN must be between 1 and 20");
+    }
+
+    #endregion
+
+    #region Progress Timeline Tests
+
+    [Fact]
+    public async Task GetProgressTimeline_WithoutDateRange_ReturnsOk()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/progress-timeline");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<ProgressTimeline>();
+        content.Should().NotBeNull();
+        content!.StudentId.Should().Be(_testStudentId);
+    }
+
+    [Fact]
+    public async Task GetProgressTimeline_WithValidDateRange_ReturnsOk()
+    {
+        // Arrange
+        var startDate = DateTime.UtcNow.AddMonths(-3);
+        var endDate = DateTime.UtcNow;
+
+        // Act
+        var response = await _client.GetAsync(
+            $"/api/v1/students/{_testStudentId}/analytics/progress-timeline?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<ProgressTimeline>();
+        content.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetProgressTimeline_WithInvalidDateRange_ReturnsBadRequest()
+    {
+        // Arrange
+        var startDate = DateTime.UtcNow;
+        var endDate = DateTime.UtcNow.AddMonths(-3);
+
+        // Act
+        var response = await _client.GetAsync(
+            $"/api/v1/students/{_testStudentId}/analytics/progress-timeline?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("startDate cannot be after endDate");
+    }
+
+    #endregion
+
+    #region Peer Comparison Tests
+
+    [Fact]
+    public async Task GetPeerComparison_WithoutFilters_ReturnsOk()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/peer-comparison");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<PeerComparison>();
+        content.Should().NotBeNull();
+        content!.StudentId.Should().Be(_testStudentId);
+    }
+
+    [Fact]
+    public async Task GetPeerComparison_WithGradeLevel_ReturnsOk()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/peer-comparison?gradeLevel=9");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<PeerComparison>();
+        content.Should().NotBeNull();
+        content!.GradeLevel.Should().Be(GradeLevel.Grade9);
+    }
+
+    [Fact]
+    public async Task GetPeerComparison_WithGradeLevelAndSubject_ReturnsOk()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/peer-comparison?gradeLevel=10&subject=0");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<PeerComparison>();
+        content.Should().NotBeNull();
+    }
+
+    #endregion
+
+    #region Content Type Tests
+
+    [Fact]
+    public async Task AllEndpoints_ReturnJsonContentType()
+    {
+        // Arrange
+        var endpoints = new[]
+        {
+            $"/api/v1/students/{_testStudentId}/analytics/performance-summary",
+            $"/api/v1/students/{_testStudentId}/analytics/subject-performance",
+            $"/api/v1/students/{_testStudentId}/analytics/learning-objectives",
+            $"/api/v1/students/{_testStudentId}/analytics/ability-estimates",
+            $"/api/v1/students/{_testStudentId}/analytics/improvement-areas",
+            $"/api/v1/students/{_testStudentId}/analytics/progress-timeline",
+            $"/api/v1/students/{_testStudentId}/analytics/peer-comparison"
+        };
+
+        foreach (var endpoint in endpoints)
+        {
+            // Act
+            var response = await _client.GetAsync(endpoint);
+
+            // Assert
+            response.Content.Headers.ContentType?.MediaType.Should().Be("application/json");
+        }
+    }
+
+    #endregion
+
+    #region Performance Tests
+
+    [Fact]
+    public async Task GetPerformanceSummary_ResponseTime_ShouldBeLessThan500Ms()
+    {
+        // Arrange
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        // Act
+        var response = await _client.GetAsync($"/api/v1/students/{_testStudentId}/analytics/performance-summary");
+
+        // Assert
+        stopwatch.Stop();
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        stopwatch.ElapsedMilliseconds.Should().BeLessThan(500, "API should respond quickly with stub data");
+    }
+
+    #endregion
+}

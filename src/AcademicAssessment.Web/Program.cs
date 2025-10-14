@@ -186,11 +186,33 @@ try
     });
 
     // ============================================================
-    // APPLICATION SERVICES (TODO: Add when implementing controllers)
+    // DATABASE CONTEXT (TODO: Enable when database migrations are ready)
     // ============================================================
-    // builder.Services.AddScoped<IStudentAnalyticsService, StudentAnalyticsService>();
-    // builder.Services.AddDbContext<ApplicationDbContext>();
-    // builder.Services.AddScoped<ITenantContext, TenantContext>();
+    // builder.Services.AddDbContext<AcademicAssessment.Infrastructure.Data.AcademicContext>(options =>
+    // {
+    //     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    //         ?? "Host=localhost;Database=edumind_dev;Username=edumind_user;Password=edumind_dev_password";
+    //     options.UseNpgsql(connectionString);
+    // });
+
+    // ============================================================
+    // APPLICATION SERVICES
+    // ============================================================
+
+    // Tenant Context - Development implementation (replace with real auth-based context later)
+    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.ITenantContext, AcademicAssessment.Web.Services.TenantContextDevelopment>();
+
+    // Analytics Service - Currently returns sample/stub data since DB is not connected
+    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentAnalyticsService, AcademicAssessment.Analytics.Services.StudentAnalyticsService>();
+
+    // Stub repositories for development (replace with real repository implementations when DB is ready)
+    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentAssessmentRepository, AcademicAssessment.Web.Services.StubStudentAssessmentRepository>();
+    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentResponseRepository, AcademicAssessment.Web.Services.StubStudentResponseRepository>();
+    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IQuestionRepository, AcademicAssessment.Web.Services.StubQuestionRepository>();
+    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IAssessmentRepository, AcademicAssessment.Web.Services.StubAssessmentRepository>();
+    // TODO: Register other repositories when they are implemented
+    // builder.Services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
+    // etc.
 
     var app = builder.Build();
 
@@ -433,3 +455,6 @@ public class SwaggerDefaultValues : Swashbuckle.AspNetCore.SwaggerGen.IOperation
         }
     }
 }
+
+// Make the Program class accessible to integration tests
+public partial class Program { }
