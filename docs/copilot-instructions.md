@@ -5,61 +5,66 @@ Build a sophisticated multi-agent educational assessment system using C# and .NE
 
 ## Documentation Standards
 
+### Single Source of Truth: TASK_JOURNAL.md
+**`docs/TASK_JOURNAL.md` is the ONLY planning and tracking document.**
+
+This journal must be updated with EVERY significant change and serves as:
+- ✅ Development history and timeline
+- ✅ Current project status and recent milestones
+- ✅ Next steps and priorities
+- ✅ Decisions made and their rationale
+- ✅ Issues encountered and solutions
+- ✅ Files created/modified with line counts
+- ✅ Test results and coverage metrics
+- ✅ Performance benchmarks
+
+**CRITICAL**: Always update TASK_JOURNAL.md immediately after completing work. Never create separate planning documents like IMPLEMENTATION_PLAN.md, NEXT_STEPS.md, README.md, or PHASE_*_COMPLETE.md.
+
 ### Documentation Location
 **All documentation files MUST be created in the `/workspaces/edumind-ai/docs/` folder.**
 
-### Required Documentation
-When implementing new features or components, create/update the following documentation:
+### Specialized Documentation (Keep Separate)
 
-1. **Feature Implementation Docs** - Create `{FEATURE_NAME}_IMPLEMENTATION.md` in `docs/` with:
-   - Architecture overview and design decisions
-   - API endpoints and contracts
-   - Data models and database schema changes
-   - Configuration requirements
-   - Testing approach and results
-   - Deployment considerations
-
-2. **API Documentation** - Update `docs/API_TEST_RESULTS.md` and `docs/API_TESTING_GUIDE.md` with:
-   - New endpoint specifications
-   - Request/response examples
+1. **API Documentation** - `docs/API_TEST_RESULTS.md` and `docs/API_TESTING_GUIDE.md`
+   - Endpoint specifications with examples
+   - Request/response contracts
    - Error scenarios and status codes
    - Authentication/authorization requirements
    - Performance benchmarks
 
-3. **Testing Documentation** - Update `docs/TESTING_STRATEGY.md` with:
-   - New test cases and coverage
-   - Integration test scenarios
-   - Performance test results
-   - Known issues and limitations
+2. **Testing Documentation** - `docs/TESTING_STRATEGY.md`
+   - Testing methodology and approach
+   - Test case categories
+   - Coverage requirements
+   - CI/CD integration
 
-4. **Task Journal** - Always update `docs/TASK_JOURNAL.md` with:
-   - What was implemented
-   - Files created/modified
-   - Decisions made and rationale
-   - Issues encountered and solutions
-   - Next steps and blockers
+3. **Technical Implementations** - `docs/{FEATURE}_IMPLEMENTATION.md` (for major features only)
+   - Detailed technical architecture
+   - Design decisions and alternatives considered
+   - Implementation patterns used
+   - Known limitations
 
-5. **CI/CD Status** - Update `docs/CI_CD_DEPLOYMENT_STATUS.md` when:
-   - Pipeline configuration changes
-   - New deployment stages added
-   - Build/test failures resolved
-   - Infrastructure changes
+4. **CI/CD Status** - `docs/CI_CD_DEPLOYMENT_STATUS.md`
+   - Pipeline configuration
+   - Deployment stages
+   - Build/test status
+   - Infrastructure details
 
-### Documentation Best Practices
-- **Keep docs in sync with code** - Update docs in the same commit as code changes
-- **Use clear, descriptive titles** - Make it easy to find relevant documentation
-- **Include code examples** - Show actual usage patterns from the codebase
-- **Document decisions** - Explain why, not just what
-- **Add diagrams** - Use Mermaid for architecture and sequence diagrams
-- **Link related docs** - Create navigation between related documentation files
-- **Version significant changes** - Note breaking changes and migration paths
-
-### Quick Start Documentation
-Maintain these key files for onboarding:
+### Core Reference Documentation (Maintain, Don't Duplicate)
 - `docs/CONTEXT.md` - High-level system overview
 - `docs/SOLUTION_STRUCTURE.md` - Codebase organization
 - `docs/DEVCONTAINER_SETUP.md` - Development environment setup
 - `docs/GITHUB_SETUP.md` - CI/CD and repository configuration
+- `docs/ARCHITECTURE_SUMMARY.md` - Technical architecture
+- `docs/PRIVACY_AND_SECURITY.md` - Security and compliance
+- `docs/RBAC_ARCHITECTURE.md` - Authorization model
+
+### Documentation Workflow
+1. **Before starting work**: Check TASK_JOURNAL.md for current status and priorities
+2. **During work**: Make notes of decisions and issues
+3. **After completing work**: Update TASK_JOURNAL.md with comprehensive milestone entry
+4. **If needed**: Create/update specialized docs (API, testing, implementation guides)
+5. **Always**: Keep docs in same commit as code changes
 
 ## System Architecture
 
