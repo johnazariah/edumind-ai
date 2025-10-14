@@ -3,6 +3,64 @@
 ## Project Overview
 Build a sophisticated multi-agent educational assessment system using C# and .NET that provides personalized academic testing and progress tracking for students across multiple subjects and grade levels. The system uses specialized AI agents to evaluate student performance, identify knowledge gaps, and orchestrate adaptive learning paths.
 
+## Documentation Standards
+
+### Documentation Location
+**All documentation files MUST be created in the `/workspaces/edumind-ai/docs/` folder.**
+
+### Required Documentation
+When implementing new features or components, create/update the following documentation:
+
+1. **Feature Implementation Docs** - Create `{FEATURE_NAME}_IMPLEMENTATION.md` in `docs/` with:
+   - Architecture overview and design decisions
+   - API endpoints and contracts
+   - Data models and database schema changes
+   - Configuration requirements
+   - Testing approach and results
+   - Deployment considerations
+
+2. **API Documentation** - Update `docs/API_TEST_RESULTS.md` and `docs/API_TESTING_GUIDE.md` with:
+   - New endpoint specifications
+   - Request/response examples
+   - Error scenarios and status codes
+   - Authentication/authorization requirements
+   - Performance benchmarks
+
+3. **Testing Documentation** - Update `docs/TESTING_STRATEGY.md` with:
+   - New test cases and coverage
+   - Integration test scenarios
+   - Performance test results
+   - Known issues and limitations
+
+4. **Task Journal** - Always update `docs/TASK_JOURNAL.md` with:
+   - What was implemented
+   - Files created/modified
+   - Decisions made and rationale
+   - Issues encountered and solutions
+   - Next steps and blockers
+
+5. **CI/CD Status** - Update `docs/CI_CD_DEPLOYMENT_STATUS.md` when:
+   - Pipeline configuration changes
+   - New deployment stages added
+   - Build/test failures resolved
+   - Infrastructure changes
+
+### Documentation Best Practices
+- **Keep docs in sync with code** - Update docs in the same commit as code changes
+- **Use clear, descriptive titles** - Make it easy to find relevant documentation
+- **Include code examples** - Show actual usage patterns from the codebase
+- **Document decisions** - Explain why, not just what
+- **Add diagrams** - Use Mermaid for architecture and sequence diagrams
+- **Link related docs** - Create navigation between related documentation files
+- **Version significant changes** - Note breaking changes and migration paths
+
+### Quick Start Documentation
+Maintain these key files for onboarding:
+- `docs/CONTEXT.md` - High-level system overview
+- `docs/SOLUTION_STRUCTURE.md` - Codebase organization
+- `docs/DEVCONTAINER_SETUP.md` - Development environment setup
+- `docs/GITHUB_SETUP.md` - CI/CD and repository configuration
+
 ## System Architecture
 
 ### Core Components
