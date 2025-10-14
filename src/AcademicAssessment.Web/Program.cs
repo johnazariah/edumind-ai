@@ -1,44 +1,435 @@
-var builder = WebApplication.CreateBuilder(args);
+using System.Reflection;
+using System.Text.Json;
+using Asp.Versioning;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.OpenApi.Models;
+using Serilog;
+using Serilog.Events;
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// ============================================================
+// SERILOG CONFIGURATION (Early initialization)
+// ============================================================
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithEnvironmentName()
+    .Enrich.WithMachineName()
+    .Enrich.WithThreadId()
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: "logs/edumind-.log",
+        rollingInterval: RollingInterval.Day,
+        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}",
+        retainedFileCountLimit: 30)
+    .CreateLogger();
 
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+try
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    Log.Information("Starting EduMind.AI Web API");
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    // ============================================================
+    // LOGGING - Use Serilog
+    // ============================================================
+    builder.Host.UseSerilog();
+
+    // ============================================================
+    // CORS CONFIGURATION
+    // ============================================================
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("DevelopmentCors", policy =>
+        {
+            policy
+                .WithOrigins(
+                    "https://localhost:5001",
+                    "https://localhost:5002",
+                    "https://localhost:5003",
+                    "http://localhost:5000",
+                    "http://localhost:5001",
+                    "http://localhost:5002",
+                    "http://localhost:5003"
+                )
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials() // Required for SignalR
+                .SetIsOriginAllowedToAllowWildcardSubdomains();
+        });
+
+        options.AddPolicy("ProductionCors", policy =>
+        {
+            // Configure production origins from configuration
+            var allowedOrigins = builder.Configuration
+                .GetSection("Cors:AllowedOrigins")
+                .Get<string[]>() ?? Array.Empty<string>();
+
+            policy
+                .WithOrigins(allowedOrigins)
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials()
+                .SetIsOriginAllowedToAllowWildcardSubdomains();
+        });
+    });
+
+    // ============================================================
+    // API VERSIONING
+    // ============================================================
+    builder.Services.AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.ReportApiVersions = true;
+        options.ApiVersionReader = ApiVersionReader.Combine(
+            new UrlSegmentApiVersionReader(),
+            new HeaderApiVersionReader("X-Api-Version"),
+            new MediaTypeApiVersionReader("version")
+        );
+    }).AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
+        options.SubstituteApiVersionInUrl = true;
+    });
+
+    // ============================================================
+    // CONTROLLERS & SIGNALR
+    // ============================================================
+    builder.Services.AddControllers();
+    builder.Services.AddSignalR();
+
+    // ============================================================
+    // HEALTH CHECKS
+    // ============================================================
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    var redisConnection = builder.Configuration.GetConnectionString("Redis");
+
+    builder.Services.AddHealthChecks()
+        .AddNpgSql(
+            connectionString ?? "Host=localhost;Database=edumind_dev;Username=edumind_user;Password=edumind_dev_password",
+            name: "postgresql",
+            tags: new[] { "db", "postgresql", "ready" })
+        .AddRedis(
+            redisConnection ?? "localhost:6379",
+            name: "redis",
+            tags: new[] { "cache", "redis", "ready" });
+
+    // ============================================================
+    // SWAGGER/OPENAPI CONFIGURATION
+    // ============================================================
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.SwaggerDoc("v1", new OpenApiInfo
+        {
+            Version = "v1",
+            Title = "EduMind.AI API",
+            Description = "Academic Test Preparation Multi-Agent System API - Provides endpoints for student analytics, adaptive assessments, and real-time progress tracking.",
+            Contact = new OpenApiContact
+            {
+                Name = "EduMind.AI Support",
+                Email = "support@edumind.ai",
+                Url = new Uri("https://edumind.ai/support")
+            },
+            License = new OpenApiLicense
+            {
+                Name = "Proprietary License",
+                Url = new Uri("https://edumind.ai/license")
+            }
+        });
+
+        // Add XML documentation
+        var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+        var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
+        if (File.Exists(xmlPath))
+        {
+            options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+        }
+
+        // Add JWT Bearer authorization
+        options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.ApiKey,
+            Scheme = "Bearer",
+            BearerFormat = "JWT"
+        });
+
+        options.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
+                Array.Empty<string>()
+            }
+        });
+
+        // Add API versioning support
+        options.OperationFilter<SwaggerDefaultValues>();
+
+        // Group by controller name
+        options.TagActionsBy(api => new[] { api.GroupName ?? api.ActionDescriptor.RouteValues["controller"] ?? "Default" });
+        options.DocInclusionPredicate((docName, apiDesc) => true);
+    });
+
+    // ============================================================
+    // APPLICATION SERVICES (TODO: Add when implementing controllers)
+    // ============================================================
+    // builder.Services.AddScoped<IStudentAnalyticsService, StudentAnalyticsService>();
+    // builder.Services.AddDbContext<ApplicationDbContext>();
+    // builder.Services.AddScoped<ITenantContext, TenantContext>();
+
+    var app = builder.Build();
+
+    // ============================================================
+    // MIDDLEWARE PIPELINE
+    // ============================================================
+
+    // Request logging (before any other middleware)
+    app.UseSerilogRequestLogging(options =>
+    {
+        options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        {
+            diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
+            diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+            diagnosticContext.Set("RemoteIpAddress", httpContext.Connection.RemoteIpAddress);
+            diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].ToString());
+        };
+    });
+
+    // CORS - Must be before routing
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseCors("DevelopmentCors");
+    }
+    else
+    {
+        app.UseCors("ProductionCors");
+    }
+
+    // Swagger - Development only
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI(options =>
+        {
+            options.SwaggerEndpoint("/swagger/v1/swagger.json", "EduMind.AI API v1");
+            options.RoutePrefix = "swagger";
+            options.DocumentTitle = "EduMind.AI API Documentation";
+            options.DisplayRequestDuration();
+            options.EnableDeepLinking();
+            options.EnableFilter();
+            options.ShowExtensions();
+            options.EnableValidator();
+        });
+
+        Log.Information("Swagger UI available at: https://localhost:{Port}/swagger",
+            builder.Configuration["ASPNETCORE_HTTPS_PORT"] ?? "5001");
+    }
+
+    app.UseHttpsRedirection();
+    app.UseRouting();
+
+    // Authentication & Authorization (to be configured later)
+    // app.UseAuthentication();
+    // app.UseAuthorization();
+
+    // ============================================================
+    // HEALTH CHECK ENDPOINTS
+    // ============================================================
+
+    // Basic health check - returns 200 OK if the application is running
+    app.MapHealthChecks("/health", new HealthCheckOptions
+    {
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+            var result = JsonSerializer.Serialize(new
+            {
+                status = report.Status.ToString(),
+                timestamp = DateTime.UtcNow,
+                duration = report.TotalDuration,
+                checks = report.Entries.Select(e => new
+                {
+                    name = e.Key,
+                    status = e.Value.Status.ToString(),
+                    description = e.Value.Description,
+                    duration = e.Value.Duration,
+                    exception = e.Value.Exception?.Message,
+                    data = e.Value.Data
+                })
+            }, new JsonSerializerOptions { WriteIndented = true });
+            await context.Response.WriteAsync(result);
+        }
+    }).WithTags("Health Checks")
+      .WithOpenApi(operation =>
+      {
+          operation.Summary = "Comprehensive health check";
+          operation.Description = "Returns detailed health status including database and cache connectivity";
+          return operation;
+      });
+
+    // Readiness check - for Kubernetes readiness probe
+    app.MapHealthChecks("/health/ready", new HealthCheckOptions
+    {
+        Predicate = check => check.Tags.Contains("ready"),
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+            var result = JsonSerializer.Serialize(new
+            {
+                status = report.Status.ToString(),
+                timestamp = DateTime.UtcNow
+            });
+            await context.Response.WriteAsync(result);
+        }
+    }).WithTags("Health Checks")
+      .WithOpenApi(operation =>
+      {
+          operation.Summary = "Readiness probe";
+          operation.Description = "Kubernetes readiness probe - checks if the application is ready to serve traffic";
+          return operation;
+      });
+
+    // Liveness check - for Kubernetes liveness probe
+    app.MapHealthChecks("/health/live", new HealthCheckOptions
+    {
+        Predicate = _ => false, // No checks, just returns if the app is responsive
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                status = "Healthy",
+                timestamp = DateTime.UtcNow
+            }));
+        }
+    }).WithTags("Health Checks")
+      .WithOpenApi(operation =>
+      {
+          operation.Summary = "Liveness probe";
+          operation.Description = "Kubernetes liveness probe - checks if the application is running";
+          return operation;
+      });
+
+    // ============================================================
+    // CONTROLLERS & SIGNALR HUBS
+    // ============================================================
+    app.MapControllers();
+    // app.MapHub<AssessmentHub>("/hubs/assessment");
+    // app.MapHub<ProgressTrackingHub>("/hubs/progress");
+
+    // ============================================================
+    // EXAMPLE ENDPOINT (To be removed when real controllers are added)
+    // ============================================================
+    var summaries = new[]
+    {
+        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+    };
+
+    app.MapGet("/api/v1/weatherforecast", () =>
+    {
+        var forecast = Enumerable.Range(1, 5).Select(index =>
+            new WeatherForecast
+            (
+                DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+                Random.Shared.Next(-20, 55),
+                summaries[Random.Shared.Next(summaries.Length)]
+            ))
+            .ToArray();
+        return forecast;
+    })
+    .WithName("GetWeatherForecast")
+    .WithTags("Example")
+    .WithOpenApi(operation =>
+    {
+        operation.Summary = "Get weather forecast";
+        operation.Description = "Example endpoint - Returns a 5-day weather forecast (to be removed)";
+        return operation;
+    });
+
+    Log.Information("EduMind.AI Web API started successfully");
+    Log.Information("Environment: {Environment}", app.Environment.EnvironmentName);
+    Log.Information("Listening on: {Urls}", string.Join(", ", builder.Configuration.GetSection("Urls").Get<string[]>() ?? new[] { "https://localhost:5001" }));
+
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
 }
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
-
-app.Run();
-
+// ============================================================
+// DTOs
+// ============================================================
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+}
+
+// ============================================================
+// SWAGGER HELPERS
+// ============================================================
+public class SwaggerDefaultValues : Swashbuckle.AspNetCore.SwaggerGen.IOperationFilter
+{
+    public void Apply(Microsoft.OpenApi.Models.OpenApiOperation operation, Swashbuckle.AspNetCore.SwaggerGen.OperationFilterContext context)
+    {
+        var apiDescription = context.ApiDescription;
+
+        // Mark deprecated operations
+        if (apiDescription.IsDeprecated())
+        {
+            operation.Deprecated = true;
+        }
+
+        // Clean up response types
+        foreach (var responseType in context.ApiDescription.SupportedResponseTypes)
+        {
+            var responseKey = responseType.IsDefaultResponse ? "default" : responseType.StatusCode.ToString();
+            if (operation.Responses.TryGetValue(responseKey, out var response))
+            {
+                foreach (var contentType in response.Content.Keys.ToList())
+                {
+                    if (responseType.ApiResponseFormats.All(x => x.MediaType != contentType))
+                    {
+                        response.Content.Remove(contentType);
+                    }
+                }
+            }
+        }
+
+        // Set parameter descriptions and requirements
+        if (operation.Parameters != null)
+        {
+            foreach (var parameter in operation.Parameters)
+            {
+                var description = apiDescription.ParameterDescriptions
+                    .FirstOrDefault(p => p.Name == parameter.Name);
+
+                if (description != null)
+                {
+                    parameter.Description ??= description.ModelMetadata?.Description;
+                    parameter.Required |= description.IsRequired;
+                }
+            }
+        }
+    }
 }
