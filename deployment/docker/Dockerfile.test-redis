@@ -1,0 +1,22 @@
+# Optimized Redis image for integration tests
+# Pre-configured for test workloads
+
+FROM redis:7-alpine
+
+# Copy custom Redis configuration optimized for testing
+COPY redis-test.conf /usr/local/etc/redis/redis.conf
+
+# Set up for fast startup and teardown
+# Disable persistence for faster tests (data is ephemeral anyway)
+RUN echo "appendonly no" >> /usr/local/etc/redis/redis.conf && \
+    echo "save ''" >> /usr/local/etc/redis/redis.conf && \
+    echo "maxmemory 128mb" >> /usr/local/etc/redis/redis.conf && \
+    echo "maxmemory-policy allkeys-lru" >> /usr/local/etc/redis/redis.conf
+
+# Add healthcheck
+HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=3 \
+    CMD redis-cli ping || exit 1
+
+EXPOSE 6379
+
+CMD ["redis-server", "/usr/local/etc/redis/redis.conf"]

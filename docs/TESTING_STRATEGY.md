@@ -1,52 +1,34 @@
-# Testing Strategy for EduMind.AI
+# Testing Strategy
+
+**Created:** January 15, 2025  
+**Status:** Active  
+**Version:** 2.0 (Updated for OLLAMA Integration)
 
 ## Overview
 
-This document outlines the comprehensive testing strategy for the EduMind.AI platform, covering unit tests, integration tests, performance tests, and CI/CD integration.
+The EduMind.AI project uses a multi-tiered testing strategy that balances speed, coverage, and practical CI/CD constraints. Tests are categorized by speed, dependencies, and when they run.
+
+This document replaces the previous version to reflect the new OLLAMA integration and CI/CD pipeline separation.
 
 ## Table of Contents
 
-1. [Test Pyramid](#test-pyramid)
-2. [Test Types](#test-types)
-3. [Testing Frameworks & Tools](#testing-frameworks--tools)
-4. [Test Organization](#test-organization)
-5. [CI/CD Integration](#cicd-integration)
-6. [Code Coverage](#code-coverage)
-7. [Testing the Analytics API](#testing-the-analytics-api)
+1. [Test Categories](#test-categories)
+2. [CI/CD Pipeline Architecture](#cicd-pipeline-architecture)
+3. [Local Development Workflow](#local-development-workflow)
+4. [Test Data Management](#test-data-management)
+5. [Environment Variables](#environment-variables)
+6. [Test Coverage Goals](#test-coverage-goals)
+7. [Troubleshooting](#troubleshooting)
 8. [Best Practices](#best-practices)
+9. [Future Improvements](#future-improvements)
 
 ---
 
-## Test Pyramid
+## Test Categories
 
-We follow the test pyramid approach:
+### 1. Unit Tests ⚡
 
-```
-                    /\
-                   /  \
-                  / E2E \        (Few, Slow, Expensive)
-                 /______\
-                /        \
-               /Integration\    (Some, Medium Speed)
-              /____________\
-             /              \
-            /   Unit Tests   \  (Many, Fast, Cheap)
-           /________________\
-```
-
-### Distribution
-
-- **70%** Unit Tests
-- **20%** Integration Tests
-- **10%** E2E/Performance Tests
-
----
-
-## Test Types
-
-### 1. Unit Tests
-
-**Purpose**: Test individual components in isolation
+**Purpose**: Fast, isolated tests with no external dependencies
 
 **Location**: `tests/AcademicAssessment.Tests.Unit/`
 

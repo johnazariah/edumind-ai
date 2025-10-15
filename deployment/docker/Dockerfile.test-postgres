@@ -1,0 +1,27 @@
+# Optimized PostgreSQL image for integration tests
+# Pre-loaded with schema and test data for faster CI/CD
+
+FROM postgres:16-alpine
+
+# Install additional tools if needed
+RUN apk add --no-cache bash
+
+# Copy initialization scripts
+COPY ../scripts/init-db.sql /docker-entrypoint-initdb.d/01-init-db.sql
+COPY ../scripts/test-data.sql /docker-entrypoint-initdb.d/02-test-data.sql
+
+# Set default environment variables
+ENV POSTGRES_DB=edumind_test
+ENV POSTGRES_USER=edumind_test_user
+ENV POSTGRES_PASSWORD=edumind_test_password
+ENV PGDATA=/var/lib/postgresql/data/pgdata
+
+# Optimize for faster startup in test environments
+ENV POSTGRES_HOST_AUTH_METHOD=trust
+ENV POSTGRES_INITDB_ARGS="--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+
+# Add healthcheck
+HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=3 \
+    CMD pg_isready -U $POSTGRES_USER -d $POSTGRES_DB || exit 1
+
+EXPOSE 5432
