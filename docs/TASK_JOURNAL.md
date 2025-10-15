@@ -1,29 +1,35 @@
 # EduMind.AI Development Task Journal
 
-> **Single Source of Truth**: This document tracks all development work, decisions, and planning. 
+> **Single Source of Truth**: This document tracks all development work, decisions, and planning.
 > Check here first when resuming work or planning next steps.
 
 ---
 
-## 🎯 Current Status & Next Steps (Updated: October 14, 2025)
+## 🎯 Current Status & Next Steps (Updated: October 15, 2025)
 
 ### ✅ What's Working Now
+
 - **StudentAnalyticsController**: 7 REST endpoints fully implemented and tested
 - **Integration Tests**: 24 tests, all passing locally after CI/CD fix (commit 1b5ef9f)
 - **Stub Infrastructure**: 4 stub repositories for development without database
 - **CI/CD Pipeline**: Running on GitHub Actions (awaiting verification)
+- **Deployment Strategy**: Comprehensive Azure Container Apps deployment plan documented
 
 ### 🚀 Immediate Next Steps (Priority Order)
 
 #### 1. **Verify CI/CD Success** (5 minutes)
+
 Check that the test fixes resolved the pipeline failure:
+
 ```bash
 gh run list --limit 5
 # Or visit: https://github.com/johnazariah/edumind-ai/actions
 ```
 
 #### 2. **Database Integration** (High Priority - 2-3 days)
+
 Replace stub repositories with real implementations:
+
 - [ ] Configure PostgreSQL connection string in appsettings.json
 - [ ] Run existing EF Core migrations
 - [ ] Implement real repository methods (4 repositories)
@@ -31,7 +37,9 @@ Replace stub repositories with real implementations:
 - [ ] Verify all endpoints work with real data
 
 #### 3. **Authentication & Authorization** (High Priority - 2-3 days)
+
 Replace development tenant context:
+
 - [ ] Configure JWT authentication (Azure AD B2C or alternative)
 - [ ] Implement real ITenantContext using JWT claims
 - [ ] Add authorization policies (Student, Teacher, SchoolAdmin, etc.)
@@ -39,23 +47,39 @@ Replace development tenant context:
 - [ ] Add authentication tests
 
 #### 4. **Additional Controllers** (Medium Priority - 1 week)
+
 - [ ] AssessmentController - CRUD operations for assessments
 - [ ] StudentController - Student profile management
 - [ ] TeacherController - Teacher dashboard data
 - [ ] AdminController - Administrative functions
 
 #### 5. **Real-time Features** (Medium Priority - 1 week)
+
 - [ ] AssessmentHub (SignalR) - Live assessment updates
 - [ ] ProgressHub (SignalR) - Real-time progress notifications
 - [ ] NotificationHub (SignalR) - System notifications
 
+#### 6. **Azure Deployment** (Low Priority - After MVP - 1-2 weeks)
+
+- [ ] Create Dockerfiles for all projects (7 apps)
+- [ ] Set up Azure Container Registry
+- [ ] Configure Container Apps environment
+- [ ] Create Bicep/ARM templates for infrastructure
+- [ ] Set up deployment pipelines in GitHub Actions
+- [ ] Configure production databases and services
+- [ ] Deploy to staging and validate
+
+See [AZURE_DEPLOYMENT_STRATEGY.md](./AZURE_DEPLOYMENT_STRATEGY.md) for complete deployment plan.
+
 ### 📊 Key Metrics
+
 - **Total Tests**: 24 integration tests (100% passing locally)
 - **Code Coverage**: StudentAnalyticsController fully covered
 - **Response Times**: <100ms (with stub data), target <500ms (with database)
 - **Commits Since Last Milestone**: 3 (0c741ae, b83d6f0, 1b5ef9f)
 
 ### 📁 Key Files to Know
+
 - **Controller**: `src/AcademicAssessment.Web/Controllers/StudentAnalyticsController.cs`
 - **Service**: `src/AcademicAssessment.Analytics/Services/StudentAnalyticsService.cs`
 - **Tests**: `tests/AcademicAssessment.Tests.Integration/Controllers/StudentAnalyticsControllerTests.cs`
@@ -65,6 +89,85 @@ Replace development tenant context:
 ---
 
 ## Recent Milestones
+
+### 📋 Milestone: Azure Deployment Strategy Documented - October 15, 2025
+
+**Summary**: Created comprehensive Azure deployment strategy using Container Apps as primary platform with defined migration path to AKS for scale. Includes complete architecture, cost estimates, and implementation plan.
+
+**Completed Work**:
+
+**AZURE_DEPLOYMENT_STRATEGY.md** (`docs/AZURE_DEPLOYMENT_STRATEGY.md`, 850+ lines):
+
+- **Deployment Platform Selection**:
+  - Primary: Azure Container Apps (serverless, cost-effective, simple)
+  - Migration Path: Container Apps → AKS (when scale exceeds Container Apps limits)
+  - Decision rationale documented with pros/cons
+
+- **Production Architecture**:
+  - 7 Container Apps (Web API + 6 Blazor apps)
+  - Auto-scaling configuration (min/max replicas per app)
+  - VNet integration for security
+  - Azure Front Door for global load balancing
+  
+- **Data Services Configuration**:
+  - Azure PostgreSQL Flexible Server (multi-database isolation)
+  - Azure Redis Cache (sessions, distributed cache, SignalR backplane)
+  - Azure Blob Storage (assessment files, uploads)
+  - Connection pooling and performance optimization
+
+- **Security Architecture**:
+  - Azure AD B2C for authentication (all user types)
+  - Azure Key Vault for secrets management
+  - Private endpoints for all data services
+  - Network Security Groups and VNet isolation
+
+- **Cost Estimation** (3 tiers documented):
+  - Development: ~$164/month
+  - Small Scale (500 students): ~$823/month
+  - Medium Scale (5,000 students): ~$2,300/month
+  - Large Scale (50,000 students): ~$12,770/month
+  - Migration threshold: $10,000/month or 50,000 concurrent users
+
+- **Migration Strategy** (Container Apps → AKS):
+  - When to migrate (6 clear criteria)
+  - Zero-downtime migration plan (4 phases)
+  - AKS architecture design
+  - Cost comparison and break-even analysis
+
+- **Monitoring & Observability**:
+  - Application Insights configuration
+  - Azure Monitor Log Analytics
+  - Custom dashboards and alerts
+  - 90-day log retention
+
+- **CI/CD Pipeline Design**:
+  - GitHub Actions workflow
+  - Build → Test → Package → Deploy
+  - Blue/green deployment strategy
+  - Environment promotion (dev → staging → production)
+
+- **Implementation Checklist**:
+  - Phase 1: Infrastructure Setup (1 week)
+  - Phase 2: Containerization (1 week)
+  - Phase 3: Deployment Configuration (1-2 weeks)
+  - Phase 4: Testing & Validation (1-2 weeks)
+  - Phase 5: Operations (ongoing)
+
+**Key Decisions Made**:
+
+1. **Azure Container Apps over AKS**: Simpler management, lower costs for initial scale, faster time to market
+2. **Multi-database Isolation**: Physical database per school (B2B), shared database for self-service (B2C)
+3. **Auto-scaling Strategy**: Different min/max replicas per app based on usage patterns
+4. **Migration Threshold**: Defined clear criteria for when to migrate to AKS
+5. **Cost Optimization**: Scale to zero for admin apps, aggressive scaling rules
+
+**Next Steps**:
+
+- Database integration remains top priority
+- Containerization deferred until after MVP with real data
+- Deployment infrastructure to be implemented after authentication is complete
+
+---
 
 ### ✅ Milestone: StudentAnalyticsController Implementation with Comprehensive Testing - October 14, 2025
 
