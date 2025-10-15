@@ -22,6 +22,7 @@ Implemented comprehensive integration testing on **all pull requests** to preven
 ### CI/CD Pipeline Updates
 
 #### Before
+
 ```yaml
 # Integration tests only on main branch pushes
 - name: Run integration tests (main branch only)
@@ -29,6 +30,7 @@ Implemented comprehensive integration testing on **all pull requests** to preven
 ```
 
 #### After
+
 ```yaml
 # Integration tests on ALL PRs and pushes
 - name: Run integration tests (all PRs and pushes)
@@ -42,6 +44,7 @@ Implemented comprehensive integration testing on **all pull requests** to preven
 #### Created: `docker-compose.test.yml`
 
 Optimized for CI/CD speed:
+
 - **tmpfs volumes** - Database and cache in memory (faster I/O)
 - **Disabled fsync** - PostgreSQL writes faster (safe for tests)
 - **No persistence** - Redis doesn't save to disk (faster)
@@ -49,6 +52,7 @@ Optimized for CI/CD speed:
 - **Minimal memory** - 128MB Redis, optimized PostgreSQL
 
 **Performance:**
+
 - Before: ~10-15 minutes for integration tests
 - After: ~3-5 minutes for integration tests
 - **Improvement: 60-70% faster** 🚀
@@ -56,6 +60,7 @@ Optimized for CI/CD speed:
 #### Created: Test Docker Images (Optional)
 
 Custom images ready if needed:
+
 - `deployment/docker/Dockerfile.test-postgres`
 - `deployment/docker/Dockerfile.test-redis`
 - `deployment/docker/redis-test.conf`
@@ -68,12 +73,14 @@ Custom images ready if needed:
 #### Created: `.github/workflows/ollama-integration.yml`
 
 OLLAMA tests now run separately:
+
 - **Manual trigger** (workflow_dispatch)
 - **Nightly schedule** (2 AM UTC)
 - **Includes full OLLAMA setup** (install, pull model, test all 5 agents)
 - **30-minute timeout** (OLLAMA is slow on CPU)
 
 **Why separate?**
+
 - OLLAMA takes 20-60s per evaluation (too slow for PR CI/CD)
 - Model download is 2GB (wasteful on every PR)
 - Standard PRs use StubLLMService (instant responses)
@@ -83,6 +90,7 @@ OLLAMA tests now run separately:
 #### 1. `docs/PR_INTEGRATION_TESTS.md` (Comprehensive Guide)
 
 **Covers:**
+
 - Branch protection rules (step-by-step)
 - PR workflow (developer guide)
 - GitHub CLI and Terraform options
@@ -91,6 +99,7 @@ OLLAMA tests now run separately:
 - Troubleshooting common issues
 
 **Key sections:**
+
 - ✅ Branch protection configuration (copy-paste ready)
 - ✅ PR workflow diagram
 - ✅ Integration test strategy
@@ -100,6 +109,7 @@ OLLAMA tests now run separately:
 #### 2. `.github/ISSUE_TEMPLATE/branch-protection-setup.md`
 
 **Interactive checklist for:**
+
 - Configuring branch protection in GitHub UI
 - Verifying protection is working
 - Testing with a trial PR
@@ -110,6 +120,7 @@ OLLAMA tests now run separately:
 #### `.github/workflows/ci.yml`
 
 **Changes:**
+
 1. Removed `if: github.ref == 'refs/heads/main'` from integration tests
 2. Added proper service health checks with timeout
 3. Added database migration step
@@ -121,6 +132,7 @@ OLLAMA tests now run separately:
 #### `docs/TESTING_STRATEGY.md`
 
 **Updated with:**
+
 - Integration tests run on all PRs
 - OLLAMA tests run separately
 - Performance benchmarks
@@ -148,6 +160,7 @@ graph TD
 ### Database Configuration Optimizations
 
 **PostgreSQL settings for tests:**
+
 ```sql
 fsync=off                    # Don't wait for disk writes
 synchronous_commit=off       # Don't wait for WAL writes
@@ -158,11 +171,13 @@ effective_cache_size=256MB  # Expected cache size
 ```
 
 **Why safe for tests?**
+
 - Data is ephemeral (torn down after tests)
 - No need for crash recovery
 - Speed > durability in test environment
 
 **Why NOT safe for production?**
+
 - Can lose data on crash
 - No point-in-time recovery
 - Corruption risk on power loss
@@ -188,6 +203,7 @@ ASPNETCORE_ENVIRONMENT=Testing
 ### Required Status Checks
 
 **These must pass before merging:**
+
 1. ✅ `build-and-test` - Unit + Performance + **Integration tests**
 2. ✅ `code-quality` - Code formatting and analysis
 3. ✅ `build-matrix (ubuntu-latest)` - Cross-platform unit tests
@@ -211,12 +227,14 @@ Allow deletions: No
 ### Configuration Steps
 
 **Option 1: GitHub UI**
+
 1. Settings → Branches → Add rule
 2. Pattern: `main`
 3. Check all boxes per docs/PR_INTEGRATION_TESTS.md
 4. Save
 
 **Option 2: GitHub CLI**
+
 ```bash
 gh api repos/johnazariah/edumind-ai/branches/main/protection \
   --method PUT \
@@ -226,6 +244,7 @@ gh api repos/johnazariah/edumind-ai/branches/main/protection \
 ```
 
 **Option 3: Use Issue Template**
+
 - Create issue from `.github/ISSUE_TEMPLATE/branch-protection-setup.md`
 - Follow the checklist
 - Verify with test PR
@@ -297,12 +316,14 @@ git push origin feature/my-feature
 ### Resource Usage
 
 **GitHub Actions minutes:**
+
 - Per PR: ~10 minutes
 - 20 PRs/month: 200 minutes
 - Free tier: 2,000 minutes/month
 - **Usage: 10% of free tier** ✅
 
 **Docker Hub pulls:**
+
 - Per PR: 2 images (postgres, redis)
 - Anonymous limit: 100 pulls / 6 hours
 - Current volume: Well within limit ✅
@@ -310,16 +331,19 @@ git push origin feature/my-feature
 ### Optimization Results
 
 **Integration test infrastructure startup:**
+
 - Before: 30-60 seconds (dev docker-compose)
 - After: 10-15 seconds (test docker-compose with tmpfs)
 - **Improvement: 50-75% faster**
 
 **Integration test execution:**
+
 - Before: ~10-15 minutes (slow database)
 - After: ~3-5 minutes (optimized database)
 - **Improvement: 60-70% faster**
 
 **Total CI/CD time:**
+
 - Before: ~20 minutes on main only
 - After: ~10 minutes on every PR
 - **Improvement: 50% faster + earlier feedback**
@@ -331,6 +355,7 @@ git push origin feature/my-feature
 **Current answer: No** ❌
 
 **Reasons:**
+
 1. Standard Docker Hub images work well
 2. No custom builds needed
 3. Pull times are acceptable (~10-30 seconds)
@@ -340,6 +365,7 @@ git push origin feature/my-feature
 ### When to Reconsider ACR
 
 ✅ **Use ACR if:**
+
 - Running 50+ PRs per day
 - Hit Docker Hub rate limits (100 pulls / 6 hours)
 - Need custom images with pre-seeded test data
@@ -349,6 +375,7 @@ git push origin feature/my-feature
 ### ACR Setup (If Needed)
 
 Documentation provided in:
+
 - `docs/PR_INTEGRATION_TESTS.md` (detailed steps)
 - `deployment/docker/Dockerfile.test-*` (custom images ready)
 
@@ -359,6 +386,7 @@ Documentation provided in:
 ### Manual Verification Steps
 
 1. **Create test branch**
+
    ```bash
    git checkout -b test/integration-tests
    echo "# Test" >> README.md
@@ -388,6 +416,7 @@ Documentation provided in:
 ### Automated Verification
 
 The CI/CD itself is the test:
+
 - If integration tests don't run → Pipeline fails
 - If tests fail → Merge blocked
 - If tests pass → Merge allowed
@@ -415,6 +444,7 @@ The CI/CD itself is the test:
 ### Short Term (This Week)
 
 - [ ] **Run full integration test suite** (28 tests)
+
   ```bash
   docker-compose -f docker-compose.test.yml up -d
   dotnet test tests/AcademicAssessment.Tests.Integration --verbosity detailed
@@ -478,6 +508,7 @@ The CI/CD itself is the test:
 If integration tests on PRs cause issues:
 
 1. **Temporarily disable integration tests**
+
    ```yaml
    # In .github/workflows/ci.yml, add:
    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -505,17 +536,20 @@ If integration tests on PRs cause issues:
 ### What This Means
 
 **For developers:**
+
 - Integration tests catch issues before merge
 - ~10 minute CI/CD feedback loop
 - Main branch stays deployable
 - Confidence in changes
 
 **For reviewers:**
+
 - Know tests passed before reviewing
 - Focus on code quality, not catching bugs
 - Less risk in approving PRs
 
 **For the project:**
+
 - Higher code quality
 - Fewer hotfixes
 - Faster deployment cycles
@@ -545,6 +579,7 @@ Use the issue template: `.github/ISSUE_TEMPLATE/branch-protection-setup.md`
 ---
 
 **Questions? Issues?**
+
 - Check docs/PR_INTEGRATION_TESTS.md for troubleshooting
 - Open an issue with the branch-protection-setup template
 - Review CI/CD logs in GitHub Actions

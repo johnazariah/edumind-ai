@@ -16,7 +16,7 @@ To enforce integration tests on PRs, configure the following rules in GitHub:
 
 **Repository Settings → Branches → Branch protection rules → Add rule**
 
-#### For `main` branch:
+#### For `main` branch
 
 ```yaml
 Branch name pattern: main
@@ -49,22 +49,25 @@ Settings:
   ⚠️ Allow deletions: DISABLED
 ```
 
-#### For `develop` branch (if using):
+#### For `develop` branch (if using)
 
 Same settings as main, but can optionally:
+
 - Reduce required approvals to 0 for faster iteration
 - Allow force pushes for rebasing (use with caution)
 
 ### Applying Branch Protection
 
-#### Via GitHub UI:
+#### Via GitHub UI
+
 1. Go to repository → Settings → Branches
 2. Click "Add branch protection rule"
 3. Enter branch name pattern: `main`
 4. Check all boxes as listed above
 5. Click "Create" or "Save changes"
 
-#### Via GitHub CLI:
+#### Via GitHub CLI
+
 ```bash
 gh api repos/johnazariah/edumind-ai/branches/main/protection \
   --method PUT \
@@ -74,7 +77,8 @@ gh api repos/johnazariah/edumind-ai/branches/main/protection \
   --field restrictions=null
 ```
 
-#### Via Terraform (Infrastructure as Code):
+#### Via Terraform (Infrastructure as Code)
+
 ```hcl
 resource "github_branch_protection" "main" {
   repository_id = "edumind-ai"
@@ -131,11 +135,13 @@ graph TD
 ### Step-by-Step PR Process
 
 1. **Create Feature Branch**
+
    ```bash
    git checkout -b feature/my-new-feature
    ```
 
 2. **Make Changes and Run Tests Locally**
+
    ```bash
    # Run unit tests (fast)
    dotnet test tests/AcademicAssessment.Tests.Unit
@@ -147,6 +153,7 @@ graph TD
    ```
 
 3. **Commit and Push**
+
    ```bash
    git add .
    git commit -m "feat: add new feature"
@@ -245,14 +252,17 @@ Closes #(issue number)
 ### Performance Considerations
 
 **Before optimization:**
+
 - Integration tests: ~10-15 minutes
 - Total CI/CD time: ~20 minutes per PR
 
 **After optimization (current):**
+
 - Integration tests: ~3-5 minutes
 - Total CI/CD time: ~8-10 minutes per PR
 
 **Optimizations applied:**
+
 1. Use `docker-compose.test.yml` with tmpfs for faster I/O
 2. Disable PostgreSQL fsync and synchronous_commit (safe for tests)
 3. Use Redis without persistence
@@ -262,16 +272,19 @@ Closes #(issue number)
 ### Cost Analysis
 
 **GitHub Actions minutes:**
+
 - Free tier: 2,000 minutes/month
 - Pro tier: 3,000 minutes/month
 - Team tier: 10,000 minutes/month
 
 **Current usage:**
+
 - ~10 minutes per PR
 - Estimate: 20 PRs/month = 200 minutes
 - **Well within free tier**
 
 If usage grows:
+
 - Can limit integration tests to specific file paths
 - Can use self-hosted runners (free)
 - Can use Azure Container Instances for runners
@@ -283,6 +296,7 @@ If usage grows:
 ❌ **Not recommended for our use case**
 
 **Reasons:**
+
 1. **Standard images work well** - postgres:16-alpine and redis:7-alpine are fast enough
 2. **No custom builds needed** - We configure via docker-compose, not custom Dockerfiles
 3. **Added complexity** - ACR requires authentication, pushing images, version management
@@ -292,6 +306,7 @@ If usage grows:
 ### When Would ACR Make Sense?
 
 ✅ **Use ACR if:**
+
 - Running 50+ PRs per day (Docker Hub rate limits)
 - Building custom test images with pre-seeded data
 - Need guaranteed availability (Docker Hub outages affect CI)
@@ -352,15 +367,18 @@ az ad sp create-for-rbac \
 ### Current Recommendation
 
 **Stick with standard Docker Hub images** for now:
+
 - postgres:16-alpine
 - redis:7-alpine
 
 **Monitor:**
+
 - Docker Hub rate limits (100 pulls per 6 hours for anonymous users)
 - CI/CD run times
 - Number of PRs per day
 
 **Switch to ACR if:**
+
 - Hit Docker Hub rate limits
 - CI/CD times exceed 15 minutes
 - Processing 50+ PRs per day
@@ -370,11 +388,13 @@ az ad sp create-for-rbac \
 ### PR blocked by failing tests
 
 **Check:**
+
 1. Go to PR → "Checks" tab
 2. Click on failed job
 3. Expand failed step to see error message
 
 **Common fixes:**
+
 - **Unit test failure:** Fix the code or test
 - **Integration test failure:** Check database migrations, service configuration
 - **Code quality failure:** Run `dotnet format` locally
@@ -383,11 +403,13 @@ az ad sp create-for-rbac \
 ### Integration tests timeout
 
 **Possible causes:**
+
 - Services not starting (check health checks)
 - Database migration failing
 - Network issues in GitHub Actions
 
 **Fix:**
+
 ```yaml
 # Add longer timeout in .github/workflows/ci.yml
 timeout-minutes: 15  # Default is 360 minutes, reduce to 15
@@ -396,6 +418,7 @@ timeout-minutes: 15  # Default is 360 minutes, reduce to 15
 ### "Cannot connect to database"
 
 **Check:**
+
 1. Services started correctly
 2. Health checks passing
 3. Connection string correct (edumind_test user/database)
@@ -403,6 +426,7 @@ timeout-minutes: 15  # Default is 360 minutes, reduce to 15
 ### PR cannot be merged despite passing tests
 
 **Check:**
+
 1. Branch protection rules configured correctly
 2. Required status checks match job names exactly
 3. Branch is up to date with main

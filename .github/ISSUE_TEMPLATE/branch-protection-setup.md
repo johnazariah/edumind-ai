@@ -20,7 +20,7 @@ Configure GitHub branch protection rules to enforce integration tests on all PRs
 
 ### Step 1: Navigate to Settings
 
-1. Go to repository: https://github.com/johnazariah/edumind-ai
+1. Go to repository: <https://github.com/johnazariah/edumind-ai>
 2. Click **Settings** (top right)
 3. Click **Branches** (left sidebar)
 4. Click **Add branch protection rule**
@@ -35,6 +35,7 @@ Configure GitHub branch protection rules to enforce integration tests on all PRs
 - [x] ✅ Require branches to be up to date before merging
 
 **Select these required status checks:**
+
 - [ ] `build-and-test`
 - [ ] `code-quality`
 - [ ] `build-matrix (ubuntu-latest)`
@@ -83,12 +84,14 @@ Configure GitHub branch protection rules to enforce integration tests on all PRs
 ### Expected Behavior
 
 ✅ **Should work:**
+
 - Creating PRs to main
 - Pushing to feature branches
 - Merging PRs after checks pass and approval
 - Viewing status check results
 
 ❌ **Should be blocked:**
+
 - Direct push to main (bypassing PR)
 - Merging PR with failing tests
 - Merging PR without approval
@@ -102,6 +105,7 @@ Configure GitHub branch protection rules to enforce integration tests on all PRs
 **Cause:** Job names don't match or CI hasn't run yet
 
 **Fix:**
+
 1. Push a commit to trigger CI
 2. Check workflow file for exact job names: `.github/workflows/ci.yml`
 3. Update required status checks to match exact names
@@ -109,11 +113,13 @@ Configure GitHub branch protection rules to enforce integration tests on all PRs
 ### Can't merge despite passing tests
 
 **Possible causes:**
+
 - Branch not up to date with main
 - Missing approval
 - Unresolved conversations
 
 **Fix:**
+
 1. Update branch: `git pull origin main`
 2. Push: `git push`
 3. Request review if not approved
@@ -124,6 +130,7 @@ Configure GitHub branch protection rules to enforce integration tests on all PRs
 **Expected:** Admins can bypass rules by default
 
 **Fix:**
+
 - Enable "Do not allow bypassing the above settings"
 - Or accept that admins have emergency access
 
