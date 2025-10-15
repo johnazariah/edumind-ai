@@ -5,46 +5,59 @@
 
 ---
 
-## 🎯 Current Status & Next Steps (Updated: October 15, 2025)
+## 🎯 Current Status & Next Steps (Updated: October 15, 2025 - Evening)
 
 ### ✅ What's Working Now
 
 - **StudentAnalyticsController**: 7 REST endpoints fully implemented and tested
 - **Integration Tests**: 24 tests, all passing locally after CI/CD fix (commit 1b5ef9f)
-- **Stub Infrastructure**: 4 stub repositories for development without database
+- **Database Integration**: PostgreSQL running, migrations applied, real repositories connected ✨ NEW
+- **JWT Authentication**: Infrastructure ready with TenantContextJwt implementation ✨ NEW
+- **Authorization Policies**: 9 role-based policies configured ✨ NEW
 - **CI/CD Pipeline**: Running on GitHub Actions (awaiting verification)
 - **Deployment Strategy**: Comprehensive Azure Container Apps deployment plan documented
 
 ### 🚀 Immediate Next Steps (Priority Order)
 
-#### 1. **Verify CI/CD Success** (5 minutes)
+#### 1. **Set up Azure AD B2C with Google OAuth** (30-45 minutes - HIGH PRIORITY)
 
-Check that the test fixes resolved the pipeline failure:
+Configure Google federated authentication:
 
-```bash
-gh run list --limit 5
-# Or visit: https://github.com/johnazariah/edumind-ai/actions
-```
+- [ ] Create Azure AD B2C tenant (edumindai.onmicrosoft.com)
+- [ ] Register Google as identity provider
+- [ ] Create user flow (B2C_1_susi_google)
+- [ ] Configure custom attributes (SchoolId, ClassIds)
+- [ ] Register API application and get ClientId
+- [ ] Update appsettings.json with real ClientId/TenantId
 
-#### 2. **Database Integration** (High Priority - 2-3 days)
+See detailed instructions in [AUTHENTICATION_DATABASE_SETUP.md](./AUTHENTICATION_DATABASE_SETUP.md)
 
-Replace stub repositories with real implementations:
+#### 2. **Update Integration Tests for Authentication** (1-2 hours)
 
-- [ ] Configure PostgreSQL connection string in appsettings.json
-- [ ] Run existing EF Core migrations
-- [ ] Implement real repository methods (4 repositories)
-- [ ] Update integration tests to use test database
-- [ ] Verify all endpoints work with real data
+Add JWT token support to tests:
 
-#### 3. **Authentication & Authorization** (High Priority - 2-3 days)
+- [ ] Create test JWT token generator
+- [ ] Update test setup to include Authorization headers
+- [ ] Add authorization failure tests (401/403)
+- [ ] Test role-based access control
 
-Replace development tenant context:
+#### 3. **End-to-End Testing** (30 minutes)
 
-- [ ] Configure JWT authentication (Azure AD B2C or alternative)
-- [ ] Implement real ITenantContext using JWT claims
-- [ ] Add authorization policies (Student, Teacher, SchoolAdmin, etc.)
-- [ ] Update StudentAnalyticsController authorization
-- [ ] Add authentication tests
+Verify complete flow:
+
+- [ ] Sign in with Google via Azure AD B2C
+- [ ] Test all 7 analytics endpoints with JWT token
+- [ ] Verify authorization rules (students see own data, teachers see school data)
+- [ ] Test with different roles (Student, Teacher, Admin)
+
+#### 4. **Remove Stub Infrastructure** (15 minutes - CLEANUP)
+
+Clean up development code:
+
+- [ ] Delete stub repository files (Stub*.cs)
+- [ ] Delete TenantContextDevelopment.cs
+- [ ] Remove stub-related code from Program.cs
+- [ ] Update documentation
 
 #### 4. **Additional Controllers** (Medium Priority - 1 week)
 
@@ -90,7 +103,97 @@ See [AZURE_DEPLOYMENT_STRATEGY.md](./AZURE_DEPLOYMENT_STRATEGY.md) for complete 
 
 ## Recent Milestones
 
-### 📋 Milestone: Azure Deployment Strategy Documented - October 15, 2025
+### � Milestone: Database Integration & JWT Authentication - October 15, 2025 (Evening)
+
+**Summary**: Integrated PostgreSQL database with EF Core migrations and implemented JWT authentication infrastructure with Google OAuth 2.0 support via Azure AD B2C. System now has real repository implementations and production-ready authentication ready for Azure tenant setup.
+
+**Completed Work**:
+
+**1. Database Integration**:
+- **PostgreSQL Setup**: Docker Compose running PostgreSQL 16 on port 5432
+- **Connection Strings**: Configured in appsettings.json and appsettings.Development.json
+- **Database Schema**: Created `edumind_dev` with schemas (academic, analytics, agents)
+- **EF Core Migration**: Created and applied `InitialCreate` migration (20251015005710)
+- **Tables Created**: Users, Schools, Classes, Students, Courses, Assessments, Questions, StudentAssessments, StudentResponses
+- **Repository Registration**: Replaced all 4 stub repositories with real EF Core implementations:
+  - `StudentAssessmentRepository`
+  - `StudentResponseRepository`
+  - `QuestionRepository`
+  - `AssessmentRepository`
+
+**2. JWT Authentication Infrastructure**:
+- **Packages Added**:
+  - `Microsoft.Identity.Web` 3.2.1 (Azure AD B2C integration)
+  - `Microsoft.EntityFrameworkCore.Design` 8.0.10
+- **TenantContextJwt** (`src/AcademicAssessment.Infrastructure/Context/TenantContextJwt.cs`):
+  - Extracts user context from JWT claims (sub, oid, email, name, role)
+  - Supports Azure AD B2C extension attributes (extension_SchoolId, extension_ClassIds)
+  - Implements row-level security logic
+  - Role hierarchy support (SystemAdmin > BusinessAdmin > SchoolAdmin > CourseAdmin > Teacher > Student)
+  - Key methods: `HasAccessToSchool()`, `HasAccessToClass()`, `HasRole()`
+- **Authentication Configuration** (Program.cs):
+  - Production: JWT Bearer with Azure AD B2C
+  - Development: No authentication (stub context)
+  - Conditional TenantContext registration based on environment
+- **Authorization Policies** (9 policies):
+  - Role-based: Student, Teacher, SchoolAdmin, CourseAdmin, BusinessAdmin, SystemAdmin
+  - Combined: AdminPolicy, EducatorPolicy, AllUsersPolicy
+- **Controller Protection**: Added `[Authorize(Policy = "AllUsersPolicy")]` to StudentAnalyticsController
+
+**3. Configuration**:
+- **appsettings.json**: Added AzureAdB2C section with Google OAuth 2.0 user flow
+- **appsettings.Development.json**: Development mode with authentication disabled
+- **Program.cs**: 
+  - JWT authentication middleware
+  - Authorization policies
+  - Real repository registrations
+  - Conditional TenantContext (production vs development)
+
+**4. Documentation**:
+- **AUTHENTICATION_DATABASE_SETUP.md** (450+ lines): Comprehensive guide covering:
+  - Complete implementation details
+  - Step-by-step Azure AD B2C setup with Google OAuth 2.0
+  - JWT token structure and claims mapping
+  - Testing procedures (development vs production)
+  - Security considerations and troubleshooting
+  - Configuration reference and Docker commands
+
+**Key Decisions**:
+1. **Google OAuth via Azure AD B2C**: Chose federated authentication for self-service users
+2. **Conditional Authentication**: Development mode runs without auth, production requires JWT
+3. **Row-Level Security**: Implemented in TenantContext with role-based access control
+4. **Real Repositories**: Switched from stubs to EF Core implementations
+5. **Migration Strategy**: Single migration for all entities to simplify initial setup
+
+**Technical Details**:
+- Migration File: `src/AcademicAssessment.Infrastructure/Data/Migrations/20251015005710_InitialCreate.cs`
+- Docker Database: `localhost:5432` (edumind-postgres container)
+- Authentication: Microsoft.Identity.Web with JwtBearer
+- Claims Mapping: Standard OAuth claims + custom extension attributes
+
+**Files Changed**:
+- New: `src/AcademicAssessment.Infrastructure/Context/TenantContextJwt.cs`
+- New: `src/AcademicAssessment.Infrastructure/Data/Migrations/*` (3 files)
+- New: `docs/AUTHENTICATION_DATABASE_SETUP.md`
+- Modified: `src/AcademicAssessment.Web/Program.cs` (auth config, real repos)
+- Modified: `src/AcademicAssessment.Web/appsettings.json` (AzureAdB2C, connection string)
+- Modified: `src/AcademicAssessment.Web/appsettings.Development.json` (dev connection string)
+- Modified: `src/AcademicAssessment.Web/Controllers/StudentAnalyticsController.cs` ([Authorize])
+- Modified: `src/AcademicAssessment.Web/AcademicAssessment.Web.csproj` (packages)
+
+**Next Steps**:
+1. Set up Azure AD B2C tenant with Google provider
+2. Update integration tests for authentication
+3. End-to-end testing with JWT tokens
+4. Remove stub infrastructure
+
+**Build Status**: ✅ All projects building successfully (0 errors, 2 warnings about Microsoft.Identity.Web vulnerability)
+
+**Testing Status**: Integration tests still using stub auth (needs update for JWT testing)
+
+---
+
+### �📋 Milestone: Azure Deployment Strategy Documented - October 15, 2025
 
 **Summary**: Created comprehensive Azure deployment strategy using Container Apps as primary platform with defined migration path to AKS for scale. Includes complete architecture, cost estimates, and implementation plan.
 

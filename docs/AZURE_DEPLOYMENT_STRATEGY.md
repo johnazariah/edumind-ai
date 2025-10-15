@@ -221,6 +221,7 @@ PostgreSQL Flexible Server (General Purpose, 2 vCores, 8 GB RAM)
 ```
 
 **Configuration**:
+
 - **Tier**: General Purpose (production) / Burstable (dev/test)
 - **Compute**: 2-4 vCores (auto-scale with Azure Monitor)
 - **Storage**: 128 GB (auto-grow enabled)
@@ -774,16 +775,19 @@ Production: Container Apps (full scale)
 ## 📚 Additional Resources
 
 ### Azure Documentation
+
 - [Container Apps Overview](https://learn.microsoft.com/azure/container-apps/overview)
 - [Container Apps Scaling](https://learn.microsoft.com/azure/container-apps/scale-app)
 - [Container Apps Networking](https://learn.microsoft.com/azure/container-apps/networking)
 - [Migrate to AKS](https://learn.microsoft.com/azure/aks/tutorial-kubernetes-prepare-app)
 
 ### Infrastructure as Code
+
 - [Bicep Templates](https://learn.microsoft.com/azure/azure-resource-manager/bicep/overview)
 - [Terraform for Azure](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
 
 ### Cost Management
+
 - [Azure Pricing Calculator](https://azure.microsoft.com/pricing/calculator/)
 - [Azure Cost Management](https://learn.microsoft.com/azure/cost-management-billing/)
 - [Container Apps Pricing](https://azure.microsoft.com/pricing/details/container-apps/)
@@ -793,6 +797,7 @@ Production: Container Apps (full scale)
 ## 🎯 Success Criteria
 
 ### Technical Metrics
+
 - ✅ API response time < 500ms (P95)
 - ✅ Container startup time < 30 seconds
 - ✅ Auto-scale response < 60 seconds
@@ -800,12 +805,14 @@ Production: Container Apps (full scale)
 - ✅ 99.9% uptime SLA
 
 ### Business Metrics
+
 - ✅ Support 10,000 concurrent students
 - ✅ < $3,000/month operating costs (medium scale)
 - ✅ Deploy new features in < 1 hour
 - ✅ Scale from 0 to 1,000 students in < 5 minutes
 
 ### Migration Criteria (to AKS)
+
 - ⚠️ Monthly costs > $10,000
 - ⚠️ Need > 50,000 concurrent users
 - ⚠️ Require advanced Kubernetes features

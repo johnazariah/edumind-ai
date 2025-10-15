@@ -1,8 +1,11 @@
 using System.Reflection;
 using System.Text.Json;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Web;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
@@ -98,6 +101,43 @@ try
     });
 
     // ============================================================
+    // AUTHENTICATION & AUTHORIZATION
+    // ============================================================
+    var authEnabled = builder.Configuration.GetValue<bool>("Authentication:Enabled");
+
+    if (authEnabled && !builder.Environment.IsDevelopment())
+    {
+        // Production: Azure AD B2C with JWT Bearer authentication
+        builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)
+            .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAdB2C"));
+
+        builder.Services.AddAuthorization(options =>
+        {
+            // Role-based policies
+            options.AddPolicy("StudentPolicy", policy => policy.RequireRole("Student"));
+            options.AddPolicy("TeacherPolicy", policy => policy.RequireRole("Teacher"));
+            options.AddPolicy("SchoolAdminPolicy", policy => policy.RequireRole("SchoolAdmin"));
+            options.AddPolicy("CourseAdminPolicy", policy => policy.RequireRole("CourseAdmin"));
+            options.AddPolicy("BusinessAdminPolicy", policy => policy.RequireRole("BusinessAdmin"));
+            options.AddPolicy("SystemAdminPolicy", policy => policy.RequireRole("SystemAdmin"));
+
+            // Combined policies
+            options.AddPolicy("AdminPolicy", policy => policy.RequireRole("SchoolAdmin", "BusinessAdmin", "SystemAdmin"));
+            options.AddPolicy("EducatorPolicy", policy => policy.RequireRole("Teacher", "SchoolAdmin", "CourseAdmin"));
+            options.AddPolicy("AllUsersPolicy", policy => policy.RequireAuthenticatedUser());
+        });
+    }
+    else
+    {
+        // Development: No authentication required (using stub TenantContext)
+        builder.Services.AddAuthentication();
+        builder.Services.AddAuthorization();
+    }
+
+    // HTTP Context Accessor for TenantContext
+    builder.Services.AddHttpContextAccessor();
+
+    // ============================================================
     // CONTROLLERS & SIGNALR
     // ============================================================
     builder.Services.AddControllers();
@@ -186,33 +226,45 @@ try
     });
 
     // ============================================================
-    // DATABASE CONTEXT (TODO: Enable when database migrations are ready)
+    // DATABASE CONTEXT
     // ============================================================
-    // builder.Services.AddDbContext<AcademicAssessment.Infrastructure.Data.AcademicContext>(options =>
-    // {
-    //     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    //         ?? "Host=localhost;Database=edumind_dev;Username=edumind_user;Password=edumind_dev_password";
-    //     options.UseNpgsql(connectionString);
-    // });
+    builder.Services.AddDbContext<AcademicAssessment.Infrastructure.Data.AcademicContext>(options =>
+    {
+        var connectionString = builder.Configuration.GetConnectionString("AcademicDatabase")
+            ?? "Host=localhost;Database=edumind_dev;Username=edumind_user;Password=edumind_dev_password";
+        options.UseNpgsql(connectionString);
+    });
 
     // ============================================================
     // APPLICATION SERVICES
     // ============================================================
 
-    // Tenant Context - Development implementation (replace with real auth-based context later)
-    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.ITenantContext, AcademicAssessment.Web.Services.TenantContextDevelopment>();
+    // Tenant Context - Production vs Development
+    if (authEnabled && !builder.Environment.IsDevelopment())
+    {
+        // Production: JWT-based tenant context
+        builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.ITenantContext, AcademicAssessment.Infrastructure.Context.TenantContextJwt>();
+    }
+    else
+    {
+        // Development: Stub tenant context
+        builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.ITenantContext, AcademicAssessment.Web.Services.TenantContextDevelopment>();
+    }
 
-    // Analytics Service - Currently returns sample/stub data since DB is not connected
+    // Analytics Service
     builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentAnalyticsService, AcademicAssessment.Analytics.Services.StudentAnalyticsService>();
 
-    // Stub repositories for development (replace with real repository implementations when DB is ready)
-    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentAssessmentRepository, AcademicAssessment.Web.Services.StubStudentAssessmentRepository>();
-    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentResponseRepository, AcademicAssessment.Web.Services.StubStudentResponseRepository>();
-    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IQuestionRepository, AcademicAssessment.Web.Services.StubQuestionRepository>();
-    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IAssessmentRepository, AcademicAssessment.Web.Services.StubAssessmentRepository>();
-    // TODO: Register other repositories when they are implemented
-    // builder.Services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
-    // etc.
+    // Real repository implementations (Infrastructure layer)
+    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentAssessmentRepository, AcademicAssessment.Infrastructure.Repositories.StudentAssessmentRepository>();
+    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentResponseRepository, AcademicAssessment.Infrastructure.Repositories.StudentResponseRepository>();
+    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IQuestionRepository, AcademicAssessment.Infrastructure.Repositories.QuestionRepository>();
+    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IAssessmentRepository, AcademicAssessment.Infrastructure.Repositories.AssessmentRepository>();
+
+    // Stub repositories for development (DEPRECATED - remove after database is fully integrated)
+    // builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentAssessmentRepository, AcademicAssessment.Web.Services.StubStudentAssessmentRepository>();
+    // builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentResponseRepository, AcademicAssessment.Web.Services.StubStudentResponseRepository>();
+    // builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IQuestionRepository, AcademicAssessment.Web.Services.StubQuestionRepository>();
+    // builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IAssessmentRepository, AcademicAssessment.Web.Services.StubAssessmentRepository>();
 
     var app = builder.Build();
 

@@ -1,16 +1,19 @@
 using AcademicAssessment.Core.Common;
 using AcademicAssessment.Core.Enums;
 using AcademicAssessment.Core.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AcademicAssessment.Web.Controllers;
 
 /// <summary>
 /// API endpoints for student analytics and performance tracking
+/// Requires authentication. Students can access their own data, educators and admins can access their school's students.
 /// </summary>
 [ApiController]
 [Route("api/v{version:apiVersion}/students/{studentId:guid}/analytics")]
 [Produces("application/json")]
+[Authorize(Policy = "AllUsersPolicy")]
 public class StudentAnalyticsController : ControllerBase
 {
     private readonly IStudentAnalyticsService _analyticsService;
