@@ -255,6 +255,7 @@ try
     builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentAnalyticsService, AcademicAssessment.Analytics.Services.StudentAnalyticsService>();
 
     // Real repository implementations (Infrastructure layer)
+    builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentRepository, AcademicAssessment.Infrastructure.Repositories.StudentRepository>();
     builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentAssessmentRepository, AcademicAssessment.Infrastructure.Repositories.StudentAssessmentRepository>();
     builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IStudentResponseRepository, AcademicAssessment.Infrastructure.Repositories.StudentResponseRepository>();
     builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IQuestionRepository, AcademicAssessment.Infrastructure.Repositories.QuestionRepository>();
@@ -267,7 +268,7 @@ try
     // builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IAssessmentRepository, AcademicAssessment.Web.Services.StubAssessmentRepository>();
 
     // ============================================================
-    // A2A AGENT INFRASTRUCTURE (Phase 1, 2 & 3)
+    // A2A AGENT INFRASTRUCTURE (Phase 1, 2, 3 & 4)
     // ============================================================
 
     // Task service for agent-to-agent communication
@@ -276,13 +277,86 @@ try
     // SignalR for real-time agent progress updates
     builder.Services.AddSignalR();
 
+    // LLM Service for AI-powered assessment features (Phase 4)
+    // Configure based on appsettings.json LLM:Provider setting
+    var llmProvider = builder.Configuration["LLM:Provider"] ?? "Stub";
+    switch (llmProvider.ToLowerInvariant())
+    {
+        case "ollama":
+            builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.ILLMService, AcademicAssessment.Infrastructure.ExternalServices.OllamaService>();
+            Log.Information("LLM Service configured: OllamaService (local AI, zero cost)");
+            break;
+
+        case "azureopenai":
+            // TODO: Implement when Azure.AI.OpenAI SDK v2.0 is stable
+            Log.Warning("Azure OpenAI not yet implemented, falling back to StubLLMService");
+            builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.ILLMService, AcademicAssessment.Infrastructure.ExternalServices.StubLLMService>();
+            break;
+
+        case "stub":
+        default:
+            builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.ILLMService, AcademicAssessment.Infrastructure.ExternalServices.StubLLMService>();
+            Log.Information("LLM Service configured: StubLLMService (mock mode for testing)");
+            break;
+    }
+
     // Student Progress Orchestrator (Phase 2)
-    builder.Services.AddSingleton<AcademicAssessment.Orchestration.StudentProgressOrchestrator>();
+    // Changed from Singleton to Scoped because it depends on scoped repositories
+    builder.Services.AddScoped<AcademicAssessment.Orchestration.StudentProgressOrchestrator>();
 
-    // Mathematics Assessment Agent (Phase 3)
-    builder.Services.AddSingleton<AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent>();
+    // Mathematics Assessment Agent (Phase 3 & 4)
+    // Now with LLM-enhanced semantic evaluation
+    builder.Services.AddSingleton<AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent>(sp =>
+    {
+        var taskService = sp.GetRequiredService<AcademicAssessment.Agents.Shared.Interfaces.ITaskService>();
+        var questionRepository = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.IQuestionRepository>();
+        var responseRepository = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.IStudentResponseRepository>();
+        var assessmentRepository = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.IAssessmentRepository>();
+        var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent>>();
+        var llmService = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.ILLMService>();
+        return new AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent(
+            taskService,
+            questionRepository,
+            responseRepository,
+            assessmentRepository,
+            logger,
+            llmService
+        );
+    });
 
-    Log.Information("A2A Agent infrastructure, orchestrator, and subject agents configured");
+    // Physics Assessment Agent (Phase 5)
+    // OLLAMA-enhanced semantic evaluation for physics concepts
+    builder.Services.AddSingleton<AcademicAssessment.Agents.Physics.PhysicsAssessmentAgent>(sp =>
+    {
+        var llmService = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.ILLMService>();
+        return new AcademicAssessment.Agents.Physics.PhysicsAssessmentAgent(llmService);
+    });
+
+    // Chemistry Assessment Agent (Phase 5)
+    // OLLAMA-enhanced semantic evaluation for chemistry formulas and reactions
+    builder.Services.AddSingleton<AcademicAssessment.Agents.Chemistry.ChemistryAssessmentAgent>(sp =>
+    {
+        var llmService = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.ILLMService>();
+        return new AcademicAssessment.Agents.Chemistry.ChemistryAssessmentAgent(llmService);
+    });
+
+    // Biology Assessment Agent (Phase 5)
+    // OLLAMA-enhanced semantic evaluation for biology concepts
+    builder.Services.AddSingleton<AcademicAssessment.Agents.Biology.BiologyAssessmentAgent>(sp =>
+    {
+        var llmService = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.ILLMService>();
+        return new AcademicAssessment.Agents.Biology.BiologyAssessmentAgent(llmService);
+    });
+
+    // English Assessment Agent (Phase 5)
+    // OLLAMA-enhanced semantic evaluation - especially powerful for essay evaluation
+    builder.Services.AddSingleton<AcademicAssessment.Agents.English.EnglishAssessmentAgent>(sp =>
+    {
+        var llmService = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.ILLMService>();
+        return new AcademicAssessment.Agents.English.EnglishAssessmentAgent(llmService);
+    });
+
+    Log.Information("A2A Agent infrastructure, orchestrator, and 5 LLM-enhanced subject agents configured (Math, Physics, Chemistry, Biology, English)");
 
     var app = builder.Build();
 
@@ -466,10 +540,13 @@ try
     // Get TaskService for agent registration
     var taskService = app.Services.GetRequiredService<AcademicAssessment.Agents.Shared.Interfaces.ITaskService>();
 
-    // Initialize Student Progress Orchestrator
-    var orchestrator = app.Services.GetRequiredService<AcademicAssessment.Orchestration.StudentProgressOrchestrator>();
-    await orchestrator.InitializeAsync();
-    Log.Information("Student Progress Orchestrator initialized: {AgentId}", orchestrator.AgentCard.AgentId);
+    // Initialize Student Progress Orchestrator (using a scope since it's registered as Scoped)
+    using (var scope = app.Services.CreateScope())
+    {
+        var orchestrator = scope.ServiceProvider.GetRequiredService<AcademicAssessment.Orchestration.StudentProgressOrchestrator>();
+        await orchestrator.InitializeAsync();
+        Log.Information("Student Progress Orchestrator initialized: {AgentId}", orchestrator.AgentCard.AgentId);
+    }
 
     // Initialize Mathematics Assessment Agent (Phase 3)
     var mathAgent = app.Services.GetRequiredService<AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent>();

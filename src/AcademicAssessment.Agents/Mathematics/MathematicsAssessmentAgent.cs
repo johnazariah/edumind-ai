@@ -1,6 +1,7 @@
 using AcademicAssessment.Agents.Shared;
 using AcademicAssessment.Agents.Shared.Interfaces;
 using AcademicAssessment.Agents.Shared.Models;
+using AcademicAssessment.Core.Common;
 using AcademicAssessment.Core.Enums;
 using AcademicAssessment.Core.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -10,12 +11,14 @@ namespace AcademicAssessment.Agents.Mathematics;
 /// <summary>
 /// Mathematics assessment agent responsible for generating math assessments
 /// and evaluating student responses for mathematics questions.
+/// Phase 4: Enhanced with LLM integration for semantic evaluation and dynamic generation.
 /// </summary>
 public class MathematicsAssessmentAgent : A2ABaseAgent
 {
     private readonly IQuestionRepository _questionRepository;
     private readonly IStudentResponseRepository _responseRepository;
     private readonly IAssessmentRepository _assessmentRepository;
+    private readonly ILLMService? _llmService; // Optional for Phase 3 compatibility
 
     /// <summary>
     /// Initializes the mathematics assessment agent.
@@ -26,24 +29,26 @@ public class MathematicsAssessmentAgent : A2ABaseAgent
         IStudentResponseRepository responseRepository,
         IAssessmentRepository assessmentRepository,
         ILogger<MathematicsAssessmentAgent> logger,
+        ILLMService? llmService = null, // Optional LLM service
         string? signalRHubUrl = "https://localhost:5001/hubs/agent-progress")
-        : base(CreateAgentCard(), taskService, logger, signalRHubUrl)
+        : base(CreateAgentCard(llmService != null), taskService, logger, signalRHubUrl)
     {
         _questionRepository = questionRepository;
         _responseRepository = responseRepository;
         _assessmentRepository = assessmentRepository;
+        _llmService = llmService;
     }
 
     /// <summary>
     /// Creates the agent card describing this agent's capabilities.
     /// </summary>
-    private static AgentCard CreateAgentCard()
+    private static AgentCard CreateAgentCard(bool hasLLM)
     {
         return new AgentCard
         {
             Name = "MathematicsAssessmentAgent",
             Description = "Generates mathematics assessments and evaluates student responses for algebra, geometry, calculus, and statistics",
-            Version = "1.0.0",
+            Version = hasLLM ? "2.0.0" : "1.0.0",
             Subject = Subject.Mathematics,
             Skills = new List<string>
             {
@@ -67,8 +72,10 @@ public class MathematicsAssessmentAgent : A2ABaseAgent
             {
                 { "max_questions_per_assessment", 30 },
                 { "supports_adaptive_difficulty", true },
-                { "evaluation_method", "exact_match" },
-                { "can_generate_explanations", false } // Phase 2: no LLM yet
+                { "evaluation_method", hasLLM ? "semantic_llm" : "exact_match" },
+                { "can_generate_explanations", hasLLM },
+                { "can_generate_dynamic_questions", hasLLM },
+                { "llm_enhanced", hasLLM }
             }
         };
     }
@@ -197,9 +204,9 @@ public class MathematicsAssessmentAgent : A2ABaseAgent
     }
 
     /// <summary>
-    /// Evaluates a student response using exact match comparison.
-    /// Phase 2: Simple exact match (case-insensitive).
-    /// Phase 4: Will use LLM for semantic evaluation.
+    /// Evaluates a student response using semantic LLM evaluation or exact match.
+    /// Phase 3: Simple exact match (case-insensitive).
+    /// Phase 4: LLM-powered semantic evaluation with detailed feedback.
     /// </summary>
     private async Task<AgentTask> EvaluateResponseAsync(AgentTask task)
     {
@@ -238,39 +245,98 @@ public class MathematicsAssessmentAgent : A2ABaseAgent
 
             var question = ((AcademicAssessment.Core.Common.Result<AcademicAssessment.Core.Models.Question>.Success)questionResult).Value;
 
-            // Perform exact match evaluation (case-insensitive, trim whitespace)
-            var studentAnswer = (response.StudentAnswer ?? "").Trim().ToLowerInvariant();
-            var correctAnswer = (question.CorrectAnswer ?? "").Trim().ToLowerInvariant();
+            // Choose evaluation method based on LLM availability
+            bool isCorrect;
+            int pointsEarned;
+            string feedback;
+            string evaluationMethod;
+            double? score = null;
+            string? reasoning = null;
+            List<string>? partialCreditAreas = null;
 
-            var isCorrect = studentAnswer == correctAnswer;
-            var pointsEarned = isCorrect ? response.MaxPoints : 0;
+            if (_llmService != null)
+            {
+                // Phase 4: Use LLM for semantic evaluation
+                Logger.LogInformation("Using LLM for semantic evaluation of response {ResponseId}", responseId);
+
+                await BroadcastProgressAsync(
+                    $"Analyzing mathematics response {responseId} with AI...");
+
+                var evaluationResult = await _llmService.EvaluateAnswerAsync(
+                    question.QuestionText,
+                    question.CorrectAnswer,
+                    response.StudentAnswer ?? "",
+                    Subject.Mathematics);
+
+                if (evaluationResult is Result<AnswerEvaluation>.Failure failure)
+                {
+                    Logger.LogWarning("LLM evaluation failed, falling back to exact match: {Error}",
+                        failure.Error);
+                    // Fall back to exact match
+                    (isCorrect, pointsEarned, feedback) = PerformExactMatchEvaluation(response, question);
+                    evaluationMethod = "exact_match_fallback";
+                }
+                else if (evaluationResult is Result<AnswerEvaluation>.Success success)
+                {
+                    var evaluation = success.Value;
+                    isCorrect = evaluation.IsCorrect;
+                    score = evaluation.Score;
+                    pointsEarned = (int)Math.Round(evaluation.Score * response.MaxPoints);
+                    feedback = evaluation.Feedback;
+                    reasoning = evaluation.Reasoning;
+                    partialCreditAreas = evaluation.PartialCreditAreas;
+                    evaluationMethod = "semantic_llm";
+
+                    Logger.LogInformation(
+                        "LLM evaluation: IsCorrect={IsCorrect}, Score={Score}, PointsEarned={Points}",
+                        isCorrect, score, pointsEarned);
+                }
+                else
+                {
+                    // Unexpected result type - fall back to exact match
+                    (isCorrect, pointsEarned, feedback) = PerformExactMatchEvaluation(response, question);
+                    evaluationMethod = "exact_match_fallback";
+                }
+            }
+            else
+            {
+                // Phase 3: Use exact match evaluation
+                Logger.LogInformation("Using exact match evaluation for response {ResponseId}", responseId);
+                (isCorrect, pointsEarned, feedback) = PerformExactMatchEvaluation(response, question);
+                evaluationMethod = "exact_match";
+            }
 
             Logger.LogInformation(
-                "Response {ResponseId} evaluated: {IsCorrect} (Student: '{StudentAnswer}', Correct: '{CorrectAnswer}')",
-                responseId, isCorrect, studentAnswer, correctAnswer);
+                "Response {ResponseId} evaluated: {IsCorrect}, Points: {Points}/{Max}",
+                responseId, isCorrect, pointsEarned, response.MaxPoints);
 
-            // Broadcast progress
+            // Broadcast completion
             await BroadcastProgressAsync(
-                $"Mathematics response {responseId} evaluated: {(isCorrect ? "Correct" : "Incorrect")}");
+                $"Mathematics response {responseId} evaluated: {(isCorrect ? "Correct" : "Incorrect")} ({pointsEarned}/{response.MaxPoints} points)");
 
             // Return evaluation result
             // The calling service will update the StudentResponse entity
-            task.Result = new
+            var result = new Dictionary<string, object>
             {
-                responseId = responseId,
-                questionId = question.Id,
-                isCorrect = isCorrect,
-                pointsEarned = pointsEarned,
-                maxPoints = response.MaxPoints,
-                studentAnswer = response.StudentAnswer,
-                correctAnswer = question.CorrectAnswer,
-                feedback = isCorrect
-                    ? "Your answer is correct!"
-                    : $"The correct answer is: {question.CorrectAnswer}",
-                evaluationMethod = "exact_match",
-                evaluatedBy = AgentCard.Name,
-                evaluatedAt = DateTime.UtcNow
+                { "responseId", responseId },
+                { "questionId", question.Id },
+                { "isCorrect", isCorrect },
+                { "pointsEarned", pointsEarned },
+                { "maxPoints", response.MaxPoints },
+                { "studentAnswer", response.StudentAnswer ?? "" },
+                { "correctAnswer", question.CorrectAnswer },
+                { "feedback", feedback },
+                { "evaluationMethod", evaluationMethod },
+                { "evaluatedBy", AgentCard.Name },
+                { "evaluatedAt", DateTime.UtcNow }
             };
+
+            // Add LLM-specific fields if available
+            if (score.HasValue) result["score"] = score.Value;
+            if (reasoning != null) result["reasoning"] = reasoning;
+            if (partialCreditAreas != null) result["partialCreditAreas"] = partialCreditAreas;
+
+            task.Result = result;
 
             return task;
         }
@@ -279,5 +345,28 @@ public class MathematicsAssessmentAgent : A2ABaseAgent
             Logger.LogError(ex, "Error evaluating mathematics response in task {TaskId}", task.TaskId);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Performs exact match evaluation (Phase 3 compatibility).
+    /// </summary>
+    private (bool isCorrect, int pointsEarned, string feedback) PerformExactMatchEvaluation(
+        AcademicAssessment.Core.Models.StudentResponse response,
+        AcademicAssessment.Core.Models.Question question)
+    {
+        var studentAnswer = (response.StudentAnswer ?? "").Trim().ToLowerInvariant();
+        var correctAnswer = (question.CorrectAnswer ?? "").Trim().ToLowerInvariant();
+
+        var isCorrect = studentAnswer == correctAnswer;
+        var pointsEarned = isCorrect ? response.MaxPoints : 0;
+        var feedback = isCorrect
+            ? "Your answer is correct!"
+            : $"The correct answer is: {question.CorrectAnswer}";
+
+        Logger.LogInformation(
+            "Exact match evaluation: IsCorrect={IsCorrect} (Student: '{StudentAnswer}', Correct: '{CorrectAnswer}')",
+            isCorrect, studentAnswer, correctAnswer);
+
+        return (isCorrect, pointsEarned, feedback);
     }
 }

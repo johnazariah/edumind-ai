@@ -48,6 +48,25 @@ public record Course
     public IReadOnlyList<string> Topics { get; init; } = [];
 
     /// <summary>
+    /// Optional: Board/Curriculum name (e.g., "CBSE", "ICSE", "IB", "State Board")
+    /// Allows schools to tag content by educational board without requiring full hierarchy
+    /// </summary>
+    public string? BoardName { get; init; }
+
+    /// <summary>
+    /// Optional: Module name for grouping related topics (e.g., "Algebra", "Thermodynamics", "Cell Biology")
+    /// Provides additional organizational flexibility without strict hierarchy
+    /// </summary>
+    public string? ModuleName { get; init; }
+
+    /// <summary>
+    /// Optional: Flexible metadata dictionary for custom attributes
+    /// Use for board-specific codes, external LMS IDs, or custom tagging
+    /// Example: { "externalId": "google-classroom-123", "boardCode": "CBSE-2024", "term": "Semester 1" }
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Metadata { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>
     /// Whether the course is active
     /// </summary>
     public required bool IsActive { get; init; }

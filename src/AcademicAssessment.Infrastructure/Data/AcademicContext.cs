@@ -218,11 +218,27 @@ public sealed class AcademicContext : DbContext
                     v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null)!.AsReadOnly()
                 );
 
+            // Metadata fields (Phase 5 enhancement)
+            entity.Property(e => e.BoardName)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.ModuleName)
+                .HasMaxLength(200);
+
+            entity.Property(e => e.Metadata)
+                .HasConversion(
+                    v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                    v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(v, (System.Text.Json.JsonSerializerOptions?)null) as IReadOnlyDictionary<string, string> ?? new Dictionary<string, string>()
+                )
+                .HasColumnType("jsonb");
+
             // Indexes
             entity.HasIndex(e => e.Code).IsUnique();
             entity.HasIndex(e => e.Subject);
             entity.HasIndex(e => e.GradeLevel);
             entity.HasIndex(e => e.CourseAdminId);
+            entity.HasIndex(e => e.BoardName); // Index for board filtering
+            entity.HasIndex(e => e.ModuleName); // Index for module filtering
         });
     }
 
@@ -304,6 +320,20 @@ public sealed class AcademicContext : DbContext
                     v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null)!.AsReadOnly()
                 );
 
+            // Metadata fields (Phase 5 enhancement)
+            entity.Property(e => e.BoardName)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.ModuleName)
+                .HasMaxLength(200);
+
+            entity.Property(e => e.Metadata)
+                .HasConversion(
+                    v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                    v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(v, (System.Text.Json.JsonSerializerOptions?)null) as IReadOnlyDictionary<string, string> ?? new Dictionary<string, string>()
+                )
+                .HasColumnType("jsonb");
+
             // Computed properties
             entity.Ignore(e => e.SuccessRate);
 
@@ -315,6 +345,8 @@ public sealed class AcademicContext : DbContext
             entity.HasIndex(e => e.DifficultyLevel);
             entity.HasIndex(e => e.ContentHash);
             entity.HasIndex(e => e.IsAiGenerated);
+            entity.HasIndex(e => e.BoardName); // Index for board filtering
+            entity.HasIndex(e => e.ModuleName); // Index for module filtering
         });
     }
 

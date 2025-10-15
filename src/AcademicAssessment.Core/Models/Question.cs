@@ -90,6 +90,25 @@ public record Question
     public double? IrtGuessing { get; init; }
 
     /// <summary>
+    /// Optional: Board/Curriculum name (e.g., "CBSE", "ICSE", "IB", "State Board")
+    /// Allows schools to tag questions by educational board
+    /// </summary>
+    public string? BoardName { get; init; }
+
+    /// <summary>
+    /// Optional: Module name for grouping (e.g., "Quadratic Equations", "Thermodynamics")
+    /// Provides organizational flexibility for question banks
+    /// </summary>
+    public string? ModuleName { get; init; }
+
+    /// <summary>
+    /// Optional: Flexible metadata dictionary for custom attributes
+    /// Use for external IDs, custom tags, or board-specific codes
+    /// Example: { "externalQuestionId": "qbank-456", "bloomsLevel": "3", "estimatedTime": "120" }
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Metadata { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>
     /// Whether the question is active
     /// </summary>
     public required bool IsActive { get; init; }
