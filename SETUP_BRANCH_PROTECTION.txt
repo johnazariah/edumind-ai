@@ -1,0 +1,137 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                                                ┃
+┃  🚀 SETUP BRANCH PROTECTION - JUST 2 COMMANDS                 ┃
+┃                                                                ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+You're struggling with credentials and tenant setup for branch protection.
+Good news: GitHub CLI handles all that! No manual UI navigation needed.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 WHAT YOU NEED TO DO
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1: Authenticate with GitHub (One Time Setup)
+
+    cd /workspaces/edumind-ai
+    gh auth login
+
+Then just follow the prompts:
+  • Pick "GitHub.com"
+  • Pick "HTTPS"
+  • Say "Yes" to authenticate Git
+  • Pick "Login with a web browser"
+  • Copy the code shown
+  • Press Enter (opens browser)
+  • Paste code in browser
+  • Click "Authorize"
+
+STEP 2: Configure Branch Protection (One Command)
+
+    ./deployment/scripts/setup-branch-protection.sh
+
+That's it! The script will:
+  ✅ Verify you're authenticated
+  ✅ Check you have admin access
+  ✅ Apply all branch protection rules
+  ✅ Validate configuration
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 EVEN EASIER: INTERACTIVE GUIDED SETUP
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Run this ONE command instead:
+
+    ./deployment/scripts/easy-setup.sh
+
+It will guide you through BOTH authentication AND configuration!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ WHAT HAPPENS WHEN YOU RUN THIS
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The 'main' branch will be protected with:
+
+  ✓ Require Pull Request with 1 approval
+  ✓ Require all CI/CD checks to pass
+    - build-and-test
+    - code-quality
+    - build-matrix (3 platforms)
+  ✓ Integration tests run on EVERY PR
+  ✓ Require conversation resolution
+  ✓ Block force pushes
+  ✓ Block branch deletion
+  ✓ Enforce for administrators
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔍 VERIFY IT WORKED
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Quick check:
+
+    gh api repos/johnazariah/edumind-ai/branches/main/protection
+
+Or view in browser:
+
+    https://github.com/johnazariah/edumind-ai/settings/branches
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❓ TROUBLESHOOTING
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"You do not have admin access"
+  → Ask repo owner (johnazariah) to run the script
+  → Or ask for admin permissions
+
+"gh: command not found"
+  → Already installed in your dev container!
+  → Verify: gh --version
+
+"Authentication failed"
+  → Try browser auth: gh auth login
+  → Or use Personal Access Token (see docs)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 MORE HELP
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Detailed guides:
+  • docs/GITHUB_CLI_QUICKSTART.md - Full authentication guide
+  • deployment/scripts/README.md - Quick start guide
+  • docs/PR_INTEGRATION_TESTS.md - Complete testing setup
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 BOTTOM LINE
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Instead of fighting with:
+  ✗ Manual tenant configuration
+  ✗ Credential setup in UI
+  ✗ Navigating GitHub settings
+
+Just run these 2 commands:
+
+    gh auth login
+    ./deployment/scripts/setup-branch-protection.sh
+
+Or even easier, just run:
+
+    ./deployment/scripts/easy-setup.sh
+
+That's literally all you need! 🎉
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

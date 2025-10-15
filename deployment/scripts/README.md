@@ -24,6 +24,7 @@ gh auth login
 ```
 
 When prompted:
+
 - What account? → **GitHub.com**
 - Preferred protocol? → **HTTPS**
 - Authenticate Git? → **Yes**
@@ -32,8 +33,9 @@ When prompted:
 
 **Option B: Personal Access Token**
 
-1. Create token: https://github.com/settings/tokens/new?scopes=repo,admin:org
+1. Create token: <https://github.com/settings/tokens/new?scopes=repo,admin:org>
 2. Authenticate:
+
    ```bash
    echo 'YOUR_TOKEN' | gh auth login --with-token
    ```
@@ -75,6 +77,7 @@ gh pr create --title "Test: Branch Protection" --body "Testing protection rules"
 ```
 
 Expected behavior:
+
 - ❌ Can't merge until all checks pass
 - ❌ Can't merge without 1 approval
 - ✅ Integration tests run automatically
@@ -84,22 +87,28 @@ Expected behavior:
 ## ❓ Troubleshooting
 
 ### "You are not logged in"
+
 **Solution:** Run `gh auth login` first
 
 ### "You do not have admin access"
+
 **Cause:** Branch protection requires admin permissions
 
 **Solution:** Ask repository owner to:
+
 1. Grant you admin access, OR
 2. Run the setup script themselves
 
 ### "gh: command not found"
+
 **Solution:** GitHub CLI should be pre-installed in dev container. Verify:
+
 ```bash
 gh --version
 ```
 
 ### More Help
+
 See detailed guide: [docs/GITHUB_CLI_QUICKSTART.md](./GITHUB_CLI_QUICKSTART.md)
 
 ---
@@ -109,16 +118,19 @@ See detailed guide: [docs/GITHUB_CLI_QUICKSTART.md](./GITHUB_CLI_QUICKSTART.md)
 When you run the setup script, these rules are applied to the `main` branch:
 
 ✅ **Require Pull Request**
+
 - Need 1 approval before merge
 - Stale reviews dismissed on new commits
 
 ✅ **Require Status Checks**
+
 - `build-and-test` must pass
 - `code-quality` must pass  
 - `build-matrix` (ubuntu, windows, macos) must pass
 - Integration tests run on every PR
 
 ✅ **Other Protections**
+
 - Require conversation resolution
 - Require linear history
 - Block force pushes
