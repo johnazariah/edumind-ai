@@ -267,7 +267,7 @@ try
     // builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IAssessmentRepository, AcademicAssessment.Web.Services.StubAssessmentRepository>();
 
     // ============================================================
-    // A2A AGENT INFRASTRUCTURE (Phase 1 & 2)
+    // A2A AGENT INFRASTRUCTURE (Phase 1, 2 & 3)
     // ============================================================
 
     // Task service for agent-to-agent communication
@@ -279,7 +279,10 @@ try
     // Student Progress Orchestrator (Phase 2)
     builder.Services.AddSingleton<AcademicAssessment.Orchestration.StudentProgressOrchestrator>();
 
-    Log.Information("A2A Agent infrastructure and orchestrator configured");
+    // Mathematics Assessment Agent (Phase 3)
+    builder.Services.AddSingleton<AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent>();
+
+    Log.Information("A2A Agent infrastructure, orchestrator, and subject agents configured");
 
     var app = builder.Build();
 
@@ -456,19 +459,34 @@ try
     });
 
     // ============================================================
-    // INITIALIZE A2A AGENTS (Phase 2)
+    // INITIALIZE A2A AGENTS (Phase 2 & 3)
     // ============================================================
     Log.Information("Initializing A2A agents...");
+
+    // Get TaskService for agent registration
+    var taskService = app.Services.GetRequiredService<AcademicAssessment.Agents.Shared.Interfaces.ITaskService>();
 
     // Initialize Student Progress Orchestrator
     var orchestrator = app.Services.GetRequiredService<AcademicAssessment.Orchestration.StudentProgressOrchestrator>();
     await orchestrator.InitializeAsync();
     Log.Information("Student Progress Orchestrator initialized: {AgentId}", orchestrator.AgentCard.AgentId);
 
-    // TODO: Initialize subject agents (Phase 3)
-    // - MathematicsAssessmentAgent
+    // Initialize Mathematics Assessment Agent (Phase 3)
+    var mathAgent = app.Services.GetRequiredService<AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent>();
+    await mathAgent.InitializeAsync();
+
+    // Register math agent handler with TaskService
+    if (taskService is AcademicAssessment.Agents.Shared.Services.TaskService ts)
+    {
+        ts.RegisterHandler(mathAgent.AgentCard.AgentId, mathAgent.ExecuteTaskAsync);
+        Log.Information("Mathematics Assessment Agent initialized and registered: {AgentId}", mathAgent.AgentCard.AgentId);
+    }
+
+    // TODO: Initialize additional subject agents (Phase 5)
     // - PhysicsAssessmentAgent
-    // - etc.
+    // - ChemistryAssessmentAgent
+    // - BiologyAssessmentAgent
+    // - EnglishAssessmentAgent
 
     Log.Information("EduMind.AI Web API started successfully");
     Log.Information("Environment: {Environment}", app.Environment.EnvironmentName);
