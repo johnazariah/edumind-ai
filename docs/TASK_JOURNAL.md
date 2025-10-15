@@ -28,6 +28,7 @@ Configure Google federated authentication - **Complete documentation ready**:
 - [ ] Test with script: `./scripts/test-auth.sh`
 
 **Key steps**:
+
 1. Create Google OAuth 2.0 credentials (15 min)
 2. Create Azure AD B2C tenant (10 min)
 3. Configure Google identity provider (10 min)
