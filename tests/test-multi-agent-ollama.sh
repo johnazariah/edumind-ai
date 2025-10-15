@@ -35,8 +35,8 @@ echo ""
 
 # Test database migration
 echo "3. Verifying database migration..."
-docker exec edumind-postgres psql -U edumind_user -d edumind_dev -c "\d courses" | grep -q "board_name"
-if [ $? -eq 0 ]; then
+MIGRATION_CHECK=$(docker exec edumind-postgres psql -U edumind_user -d edumind_dev -c "\d courses" 2>&1 | grep -i "boardname" || echo "not found")
+if [[ "$MIGRATION_CHECK" != "not found" ]]; then
     echo "✅ Database migration applied (BoardName column exists)"
 else
     echo "❌ Database migration not applied"
