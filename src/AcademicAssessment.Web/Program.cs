@@ -266,6 +266,21 @@ try
     // builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IQuestionRepository, AcademicAssessment.Web.Services.StubQuestionRepository>();
     // builder.Services.AddScoped<AcademicAssessment.Core.Interfaces.IAssessmentRepository, AcademicAssessment.Web.Services.StubAssessmentRepository>();
 
+    // ============================================================
+    // A2A AGENT INFRASTRUCTURE (Phase 1 & 2)
+    // ============================================================
+
+    // Task service for agent-to-agent communication
+    builder.Services.AddSingleton<AcademicAssessment.Agents.Shared.Interfaces.ITaskService, AcademicAssessment.Agents.Shared.Services.TaskService>();
+
+    // SignalR for real-time agent progress updates
+    builder.Services.AddSignalR();
+
+    // Student Progress Orchestrator (Phase 2)
+    builder.Services.AddSingleton<AcademicAssessment.Orchestration.StudentProgressOrchestrator>();
+
+    Log.Information("A2A Agent infrastructure and orchestrator configured");
+
     var app = builder.Build();
 
     // ============================================================
@@ -404,6 +419,10 @@ try
     // CONTROLLERS & SIGNALR HUBS
     // ============================================================
     app.MapControllers();
+
+    // A2A Agent Progress Hub - Real-time updates from agents
+    app.MapHub<AcademicAssessment.Web.Hubs.AgentProgressHub>("/hubs/agent-progress");
+
     // app.MapHub<AssessmentHub>("/hubs/assessment");
     // app.MapHub<ProgressTrackingHub>("/hubs/progress");
 
@@ -435,6 +454,21 @@ try
         operation.Description = "Example endpoint - Returns a 5-day weather forecast (to be removed)";
         return operation;
     });
+
+    // ============================================================
+    // INITIALIZE A2A AGENTS (Phase 2)
+    // ============================================================
+    Log.Information("Initializing A2A agents...");
+
+    // Initialize Student Progress Orchestrator
+    var orchestrator = app.Services.GetRequiredService<AcademicAssessment.Orchestration.StudentProgressOrchestrator>();
+    await orchestrator.InitializeAsync();
+    Log.Information("Student Progress Orchestrator initialized: {AgentId}", orchestrator.AgentCard.AgentId);
+
+    // TODO: Initialize subject agents (Phase 3)
+    // - MathematicsAssessmentAgent
+    // - PhysicsAssessmentAgent
+    // - etc.
 
     Log.Information("EduMind.AI Web API started successfully");
     Log.Information("Environment: {Environment}", app.Environment.EnvironmentName);

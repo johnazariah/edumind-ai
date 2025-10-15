@@ -1,10 +1,13 @@
 # Demo Data Setup - Complete Summary
 
 ## Overview
+
 Successfully created comprehensive demo data for EduMind.AI testing and demonstration purposes.
 
 ## Database Schema
+
 All tables created via EF Core migrations in the `public` schema:
+
 - ✅ schools
 - ✅ users  
 - ✅ students
@@ -18,6 +21,7 @@ All tables created via EF Core migrations in the `public` schema:
 ## Demo Data Statistics
 
 ### Base Entities
+
 - **3 Schools**
   - Lincoln High School (LHS) - Central District
   - Washington Academy (WA) - North District  
@@ -52,6 +56,7 @@ All tables created via EF Core migrations in the `public` schema:
   - Time limits: 25-60 minutes
 
 ### Generated Content
+
 - **171 Questions**
   - 10-20 questions per assessment
   - Multiple choice format
@@ -87,37 +92,42 @@ All tables created via EF Core migrations in the `public` schema:
 ## Test Credentials
 
 ### Students
+
 - **Emma Wilson** (Lincoln HS, Grade 9)
-  - Email: emma.wilson@lincoln.edu
+  - Email: <emma.wilson@lincoln.edu>
   - Student ID: 40000000-0000-0000-0000-000000000001
   - User ID: 20000000-0000-0000-0000-000000000101
   - Assessments: 4 completed
 
 ### Teachers
+
 - **Dr. Robert Williams** (Lincoln HS, Math)
-  - Email: math.teacher@lincoln.edu
+  - Email: <math.teacher@lincoln.edu>
   - User ID: 20000000-0000-0000-0000-000000000021
   - School ID: 10000000-0000-0000-0000-000000000001
 
 - **Dr. Lisa Anderson** (Lincoln HS, Science)
-  - Email: science.teacher@lincoln.edu
+  - Email: <science.teacher@lincoln.edu>
   - User ID: 20000000-0000-0000-0000-000000000022
 
 ### Administrators
+
 - **Sarah Johnson** (Lincoln HS School Admin)
-  - Email: admin@lincoln.edu
+  - Email: <admin@lincoln.edu>
   - User ID: 20000000-0000-0000-0000-000000000011
   - School ID: 10000000-0000-0000-0000-000000000001
 
 - **System Administrator**
-  - Email: admin@edumind.ai
+  - Email: <admin@edumind.ai>
   - User ID: 20000000-0000-0000-0000-000000000001
 
 ## Data Loading Scripts
 
 ### 1. seed-demo-data-v2.sql
+
 **Purpose**: Load base entity data
 **Content**:
+
 - Schools with contact information
 - All 34 users (system admin, school admins, teachers, students)
 - Student records with gamification data (XP, streaks, subscription tiers)
@@ -126,19 +136,23 @@ All tables created via EF Core migrations in the `public` schema:
 - Assessment templates
 
 **Usage**:
+
 ```bash
 PGPASSWORD=edumind_dev_password psql -h localhost -U edumind_user -d edumind_dev -f scripts/seed-demo-data-v2.sql
 ```
 
 ### 2. add-questions-and-responses.sql
+
 **Purpose**: Generate questions and student activity data
 **Content**:
+
 - Questions for all assessments with realistic content
 - Student assessment attempts with varied scores
 - Student responses with timing and feedback
 - Automatic question statistics updates
 
 **Features**:
+
 - Uses PostgreSQL procedural code (DO blocks)
 - Generates UUIDs with `gen_random_uuid()`
 - Creates realistic score distributions
@@ -146,6 +160,7 @@ PGPASSWORD=edumind_dev_password psql -h localhost -U edumind_user -d edumind_dev
 - Subject-specific question content
 
 **Usage**:
+
 ```bash
 PGPASSWORD=edumind_dev_password psql -h localhost -U edumind_user -d edumind_dev -f scripts/add-questions-and-responses.sql
 ```
@@ -153,12 +168,14 @@ PGPASSWORD=edumind_dev_password psql -h localhost -U edumind_user -d edumind_dev
 ## Setup Instructions
 
 ### Prerequisites
+
 1. PostgreSQL running (localhost:5432)
 2. Database `edumind_dev` created
 3. User `edumind_user` with password `edumind_dev_password`
 4. EF Core migrations applied
 
 ### Quick Setup
+
 ```bash
 # 1. Apply EF Core migrations (creates tables)
 cd /workspaces/edumind-ai
@@ -182,6 +199,7 @@ PGPASSWORD=edumind_dev_password psql -h localhost -U edumind_user -d edumind_dev
 ```
 
 ### Expected Output
+
 ```
          ?column?         
 -------------------------
@@ -195,6 +213,7 @@ PGPASSWORD=edumind_dev_password psql -h localhost -U edumind_user -d edumind_dev
 ## API Testing
 
 ### Start the API
+
 ```bash
 dotnet run --project src/AcademicAssessment.Web/AcademicAssessment.Web.csproj
 ```
@@ -204,37 +223,44 @@ The API will start on port 5103 (or check with `netstat -tlnp | grep LISTEN`).
 ### Test Endpoints
 
 #### Performance Summary
+
 ```bash
 curl "http://127.0.0.1:5103/api/analytics/students/40000000-0000-0000-0000-000000000001/performance-summary"
 ```
 
 #### Subject Performance
+
 ```bash
 # Mathematics (Subject = 0)
 curl "http://127.0.0.1:5103/api/analytics/students/40000000-0000-0000-0000-000000000001/subject-performance?subject=0"
 ```
 
 #### Learning Objectives
+
 ```bash
 curl "http://127.0.0.1:5103/api/analytics/students/40000000-0000-0000-0000-000000000001/learning-objectives"
 ```
 
 #### Ability Estimates (IRT)
+
 ```bash
 curl "http://127.0.0.1:5103/api/analytics/students/40000000-0000-0000-0000-000000000001/ability-estimates"
 ```
 
 #### Improvement Areas
+
 ```bash
 curl "http://127.0.0.1:5103/api/analytics/students/40000000-0000-0000-0000-000000000001/improvement-areas"
 ```
 
 #### Progress Timeline
+
 ```bash
 curl "http://127.0.0.1:5103/api/analytics/students/40000000-0000-0000-0000-000000000001/progress-timeline"
 ```
 
 #### Peer Comparison
+
 ```bash
 curl "http://127.0.0.1:5103/api/analytics/students/40000000-0000-0000-0000-000000000001/peer-comparison"
 ```
@@ -242,6 +268,7 @@ curl "http://127.0.0.1:5103/api/analytics/students/40000000-0000-0000-0000-00000
 ## Data Characteristics
 
 ### Realistic Patterns
+
 - **Score Distribution**: 60-95% (simulates real student performance)
 - **Time Management**: Students use 60-100% of allocated time
 - **Attempt Frequency**: 3-5 assessments per student over 30 days
@@ -249,13 +276,17 @@ curl "http://127.0.0.1:5103/api/analytics/students/40000000-0000-0000-0000-00000
 - **Answer Patterns**: Correct answers match target scores
 
 ### IRT (Item Response Theory) Support
+
 All questions include:
+
 - **Discrimination** (a): How well the question differentiates ability levels (0.5-2.0)
 - **Difficulty** (b): Question difficulty on ability scale (-2.0 to 2.0)
 - **Guessing** (c): Probability of guessing correctly (0.2-0.3)
 
 ### Gamification Data
+
 Students include:
+
 - XP points (90-400 based on grade/performance)
 - Daily streaks (1-20 days)
 - Subscription tiers (Basic=1, Premium=2)
@@ -264,20 +295,25 @@ Students include:
 ## Troubleshooting
 
 ### No Tables Found
+
 **Error**: `relation "schools" does not exist`
 **Solution**: Apply EF Core migrations first
+
 ```bash
 dotnet ef database update --project src/AcademicAssessment.Infrastructure
 ```
 
 ### No Data Returned
+
 **Check 1**: Verify data exists
+
 ```bash
 PGPASSWORD=edumind_dev_password psql -h localhost -U edumind_user -d edumind_dev \
   -c "SELECT COUNT(*) FROM students;"
 ```
 
 **Check 2**: Verify foreign key relationships
+
 ```bash
 PGPASSWORD=edumind_dev_password psql -h localhost -U edumind_user -d edumind_dev \
   -c "SELECT s.\"Id\", u.\"Email\", COUNT(sa.\"Id\") as assessments
@@ -289,7 +325,9 @@ PGPASSWORD=edumind_dev_password psql -h localhost -U edumind_user -d edumind_dev
 ```
 
 ### API Not Responding
+
 **Check 1**: Verify API is running
+
 ```bash
 ps aux | grep "AcademicAssess"
 netstat -tlnp | grep LISTEN
@@ -298,6 +336,7 @@ netstat -tlnp | grep LISTEN
 **Check 2**: Check API logs in the run-web-api terminal
 
 **Check 3**: Test basic connectivity
+
 ```bash
 curl -v "http://127.0.0.1:5103/" 2>&1 | grep HTTP
 ```
@@ -305,6 +344,7 @@ curl -v "http://127.0.0.1:5103/" 2>&1 | grep HTTP
 ## Next Steps
 
 ### Recommended Testing Order
+
 1. ✅ Verify database tables exist
 2. ✅ Confirm data loaded correctly (all 9 tables populated)
 3. ⏳ Start Web API
@@ -313,7 +353,9 @@ curl -v "http://127.0.0.1:5103/" 2>&1 | grep HTTP
 6. ⏳ Test with real Azure AD B2C tokens (Task 4)
 
 ### Integration with AI Agents
+
 Once demo data is verified working:
+
 1. Test AI agents with real assessment data
 2. Generate adaptive questions based on student performance
 3. Test recommendation engine with actual student histories
@@ -322,22 +364,27 @@ Once demo data is verified working:
 ## Files Created
 
 ### Scripts
+
 - `scripts/seed-demo-data-v2.sql` - Base entity data
 - `scripts/add-questions-and-responses.sql` - Generated content
 
 ### Documentation
+
 - `docs/DEMO.md` - Comprehensive demo guide (800+ lines)
 - `docs/JWT_AUTHENTICATION_TESTING.md` - Auth testing guide
 - `docs/DEMO_DATA_SUMMARY.md` - This file
 
 ### Infrastructure
+
 - `src/AcademicAssessment.Infrastructure/Data/AcademicContextFactory.cs` - EF Core design-time factory
 
 ## Git Commits
+
 - `cd5e46c` - Add EF Core design-time factory and load demo base data
 - `69f5ee1` - Complete demo data: add questions, assessments, and responses
 
 ## Status
+
 ✅ Task 3 (Create end-to-end demo with sample data) - **COMPLETE**
 
 All demo data successfully loaded and ready for testing!
