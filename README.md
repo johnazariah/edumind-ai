@@ -78,15 +78,17 @@ See [RBAC_ARCHITECTURE.md](docs/RBAC_ARCHITECTURE.md) for detailed role definiti
 
 ### Technology Stack
 
-- **.NET 8** - Core framework
+- **.NET 9 with Aspire 9.5.1** - Cloud-native orchestration and observability
 - **ASP.NET Core** - Web APIs
 - **SignalR** - Real-time communication
 - **Entity Framework Core** - Data access with PostgreSQL
-- **Azure OpenAI GPT-4o** - Primary LLM for content generation
+- **OLLAMA (Llama 3.2)** - Free local LLM for development
+- **Azure OpenAI GPT-4o** - Production LLM (optional)
 - **ML.NET** - Adaptive algorithms and predictive analytics
 - **Redis** - Caching and session management
 - **Blazor Server** - Interactive dashboards
 - **xUnit** - Testing framework
+- **OpenTelemetry** - Built-in distributed tracing and metrics
 
 ## 📁 Project Structure
 
@@ -105,10 +107,9 @@ edumind-ai/
 │   ├── AcademicAssessment.Tests.Unit/
 │   ├── AcademicAssessment.Tests.Integration/
 │   └── AcademicAssessment.Tests.Performance/
-├── deployment/
-│   ├── k8s/                                # Kubernetes configs
-│   ├── scripts/                            # Deployment scripts
-│   └── docker-compose.yml
+├── src/
+│   ├── EduMind.AppHost/                   # .NET Aspire orchestration
+│   └── EduMind.ServiceDefaults/           # Shared Aspire configuration
 └── docs/
     ├── CONTEXT.md                          # Project context and overview
     ├── copilot-instructions.md             # Detailed implementation guide
@@ -117,9 +118,29 @@ edumind-ai/
 
 ## 🚀 Getting Started
 
-### Option 1: Using Dev Container (Recommended)
+### Quick Start with .NET Aspire (Recommended)
 
-The fastest way to get started is using our pre-configured development container:
+The fastest way to get started is using .NET Aspire, which orchestrates all services with one command:
+
+```bash
+git clone https://github.com/johnazariah/edumind-ai.git
+cd edumind-ai
+dotnet run --project src/EduMind.AppHost
+```
+
+This automatically starts:
+- PostgreSQL (database)
+- Redis (cache)
+- OLLAMA (free local LLM for development/testing)
+- Web API
+- Dashboard
+- Student App
+
+The Aspire Dashboard opens at `https://localhost:17191` with full observability.
+
+### Option 1: Using Dev Container (Also Recommended)
+
+Alternatively, use our pre-configured development container:
 
 1. **Prerequisites:**
    - Docker Desktop
@@ -142,16 +163,44 @@ The fastest way to get started is using our pre-configured development container
 
 See [.devcontainer/README.md](.devcontainer/README.md) for details.
 
+### LLM Provider Options
+
+EduMind.AI supports multiple LLM providers:
+
+1. **OLLAMA (Default for Development)** - Free, local, privacy-focused
+   - Automatically started by Aspire
+   - Zero API costs
+   - Works offline
+   - Models: llama3.2:3b (2GB) or larger
+
+2. **Azure OpenAI** - Production-grade, cloud-based
+   - Requires Azure subscription
+   - Pay-per-use (~$0.01/evaluation)
+   - Best performance and accuracy
+
+3. **Stub LLM** - Mock service for testing
+   - No AI, exact string matching only
+   - Perfect for CI/CD pipelines
+
+Configure in `appsettings.json`:
+```json
+{
+  "LLM": {
+    "Provider": "Ollama"  // or "AzureOpenAI" or "Stub"
+  }
+}
+```
+
 ### Option 2: Local Installation
 
-If you prefer local setup:
+If you prefer manual setup without Aspire:
 
 ### Prerequisites
 
-- .NET 8 SDK or later
-- PostgreSQL 14+
+- .NET 9 SDK or later
+- PostgreSQL 16+
 - Redis 7+
-- Azure OpenAI API access (or compatible LLM provider)
+- OLLAMA (for free local LLM) or Azure OpenAI API access
 - Visual Studio 2022 or VS Code with C# extension
 
 ### Installation

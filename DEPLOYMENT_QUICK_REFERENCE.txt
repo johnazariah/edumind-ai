@@ -1,250 +1,259 @@
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                                                ┃
-┃  🚀 EDUMIND.AI - AUTOMATED DEPLOYMENT QUICK REFERENCE          ┃
+┃  🚀 EDUMIND.AI - .NET ASPIRE DEPLOYMENT QUICK REFERENCE        ┃
 ┃                                                                ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 WHAT YOU GET
+📋 ABOUT .NET ASPIRE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✅ Infrastructure as Code (Azure Bicep)
-   - Complete Azure resources in one deployment
-   - Environment-specific configurations
-   - Repeatable and version-controlled
+EduMind.AI now uses .NET Aspire 9.5.1 for cloud-native development.
 
-✅ Automated Scripts
-   - Master deployment script (deploy-infrastructure.sh)
-   - Google OAuth setup (setup-google-oauth.sh)
-   - Database migrations
-   - Secrets management
+✅ What Aspire Provides:
+   - Orchestration for local development
+   - Built-in observability (OpenTelemetry)
+   - Service discovery
+   - Health checks and resilience
+   - Simplified cloud deployment via Azure Developer CLI (azd)
 
-✅ CI/CD Pipeline (GitHub Actions)
-   - Automated builds and tests
-   - Azure deployment
-   - Health checks
-   - Integration tests
+✅ What Replaced:
+   - Docker Compose → Aspire orchestration
+   - Manual Bicep templates → azd infrastructure
+   - Custom deployment scripts → azd workflows
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚀 QUICK START (AUTOMATED)
+🚀 QUICK START (LOCAL DEVELOPMENT)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. ONE COMMAND DEPLOYMENT:
+1. RUN THE ENTIRE STACK WITH ONE COMMAND:
 
    cd /workspaces/edumind-ai
-   ./deployment/scripts/deploy-infrastructure.sh dev
+   dotnet run --project src/EduMind.AppHost
 
-2. FOLLOW INTERACTIVE PROMPTS:
+2. WHAT GETS STARTED:
    
-   ✓ Azure authentication
-   ✓ Google OAuth setup
-   ✓ Azure AD B2C creation
-   ✓ Identity provider configuration
-   ✓ User flow setup
-   ✓ App registration
+   ✓ PostgreSQL (port 5432)
+   ✓ Redis (port 6379)
+   ✓ OLLAMA (port 11434)
+   ✓ Web API (dynamic port)
+   ✓ Dashboard (dynamic port)
+   ✓ Student App (dynamic port)
 
-3. SCRIPT HANDLES EVERYTHING ELSE:
+3. ASPIRE DASHBOARD:
 
-   ✓ Deploys all Azure resources
-   ✓ Stores secrets in Key Vault
-   ✓ Runs database migrations
-   ✓ Configures GitHub secrets
-   ✓ Saves configuration
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📦 WHAT GETS DEPLOYED
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Azure Resources (via Bicep):
-  □ App Service Plan (Linux, B1 dev / P1v3 prod)
-  □ Web App (.NET 8.0, HTTPS only)
-  □ PostgreSQL Flexible Server (16)
-  □ Azure Cache for Redis
-  □ Key Vault (for secrets)
-  □ Application Insights
-  □ Log Analytics Workspace
-
-Azure AD B2C Configuration:
-  □ B2C Tenant (edumindai.onmicrosoft.com)
-  □ Google Identity Provider
-  □ User Flow (B2C_1_susi_google)
-  □ App Registration (EduMind.AI API)
-
-Database:
-  □ Schema migrations
-  □ Initial seed data (optional)
-
-GitHub:
-  □ Repository secrets
-  □ CI/CD workflow
-  □ Branch protection
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📁 KEY FILES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Deployment Scripts:
-  deployment/scripts/deploy-infrastructure.sh    # Master script
-  deployment/scripts/setup-google-oauth.sh       # Google OAuth
-  deployment/scripts/setup-azure-auth.sh         # Azure AD (non-B2C)
-
-Infrastructure as Code:
-  deployment/bicep/main.bicep                    # Bicep template
-  deployment/bicep/main.parameters.dev.json      # Dev parameters
-
-CI/CD:
-  .github/workflows/deploy-azure.yml             # Deployment pipeline
-  .github/workflows/ci.yml                       # Build & test
-
-Documentation:
-  deployment/README.md                           # Full deployment guide
-  docs/AZURE_AD_B2C_SETUP_GUIDE.md              # B2C manual setup
-  docs/AUTHENTICATION_SETUP.md                   # Auth providers
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⏱️  TIME ESTIMATES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Automated deployment:           30-45 minutes
-  - Google OAuth setup:         5-10 minutes (interactive)
-  - Azure AD B2C setup:         10-15 minutes (interactive)
-  - Azure resources deploy:     10-15 minutes (automated)
-  - Configuration & testing:    5-10 minutes (automated)
-
-Manual deployment:              60-90 minutes
-  (Without automation scripts)
-
-CI/CD pipeline run:             8-12 minutes
-  - Build & test:              3-5 minutes
-  - Deploy:                    3-5 minutes
-  - Integration tests:         2-4 minutes
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 COMMON COMMANDS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Deploy to different environments:
-  ./deployment/scripts/deploy-infrastructure.sh dev
-  ./deployment/scripts/deploy-infrastructure.sh staging
-  ./deployment/scripts/deploy-infrastructure.sh prod
-
-Deploy only Azure resources (skip B2C):
-  az deployment group create \
-    --resource-group rg-edumind-dev \
-    --template-file deployment/bicep/main.bicep \
-    --parameters @deployment/bicep/main.parameters.dev.json
-
-Run database migrations:
-  dotnet ef database update \
-    --project src/AcademicAssessment.Infrastructure \
-    --startup-project src/AcademicAssessment.Web \
-    --connection "<connection-string>"
-
-Trigger CI/CD manually:
-  gh workflow run deploy-azure.yml \
-    --ref main \
-    --field environment=dev
-
-View deployment logs:
-  az deployment group show \
-    --name <deployment-name> \
-    --resource-group <resource-group> \
-    --query properties
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔒 SECURITY FEATURES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Secrets Management:
-  ✓ All secrets in Azure Key Vault
-  ✓ Managed Identity for Key Vault access
-  ✓ No secrets in code or config files
-  ✓ User Secrets for local development
-
-Network Security:
-  ✓ HTTPS only (TLS 1.2 minimum)
-  ✓ PostgreSQL SSL required
-  ✓ Redis SSL only
-  ✓ Firewall rules configured
-
-Authentication:
-  ✓ Azure AD B2C with Google OAuth
-  ✓ JWT token validation
-  ✓ Role-based access control
-  ✓ Secure token storage
+   Opens automatically at https://localhost:17191
+   
+   - View all services
+   - Real-time logs
+   - Distributed tracing
+   - Metrics and health
+   - Environment variables
+   - Console access
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Health check:
-  curl https://edumind-dev-api.azurewebsites.net/health
+1. UNIT TESTS:
 
-Test authentication:
-  curl -H "Authorization: Bearer <token>" \
-    https://edumind-dev-api.azurewebsites.net/api/v1/students
+   dotnet test tests/AcademicAssessment.Tests.Unit
 
-Run integration tests:
-  dotnet test tests/AcademicAssessment.Tests.Integration
+2. INTEGRATION TESTS:
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-❓ TROUBLESHOOTING
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   # Start Aspire stack first
+   dotnet run --project src/EduMind.AppHost &
+   
+   # Wait for services to be ready, then run tests
+   dotnet test tests/AcademicAssessment.Tests.Integration
 
-Issue: "Azure CLI not authenticated"
-→ az login
+3. PERFORMANCE TESTS:
 
-Issue: "Bicep deployment failed"
-→ az deployment group show --name <name> --resource-group <rg> \
-    --query properties.error
+   dotnet test tests/AcademicAssessment.Tests.Performance
 
-Issue: "Database migration failed"
-→ Check PostgreSQL firewall rules
-→ az postgres flexible-server firewall-rule create ...
+4. ALL TESTS WITH COVERAGE:
 
-Issue: "Google OAuth redirect URI mismatch"
-→ Ensure EXACT match (no trailing slash):
-  https://edumindai.b2clogin.com/edumindai.onmicrosoft.com/oauth2/authresp
+   dotnet test --collect:"XPlat Code Coverage"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📚 DOCUMENTATION
+☁️ AZURE DEPLOYMENT (RECOMMENDED)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Full guides:
-  deployment/README.md                    # Complete deployment guide
-  docs/AZURE_AD_B2C_SETUP_GUIDE.md       # Manual B2C setup
-  docs/AUTHENTICATION_SETUP.md            # Auth providers
-  docs/PR_INTEGRATION_TESTS.md            # CI/CD testing
-  docs/OBSERVABILITY_STRATEGY.md          # Monitoring
+.NET Aspire integrates with Azure Developer CLI (azd) for seamless
+cloud deployment.
 
-Azure resources:
-  Azure Bicep: https://docs.microsoft.com/azure/bicep/
-  Azure AD B2C: https://docs.microsoft.com/azure/active-directory-b2c/
-  Google OAuth: https://developers.google.com/identity/protocols/oauth2
+1. INSTALL AZURE DEVELOPER CLI:
+
+   # Linux
+   curl -fsSL https://aka.ms/install-azd.sh | bash
+
+   # Windows
+   winget install microsoft.azd
+
+   # macOS
+   brew install azd
+
+2. INITIALIZE AZD PROJECT:
+
+   cd /workspaces/edumind-ai
+   azd init
+
+   When prompted:
+   - Environment name: dev (or staging/prod)
+   - Azure subscription: Select your subscription
+   - Azure location: Select region (e.g., eastus)
+
+3. DEPLOY TO AZURE:
+
+   azd up
+
+   This will:
+   ✓ Provision Azure resources (Container Apps, PostgreSQL, Redis, etc.)
+   ✓ Build and containerize all services
+   ✓ Deploy to Azure Container Apps
+   ✓ Configure service connections
+   ✓ Set up monitoring and logging
+
+4. SUBSEQUENT DEPLOYMENTS:
+
+   # Deploy code changes only
+   azd deploy
+
+   # Update infrastructure and code
+   azd up
+
+5. VIEW DEPLOYMENT:
+
+   # Open Azure portal
+   azd show
+
+   # View environment variables
+   azd env get-values
+
+   # View logs
+   azd monitor
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ POST-DEPLOYMENT CHECKLIST
+🔧 CONFIGURATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-After running deployment script:
-  □ Verify all resources in Azure Portal
-  □ Test health endpoint
-  □ Test authentication flow (Google login)
-  □ Run integration tests
-  □ Configure monitoring alerts
-  □ Review security settings
-  □ Update B2C app redirect URIs (add production URL)
-  □ Test CI/CD pipeline
-  □ Document any custom configurations
-  □ Plan backup and DR strategy
+1. ASPIRE CONFIGURATION:
+
+   - AppHost: src/EduMind.AppHost/Program.cs
+   - Service Defaults: src/EduMind.ServiceDefaults/Extensions.cs
+
+2. APPLICATION SETTINGS:
+
+   - Web API: src/AcademicAssessment.Web/appsettings.json
+   - Dashboard: src/AcademicAssessment.Dashboard/appsettings.json
+   - Student App: src/AcademicAssessment.StudentApp/appsettings.json
+
+3. ENVIRONMENT VARIABLES:
+
+   Set via Aspire AppHost or Azure App Configuration:
+   
+   - ConnectionStrings__DefaultConnection (auto-configured by Aspire)
+   - ConnectionStrings__RedisConnection (auto-configured by Aspire)
+   - Ollama__BaseUrl (auto-configured by Aspire)
+   - LLM__Provider (Stub, Ollama, or AzureOpenAI)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 MONITORING & OBSERVABILITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. LOCAL DEVELOPMENT:
+
+   Aspire Dashboard at https://localhost:17191
+   
+   - Live logs from all services
+   - Distributed tracing (OpenTelemetry)
+   - Metrics and counters
+   - Health checks
+   - Resource utilization
+
+2. AZURE PRODUCTION:
+
+   Application Insights (auto-configured by azd)
+   
+   - Request/response telemetry
+   - Exception tracking
+   - Performance monitoring
+   - Custom metrics
+   - Log aggregation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 SECRETS MANAGEMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. LOCAL DEVELOPMENT:
+
+   Use .NET User Secrets:
+   
+   cd src/AcademicAssessment.Web
+   dotnet user-secrets set "ConnectionStrings:DefaultConnection" "your-connection-string"
+
+2. AZURE DEPLOYMENT:
+
+   Azure Key Vault (auto-configured by azd)
+   
+   azd env set SECRET_NAME "secret-value"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🆘 TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. ASPIRE NOT STARTING:
+
+   # Check .NET version
+   dotnet --version  # Should be 9.0.x
+
+   # Restore workloads
+   dotnet workload restore
+
+2. SERVICES NOT CONNECTING:
+
+   # Check Aspire Dashboard for service status
+   # View logs for connection errors
+   # Verify service discovery is working
+
+3. DATABASE MIGRATIONS:
+
+   # Run migrations manually if needed
+   dotnet ef database update \
+     --project src/AcademicAssessment.Infrastructure \
+     --startup-project src/AcademicAssessment.Web
+
+4. AZURE DEPLOYMENT ISSUES:
+
+   # Check deployment logs
+   azd monitor --logs
+
+   # Re-provision infrastructure
+   azd down
+   azd up
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 ADDITIONAL RESOURCES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- .NET Aspire Docs: https://learn.microsoft.com/dotnet/aspire/
+- Azure Developer CLI: https://learn.microsoft.com/azure/developer/azure-developer-cli/
+- Migration Log: docs/ASPIRE_MIGRATION_LOG.md
+- Architecture: docs/ARCHITECTURE_SUMMARY.md
+- Task Journal: docs/TASK_JOURNAL.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ KEY BENEFITS OF ASPIRE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Simplified local development (one command to start everything)
+✓ Built-in observability (no manual OpenTelemetry setup)
+✓ Consistent dev/prod experience
+✓ Easy cloud deployment (azd up)
+✓ Service discovery and health checks
+✓ Less boilerplate and configuration
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🎯 READY TO DEPLOY?
-
-  cd /workspaces/edumind-ai
-  ./deployment/scripts/deploy-infrastructure.sh dev
-
-🎉 That's all you need!
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Last Updated: October 16, 2025
+Version: 2.0 (Aspire-based)

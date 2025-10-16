@@ -12,7 +12,7 @@ on:
         - cron: "0 2 * * *" # Run at 2 AM UTC daily
 
 env:
-    DOTNET_VERSION: "8.0.x"
+    DOTNET_VERSION: "9.0.x"
     OLLAMA_MODEL: ${{ github.event.inputs.model || 'llama3.2:3b' }}
 
 jobs:
@@ -28,6 +28,9 @@ jobs:
               uses: actions/setup-dotnet@v4
               with:
                   dotnet-version: ${{ env.DOTNET_VERSION }}
+
+            - name: Install .NET Aspire workload
+              run: dotnet workload install aspire
 
             - name: Install OLLAMA
               run: |
@@ -51,9 +54,21 @@ jobs:
                   curl -s http://localhost:11434/api/tags || (echo "OLLAMA not responding" && exit 1)
                   echo "OLLAMA is responding"
 
-            - name: Setup test infrastructure
+            - name: Setup test infrastructure (PostgreSQL and Redis)
               run: |
-                  docker-compose up -d postgres redis
+                  # Use GitHub Actions service containers instead of docker-compose
+                  # Services are defined at the job level for Aspire compatibility
+                  docker run -d --name postgres-test \
+                    -e POSTGRES_DB=edumind_test \
+                    -e POSTGRES_USER=edumind_user \
+                    -e POSTGRES_PASSWORD=edumind_test_password \
+                    -p 5432:5432 \
+                    postgres:16-alpine
+                  
+                  docker run -d --name redis-test \
+                    -p 6379:6379 \
+                    redis:7-alpine
+                  
                   sleep 10  # Wait for services to be ready
                   echo "Test infrastructure ready"
 
@@ -65,7 +80,7 @@ jobs:
 
             - name: Apply database migrations
               env:
-                  ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_dev;Username=edumind_user;Password=edumind_dev_password"
+                  ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_user;Password=edumind_test_password"
               run: |
                   dotnet ef database update \
                     --project src/AcademicAssessment.Infrastructure \
@@ -74,11 +89,12 @@ jobs:
 
             - name: Run integration tests with OLLAMA
               env:
-                  LLM_PROVIDER: Ollama # Use real OLLAMA service
-                  OLLAMA__BaseUrl: "http://localhost:11434"
-                  OLLAMA__Model: ${{ env.OLLAMA_MODEL }}
-                  ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_dev;Username=edumind_user;Password=edumind_dev_password"
+                  LLM__Provider: Ollama # Use real OLLAMA service
+                  Ollama__BaseUrl: "http://localhost:11434"
+                  Ollama__ModelName: ${{ env.OLLAMA_MODEL }}
+                  ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_user;Password=edumind_test_password"
                   ConnectionStrings__RedisConnection: "localhost:6379"
+                  ASPNETCORE_ENVIRONMENT: Testing
               run: |
                   dotnet test tests/AcademicAssessment.Tests.Integration \
                     --configuration Release \
@@ -120,7 +136,8 @@ jobs:
             - name: Cleanup
               if: always()
               run: |
-                  docker-compose down
+                  docker stop postgres-test redis-test || true
+                  docker rm postgres-test redis-test || true
                   pkill -f ollama || true
 
             - name: Comment on PR with OLLAMA results

@@ -7,7 +7,7 @@ on:
     branches: [main, develop]
 
 env:
-  DOTNET_VERSION: "9.0.x"
+  DOTNET_VERSION: "8.0.x"
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
@@ -18,32 +18,6 @@ jobs:
       contents: read
       checks: write
       pull-requests: write
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: edumind_test
-          POSTGRES_USER: edumind_test_user
-          POSTGRES_PASSWORD: edumind_test_password
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U edumind_test_user -d edumind_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -58,9 +32,6 @@ jobs:
 
       - name: Display .NET info
         run: dotnet --info
-
-      - name: Install .NET Aspire workload
-        run: dotnet workload install aspire
 
       - name: Restore dependencies
         run: dotnet restore EduMind.AI.sln
@@ -86,13 +57,27 @@ jobs:
             --verbosity normal \
             --logger "trx;LogFileName=perf-test-results.trx"
 
-      - name: Verify test services are ready
+      - name: Setup test infrastructure for integration tests
         run: |
-          echo "Verifying PostgreSQL is ready..."
-          pg_isready -h localhost -p 5432 -U edumind_test_user -d edumind_test
-          
-          echo "Verifying Redis is ready..."
-          redis-cli -h localhost -p 6379 ping
+          echo "Starting PostgreSQL and Redis for integration tests..."
+          docker-compose -f docker-compose.test.yml up -d
+
+          echo "Waiting for services to be healthy..."
+          docker-compose -f docker-compose.test.yml ps
+
+          # Wait for health checks to pass
+          for i in {1..30}; do
+            if docker-compose -f docker-compose.test.yml ps | grep -q "healthy"; then
+              echo "Services are healthy!"
+              break
+            fi
+            echo "Waiting for services... ($i/30)"
+            sleep 2
+          done
+
+          # Verify services are responding
+          docker-compose -f docker-compose.test.yml exec -T postgres-test pg_isready -U edumind_test_user -d edumind_test
+          docker-compose -f docker-compose.test.yml exec -T redis-test redis-cli ping
 
       - name: Apply database migrations
         env:
@@ -103,9 +88,9 @@ jobs:
             --startup-project src/AcademicAssessment.Web \
             --context AcademicContext
 
-      - name: Run integration tests
+      - name: Run integration tests (all PRs and pushes)
         env:
-          LLM__Provider: Stub # Use StubLLMService instead of OLLAMA in CI
+          LLM_PROVIDER: Stub # Use StubLLMService instead of OLLAMA in CI
           ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_test_user;Password=edumind_test_password"
           ConnectionStrings__RedisConnection: "localhost:6379"
           ASPNETCORE_ENVIRONMENT: Testing
@@ -116,6 +101,29 @@ jobs:
             --verbosity normal \
             --logger "trx;LogFileName=integration-test-results.trx" \
             --logger "console;verbosity=detailed"
+
+      - name: Upload service logs on failure
+        if: failure()
+        run: |
+          echo "=== PostgreSQL Logs ==="
+          docker-compose -f docker-compose.test.yml logs postgres-test || true
+          echo "=== Redis Logs ==="
+          docker-compose -f docker-compose.test.yml logs redis-test || true
+
+      - name: Cleanup test infrastructure
+        run: |
+          docker-compose -f docker-compose.test.yml logs postgres-test > postgres-test-logs.txt || true
+          docker-compose -f docker-compose.test.yml logs redis-test > redis-test-logs.txt || true
+          docker-compose -f docker-compose.test.yml down -v --remove-orphans
+        if: always()
+
+      - name: Upload service logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: service-logs
+          path: "*-test-logs.txt"
+          retention-days: 7
 
       - name: Generate coverage report
         uses: danielpalme/ReportGenerator-GitHub-Action@5.2.0
@@ -170,9 +178,6 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Install .NET Aspire workload
-        run: dotnet workload install aspire
-
       - name: Restore dependencies
         run: dotnet restore EduMind.AI.sln
 
@@ -198,9 +203,6 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Install .NET Aspire workload
-        run: dotnet workload install aspire
-
       - name: Restore dependencies
         run: dotnet restore EduMind.AI.sln
 
@@ -209,5 +211,5 @@ jobs:
 
       - name: Run unit tests only (matrix build)
         env:
-          LLM__Provider: Stub # Use stub for cross-platform testing
+          LLM_PROVIDER: Stub # Use stub for cross-platform testing
         run: dotnet test tests/AcademicAssessment.Tests.Unit --configuration Release --no-build --verbosity normal

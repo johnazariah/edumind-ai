@@ -5,6 +5,52 @@
 
 ---
 
+## 🎯 Current Status & Next Steps (Updated: October 16, 2025 - .NET Aspire Migration Complete)
+
+### ✅ Latest Milestone: .NET Aspire Migration & Legacy Cleanup (October 16, 2025)
+
+**Summary**: Successfully cleaned up all legacy deployment artifacts and updated CI/CD pipelines for .NET Aspire 9.5.1 architecture.
+
+**Completed Work**:
+
+1. **Removed Legacy Deployment Infrastructure**:
+   - ❌ Deleted `docker-compose.yml` and `docker-compose.test.yml` (replaced by Aspire orchestration)
+   - ❌ Removed entire `deployment/` folder (bicep, k8s, docker, scripts)
+   - ✅ Updated `DEPLOYMENT_QUICK_REFERENCE.txt` with Aspire-based instructions
+
+2. **Updated CI/CD Pipelines**:
+   - ✅ Updated `.github/workflows/ci.yml` for .NET 9 and Aspire
+   - ✅ Replaced docker-compose with GitHub Actions service containers
+   - ✅ Added `dotnet workload install aspire` to all workflows
+   - ✅ Updated OLLAMA integration workflow for .NET 9
+   - ✅ Created new `.github/workflows/deploy-azure-azd.yml` using Azure Developer CLI
+   - ❌ Disabled legacy `.github/workflows/deploy-azure-legacy.yml.disabled`
+
+3. **Documentation Updates**:
+   - ✅ Updated README.md with Aspire quick start instructions
+   - ✅ Added LLM provider options section (OLLAMA, Azure OpenAI, Stub)
+   - ✅ Updated technology stack to .NET 9 with Aspire 9.5.1
+   - ✅ Clarified OLLAMA as free local LLM for development/testing
+
+**Key Decisions**:
+
+1. **Kept OLLAMA Integration**: OLLAMA remains critical for zero-cost development and testing
+2. **Aspire for Orchestration**: All services (PostgreSQL, Redis, OLLAMA, apps) managed by Aspire
+3. **Azure Developer CLI**: New deployment uses `azd` instead of manual Bicep/scripts
+4. **Simplified CI**: GitHub Actions service containers replace docker-compose for tests
+
+**Files Changed**:
+- Deleted: `docker-compose.yml`, `docker-compose.test.yml`, `deployment/` folder
+- Updated: `.github/workflows/ci.yml`, `.github/workflows/ollama-integration.yml`
+- Created: `.github/workflows/deploy-azure-azd.yml`, updated `DEPLOYMENT_QUICK_REFERENCE.txt`
+- Modified: `README.md`, `docs/TASK_JOURNAL.md`
+
+**Build Status**: ✅ All configurations updated for .NET 9 and Aspire
+
+**Migration Status**: Complete - System now fully Aspire-based
+
+---
+
 ## 🎯 Current Status & Next Steps (Updated: October 15, 2025 - Phase 3 Complete)
 
 ### ✅ What's Working Now
