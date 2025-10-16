@@ -101,6 +101,10 @@ jobs:
                   echo "Verifying Redis is ready..."
                   docker exec $(docker ps -qf "ancestor=redis:7-alpine") redis-cli ping
 
+            - name: Install EF Core tools
+              if: inputs.use-github-services
+              run: dotnet tool install --global dotnet-ef
+
             - name: Apply database migrations
               if: inputs.use-github-services
               env:

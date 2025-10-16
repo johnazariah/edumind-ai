@@ -95,6 +95,9 @@ jobs:
           # Test Redis with docker exec instead of redis-cli (not installed by default)
           docker exec $(docker ps -qf "ancestor=redis:7-alpine") redis-cli ping
 
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef
+
       - name: Apply database migrations
         env:
           ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_test_user;Password=edumind_test_password"
