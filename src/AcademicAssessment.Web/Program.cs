@@ -165,11 +165,12 @@ try
     // CONTROLLERS & SIGNALR
     // ============================================================
     builder.Services.AddControllers()
-        .AddJsonOptions(options =>
+        .AddNewtonsoftJson(options =>
         {
-            // Workaround for .NET 9 test compatibility issue with PipeWriter.UnflushedBytes
+            // Use Newtonsoft.Json to workaround .NET 9 test compatibility issue with PipeWriter.UnflushedBytes
             // See: https://github.com/dotnet/aspnetcore/issues/52187
-            options.JsonSerializerOptions.DefaultBufferSize = 4096;
+            options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+            options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
         });
     builder.Services.AddSignalR();
 

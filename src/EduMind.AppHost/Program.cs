@@ -17,6 +17,8 @@ var ollama = builder.AddContainer("ollama", "ollama/ollama")
 
 // Add the Web API (primary backend)
 var webApi = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
+    .WithHttpsEndpoint(port: 5001, targetPort: 8080, name: "webapi-https")
+    .WithHttpEndpoint(port: 5000, targetPort: 8080, name: "webapi-http")
     .WithReference(edumindDb)
     .WithReference(redis)
     .WithEnvironment("OLLAMA__BaseUrl", ollama.GetEndpoint("ollama"))
