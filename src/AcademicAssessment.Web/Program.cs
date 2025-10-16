@@ -164,7 +164,13 @@ try
     // ============================================================
     // CONTROLLERS & SIGNALR
     // ============================================================
-    builder.Services.AddControllers();
+    builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            // Workaround for .NET 9 test compatibility issue with PipeWriter.UnflushedBytes
+            // See: https://github.com/dotnet/aspnetcore/issues/52187
+            options.JsonSerializerOptions.DefaultBufferSize = 4096;
+        });
     builder.Services.AddSignalR();
 
     // ============================================================

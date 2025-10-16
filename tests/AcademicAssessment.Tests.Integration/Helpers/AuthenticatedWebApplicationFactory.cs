@@ -71,6 +71,13 @@ public class AuthenticatedWebApplicationFactory<TProgram> : WebApplicationFactor
                 };
             });
 
+            // Workaround for .NET 9 PipeWriter.UnflushedBytes issue in test host
+            // Configure JSON serialization to use synchronous writes
+            services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
+            {
+                options.JsonSerializerOptions.DefaultBufferSize = 1; // Force synchronous serialization
+            });
+
             // Build the service provider and seed the database
             var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();
