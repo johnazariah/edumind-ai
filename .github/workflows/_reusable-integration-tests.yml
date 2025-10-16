@@ -107,13 +107,12 @@ jobs:
 
             - name: Apply database migrations
               if: inputs.use-github-services
-              env:
-                  ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_test_user;Password=edumind_test_password"
               run: |
                   dotnet ef database update \
                     --project src/AcademicAssessment.Infrastructure \
                     --startup-project src/AcademicAssessment.Web \
-                    --context AcademicContext
+                    --context AcademicContext \
+                    --connection "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_test_user;Password=edumind_test_password"
 
             - name: Run integration tests
               env:
