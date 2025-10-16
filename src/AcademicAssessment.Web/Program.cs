@@ -137,9 +137,25 @@ try
     }
     else
     {
-        // Development: No authentication required (using stub TenantContext)
-        builder.Services.AddAuthentication();
-        builder.Services.AddAuthorization();
+        // Development: Test JWT authentication with the same policies as production
+        builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer();
+
+        builder.Services.AddAuthorization(options =>
+        {
+            // Same policies as production for consistent testing
+            options.AddPolicy("StudentPolicy", policy => policy.RequireRole("Student"));
+            options.AddPolicy("TeacherPolicy", policy => policy.RequireRole("Teacher"));
+            options.AddPolicy("SchoolAdminPolicy", policy => policy.RequireRole("SchoolAdmin"));
+            options.AddPolicy("CourseAdminPolicy", policy => policy.RequireRole("CourseAdmin"));
+            options.AddPolicy("BusinessAdminPolicy", policy => policy.RequireRole("BusinessAdmin"));
+            options.AddPolicy("SystemAdminPolicy", policy => policy.RequireRole("SystemAdmin"));
+
+            // Combined policies
+            options.AddPolicy("AdminPolicy", policy => policy.RequireRole("SchoolAdmin", "BusinessAdmin", "SystemAdmin"));
+            options.AddPolicy("EducatorPolicy", policy => policy.RequireRole("Teacher", "SchoolAdmin", "CourseAdmin"));
+            options.AddPolicy("AllUsersPolicy", policy => policy.RequireAuthenticatedUser());
+        });
     }
 
     // HTTP Context Accessor for TenantContext
@@ -419,9 +435,9 @@ try
     app.UseHttpsRedirection();
     app.UseRouting();
 
-    // Authentication & Authorization (to be configured later)
-    // app.UseAuthentication();
-    // app.UseAuthorization();
+    // Authentication & Authorization
+    app.UseAuthentication();
+    app.UseAuthorization();
 
     // ============================================================
     // HEALTH CHECK ENDPOINTS
