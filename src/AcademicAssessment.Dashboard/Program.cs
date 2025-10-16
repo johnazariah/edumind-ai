@@ -27,4 +27,7 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+// Map Aspire default endpoints (health checks, etc.)
+app.MapDefaultEndpoints();
+
 app.Run();

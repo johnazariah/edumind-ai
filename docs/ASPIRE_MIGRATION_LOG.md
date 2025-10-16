@@ -15,11 +15,13 @@ Successfully upgraded EduMind.AI from .NET 8 with manual infrastructure to .NET 
 **Duration:** ~2 hours
 
 #### 1. Installed Latest Versions
+
 - **.NET SDK:** Upgraded from 8.0.413 → 9.0.306
 - **Aspire:** Upgraded from 8.2.2 → 9.5.1 (latest stable)
 - **OpenTelemetry:** Upgraded from 1.9.0 → 1.10.0
 
 #### 2. Created Aspire Projects
+
 ```bash
 # New projects added to solution:
 src/EduMind.AppHost/              # Orchestration host
@@ -27,6 +29,7 @@ src/EduMind.ServiceDefaults/      # Shared configuration
 ```
 
 **EduMind.AppHost:**
+
 - Aspire.Hosting.AppHost 9.5.1
 - Aspire.Hosting.PostgreSQL 9.5.1  
 - Aspire.Hosting.Redis 9.5.1
@@ -35,6 +38,7 @@ src/EduMind.ServiceDefaults/      # Shared configuration
 - References Web API, Dashboard, StudentApp
 
 **EduMind.ServiceDefaults:**
+
 - Built-in OpenTelemetry (tracing, metrics, logging)
 - Service discovery
 - HTTP resilience
@@ -42,11 +46,13 @@ src/EduMind.ServiceDefaults/      # Shared configuration
 - Shared by all services
 
 #### 3. Updated All Projects
+
 - **Target Framework:** All projects now target `net9.0`
 - **Directory.Build.props:** Updated to net9.0 and latest packages
 - **Version Bump:** 0.1.0 → 0.2.0 (Aspire milestone)
 
 **Projects Updated:**
+
 - AcademicAssessment.Core
 - AcademicAssessment.Infrastructure
 - AcademicAssessment.Agents
@@ -58,13 +64,17 @@ src/EduMind.ServiceDefaults/      # Shared configuration
 - All test projects
 
 #### 4. Added ServiceDefaults Integration
+
 Added `builder.AddServiceDefaults()` to:
+
 - `AcademicAssessment.Web/Program.cs` ✅
 - `AcademicAssessment.Dashboard/Program.cs` (pending)
 - `AcademicAssessment.StudentApp/Program.cs` (pending)
 
 #### 5. Cleaned Up Package Conflicts
+
 **Removed duplicate packages from Web project:**
+
 - OpenTelemetry.Exporter.Console 1.9.0
 - OpenTelemetry.Exporter.Prometheus.AspNetCore 1.9.0-beta.2
 - OpenTelemetry.Extensions.Hosting 1.9.0
@@ -75,12 +85,15 @@ Added `builder.AddServiceDefaults()` to:
 *These are now provided by ServiceDefaults with version 1.10.0*
 
 **Updated packages:**
+
 - Microsoft.Identity.Web: 3.3.0 → 3.6.1
 - Microsoft.Extensions.Logging.Abstractions: 8.0.2 → 9.0.9
 - System.IdentityModel.Tokens.Jwt: 8.1.2 → 8.3.1
 
 #### 6. Build Status
+
 ✅ **Build Succeeded!**
+
 - 0 errors
 - 7 warnings (pre-existing, not Aspire-related)
   - 2x Microsoft.Identity.Web vulnerability (NU1902) - known issue, will be fixed in next release
@@ -135,29 +148,34 @@ builder.Build().Run();
 ## Benefits Already Realized
 
 ### 1. **Simplified Package Management**
+
 - **Before:** 6 OpenTelemetry packages × 3 projects = 18 package references
 - **After:** 1 ServiceDefaults reference × 3 projects = 3 references
 - **Savings:** 83% reduction in package references
 
 ### 2. **Version Consistency**
+
 - All services now use identical OpenTelemetry configuration
 - No more version conflicts between projects
 - Centralized updates via ServiceDefaults
 
 ### 3. **Built-in Observability**
+
 - OpenTelemetry configured automatically
 - Aspire dashboard ready at `localhost:15888`
 - Distributed tracing across all services
 - Metrics collection without manual setup
 
 ### 4. **Latest Framework Features**
+
 - .NET 9 performance improvements
 - Aspire 9.5.1 stability and features
 - OpenTelemetry 1.10.0 latest capabilities
 
 ## Next Steps (Phase 2)
 
-### Immediate Tasks:
+### Immediate Tasks
+
 1. **Add ServiceDefaults to Dashboard and StudentApp** (~15 min)
    - Add `builder.AddServiceDefaults()` in Program.cs
    - Test compilation
@@ -176,7 +194,8 @@ builder.Build().Run();
    - Ensure EF migrations run on startup
    - Test with fresh database
 
-### Future Phases:
+### Future Phases
+
 - **Phase 3:** Test local development (1-2 hours)
 - **Phase 4:** Clean up legacy config (1 hour)
 - **Phase 5:** Azure deployment with `azd` (2-3 hours)
@@ -185,6 +204,7 @@ builder.Build().Run();
 ## Comparison: Before vs. After
 
 ### Infrastructure Code
+
 | Component | Before (.NET 8) | After (Aspire) | Reduction |
 |-----------|-----------------|----------------|-----------|
 | docker-compose.yml | 77 lines | 0 lines* | 100% |
@@ -211,6 +231,7 @@ builder.Build().Run();
 ## Technical Decisions
 
 ### Why Aspire 9.5.1?
+
 - **Latest stable release** as of October 2025
 - Significant improvements over 8.2.2
 - Better Azure integration
@@ -218,6 +239,7 @@ builder.Build().Run();
 - Improved OpenTelemetry support
 
 ### Why .NET 9?
+
 - **Latest LTS** (.NET 9 released November 2024)
 - Required for Aspire 9.x
 - Performance improvements
@@ -225,6 +247,7 @@ builder.Build().Run();
 - 3 years of support
 
 ### Why Remove OpenTelemetry Packages?
+
 - **Duplication:** ServiceDefaults provides same functionality
 - **Version conflicts:** Old 1.9.0 vs new 1.10.0
 - **Maintenance:** Centralized in one place
@@ -233,6 +256,7 @@ builder.Build().Run();
 ## Known Issues
 
 ### 1. Microsoft.Identity.Web Vulnerability (NU1902)
+
 **Status:** Known, low priority  
 **Severity:** Moderate  
 **Impact:** GHSA-rpq8-q44m-2rpg vulnerability
@@ -240,12 +264,14 @@ builder.Build().Run();
 **Mitigation:** Not exploitable in our current configuration
 
 ### 2. Nullable Reference Warnings
+
 **Status:** Pre-existing, not Aspire-related  
 **Location:** 4 agent constructors  
 **Impact:** None (warnings only)  
 **Resolution:** Will fix in separate PR
 
 ### 3. Async Method Warning
+
 **Status:** Pre-existing  
 **Location:** StudentProgressOrchestrator.cs line 195  
 **Impact:** None (runs synchronously as intended)  
@@ -254,6 +280,7 @@ builder.Build().Run();
 ## Files Changed
 
 ### New Files (8)
+
 - `docs/ASPIRE_ANALYSIS.md` (analysis document)
 - `global.json` (SDK version pinning)
 - `src/EduMind.AppHost/EduMind.AppHost.csproj`
@@ -264,6 +291,7 @@ builder.Build().Run();
 - `src/EduMind.ServiceDefaults/Extensions.cs`
 
 ### Modified Files (16)
+
 - `Directory.Build.props` (net9.0, latest packages)
 - `EduMind.AI.sln` (added 2 projects)
 - All 8 src project `.csproj` files (net9.0)
@@ -272,6 +300,7 @@ builder.Build().Run();
 - `tests/AcademicAssessment.Tests.Integration/AcademicAssessment.Tests.Integration.csproj` (updated packages)
 
 ### Total Changes
+
 - **24 files changed**
 - **882 insertions(+)**
 - **35 deletions(-)**
@@ -279,6 +308,7 @@ builder.Build().Run();
 ## Validation
 
 ### Build Status
+
 ```bash
 $ dotnet build
 Build succeeded.
@@ -288,19 +318,23 @@ Time Elapsed 00:00:30.57
 ```
 
 ### Test Status
+
 Not yet run - will validate in Phase 3
 
 ### Docker Status
+
 Not yet run - will validate in Phase 3
 
 ## Resources
 
 ### Documentation
+
 - [.NET Aspire Documentation](https://learn.microsoft.com/en-us/dotnet/aspire/)
 - [Aspire 9.0 Release Notes](https://github.com/dotnet/aspire/releases/tag/v9.0.0)
 - [.NET 9 Release Notes](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-9/overview)
 
 ### Internal Docs
+
 - `docs/ASPIRE_ANALYSIS.md` - Full analysis and recommendation
 - `docs/SOLUTION_STRUCTURE.md` - Updated solution structure (pending)
 - `README.md` - Updated getting started (pending)

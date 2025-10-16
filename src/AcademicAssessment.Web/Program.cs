@@ -577,6 +577,9 @@ try
     Log.Information("Environment: {Environment}", app.Environment.EnvironmentName);
     Log.Information("Listening on: {Urls}", string.Join(", ", builder.Configuration.GetSection("Urls").Get<string[]>() ?? new[] { "https://localhost:5001" }));
 
+    // Map Aspire default endpoints (health checks, OpenTelemetry, etc.)
+    app.MapDefaultEndpoints();
+
     app.Run();
 }
 catch (Exception ex)
