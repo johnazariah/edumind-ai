@@ -5,6 +5,7 @@ using AcademicAssessment.Agents.Shared.Models;
 using AcademicAssessment.Core.Enums;
 using AcademicAssessment.Core.Interfaces;
 using AcademicAssessment.Core.Models;
+using AcademicAssessment.Orchestration.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AcademicAssessment.Orchestration;
@@ -1414,9 +1415,337 @@ public class StudentProgressOrchestrator : A2ABaseAgent
 
         return sequence;
     }
+
+    #region Workflow Execution
+
+    /// <summary>
+    /// Executes a multi-step workflow across multiple agents.
+    /// Handles dependencies, parallel execution, and error recovery.
+    /// </summary>
+    public async Task<WorkflowExecution> ExecuteWorkflowAsync(
+        WorkflowDefinition workflow,
+        Dictionary<string, object>? initialContext = null)
+    {
+        var execution = new WorkflowExecution
+        {
+            WorkflowId = workflow.WorkflowId,
+            Status = WorkflowStatus.Running,
+            Context = initialContext ?? new Dictionary<string, object>()
+        };
+
+        Logger.LogInformation(
+            "Starting workflow execution: {WorkflowName} (ID: {WorkflowId}, Steps: {StepCount})",
+            workflow.Name, workflow.WorkflowId, workflow.Steps.Count);
+
+        try
+        {
+            // Initialize step executions
+            foreach (var step in workflow.Steps)
+            {
+                execution.StepExecutions[step.StepId] = new StepExecution
+                {
+                    StepId = step.StepId,
+                    Status = WorkflowStatus.Pending
+                };
+            }
+
+            // Execute steps in dependency order
+            var executedSteps = new HashSet<string>();
+            var startTime = DateTime.UtcNow;
+
+            while (executedSteps.Count < workflow.Steps.Count)
+            {
+                // Check for timeout
+                if (DateTime.UtcNow - startTime > workflow.Timeout)
+                {
+                    throw new TimeoutException(
+                        $"Workflow execution exceeded timeout of {workflow.Timeout.TotalMinutes} minutes");
+                }
+
+                // Find steps ready to execute (dependencies met, not yet executed)
+                var readySteps = workflow.Steps
+                    .Where(step => !executedSteps.Contains(step.StepId))
+                    .Where(step => step.DependsOn.All(dep => executedSteps.Contains(dep)))
+                    .ToList();
+
+                if (readySteps.Count == 0)
+                {
+                    // No progress possible - check for failures
+                    var hasFailedDependencies = workflow.Steps
+                        .Any(step => !executedSteps.Contains(step.StepId) &&
+                                   step.DependsOn.Any(dep =>
+                                       execution.StepExecutions[dep].Status == WorkflowStatus.Failed));
+
+                    if (hasFailedDependencies && !workflow.ContinueOnError)
+                    {
+                        throw new InvalidOperationException(
+                            "Workflow blocked due to failed dependencies and ContinueOnError=false");
+                    }
+
+                    // No steps ready and no failures - shouldn't happen
+                    break;
+                }
+
+                // Execute ready steps (supports parallel execution)
+                await ExecuteStepBatchAsync(workflow, execution, readySteps);
+
+                // Mark completed/failed steps as executed
+                foreach (var step in readySteps)
+                {
+                    var stepExec = execution.StepExecutions[step.StepId];
+                    if (stepExec.Status == WorkflowStatus.Completed ||
+                        stepExec.Status == WorkflowStatus.Failed ||
+                        (stepExec.Status == WorkflowStatus.Failed && step.Optional))
+                    {
+                        executedSteps.Add(step.StepId);
+                    }
+                }
+            }
+
+            // Check final status
+            var allCompleted = execution.StepExecutions.Values.All(s => s.Status == WorkflowStatus.Completed);
+            var anyFailed = execution.StepExecutions.Values.Any(s => s.Status == WorkflowStatus.Failed);
+
+            if (allCompleted)
+            {
+                execution.Status = WorkflowStatus.Completed;
+                Logger.LogInformation(
+                    "Workflow completed successfully: {WorkflowName} (Duration: {Duration}ms)",
+                    workflow.Name, (DateTime.UtcNow - startTime).TotalMilliseconds);
+            }
+            else if (anyFailed)
+            {
+                execution.Status = WorkflowStatus.Failed;
+                execution.ErrorMessage = "One or more workflow steps failed";
+                Logger.LogWarning(
+                    "Workflow completed with failures: {WorkflowName}",
+                    workflow.Name);
+            }
+        }
+        catch (Exception ex)
+        {
+            execution.Status = WorkflowStatus.Failed;
+            execution.ErrorMessage = ex.Message;
+            Logger.LogError(ex, "Workflow execution failed: {WorkflowName}", workflow.Name);
+        }
+        finally
+        {
+            execution.CompletedAt = DateTime.UtcNow;
+        }
+
+        return execution;
+    }
+
+    /// <summary>
+    /// Executes a batch of workflow steps in parallel.
+    /// </summary>
+    private async Task ExecuteStepBatchAsync(
+        WorkflowDefinition workflow,
+        WorkflowExecution execution,
+        List<WorkflowStep> steps)
+    {
+        // Execute steps in parallel
+        var stepTasks = steps.Select(step => ExecuteWorkflowStepAsync(workflow, execution, step));
+        await Task.WhenAll(stepTasks);
+    }
+
+    /// <summary>
+    /// Executes a single workflow step.
+    /// </summary>
+    private async Task ExecuteWorkflowStepAsync(
+        WorkflowDefinition workflow,
+        WorkflowExecution execution,
+        WorkflowStep step)
+    {
+        var stepExec = execution.StepExecutions[step.StepId];
+        stepExec.Status = WorkflowStatus.Running;
+        stepExec.StartedAt = DateTime.UtcNow;
+
+        Logger.LogInformation(
+            "Executing workflow step: {StepName} (StepId: {StepId}, Attempt: {Attempt})",
+            step.Name, step.StepId, stepExec.Attempts + 1);
+
+        try
+        {
+            // Resolve task data with outputs from previous steps
+            var resolvedData = ResolveStepData(step.TaskData, execution.StepOutputs, execution.Context);
+
+            // Create agent task
+            var task = new AgentTask
+            {
+                TaskId = Guid.NewGuid().ToString(),
+                Type = step.TaskType,
+                Data = resolvedData,
+                Status = AgentTaskStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            stepExec.Task = task;
+            stepExec.Attempts++;
+
+            // Route task to appropriate agent
+            // Use the capability as the required skill
+            var requiredSkill = step.RequiredCapability ?? step.TaskType;
+            var agent = await RouteTaskWithFallback(
+                requiredSkill,
+                task,
+                subjectFilter: null,
+                gradeLevelFilter: null,
+                priority: 5,
+                maxRetries: step.RetryCount + 1);
+
+            if (agent == null)
+            {
+                throw new InvalidOperationException(
+                    $"No agent available to handle task type '{step.TaskType}'");
+            }
+
+            stepExec.AssignedAgent = agent;
+
+            Logger.LogDebug(
+                "Routed step '{StepName}' to agent '{AgentName}'",
+                step.Name, agent.Name);
+
+            // Submit task to agent
+            var submittedTask = await TaskService.SendTaskAsync(agent.AgentId, task);
+            if (submittedTask == null || submittedTask.Status == AgentTaskStatus.Failed)
+            {
+                throw new InvalidOperationException($"Failed to submit task to agent {agent.Name}");
+            }
+
+            // Wait for task completion with timeout
+            var completed = await WaitForTaskCompletionAsync(task.TaskId, step.Timeout);
+            if (!completed)
+            {
+                throw new TimeoutException(
+                    $"Step '{step.Name}' exceeded timeout of {step.Timeout.TotalMinutes} minutes");
+            }
+
+            // Retrieve task result
+            var completedTask = await TaskService.GetTaskStatusAsync(task.TaskId);
+            if (completedTask?.Status == AgentTaskStatus.Completed)
+            {
+                stepExec.Status = WorkflowStatus.Completed;
+                execution.StepOutputs[step.StepId] = completedTask.Result ?? new { };
+
+                Logger.LogInformation(
+                    "Step completed successfully: {StepName} (Duration: {Duration}ms)",
+                    step.Name,
+                    (DateTime.UtcNow - stepExec.StartedAt!.Value).TotalMilliseconds);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Task completed with status: {completedTask?.Status}");
+            }
+        }
+        catch (Exception ex)
+        {
+            stepExec.ErrorMessage = ex.Message;
+
+            // Retry logic
+            if (stepExec.Attempts < step.RetryCount + 1)
+            {
+                Logger.LogWarning(
+                    "Step '{StepName}' failed, will retry (Attempt {Attempt}/{MaxAttempts}): {Error}",
+                    step.Name, stepExec.Attempts, step.RetryCount + 1, ex.Message);
+
+                // Exponential backoff before retry
+                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, stepExec.Attempts - 1)));
+
+                // Retry
+                await ExecuteWorkflowStepAsync(workflow, execution, step);
+            }
+            else
+            {
+                stepExec.Status = step.Optional ? WorkflowStatus.Completed : WorkflowStatus.Failed;
+
+                if (step.Optional)
+                {
+                    Logger.LogWarning(
+                        "Optional step '{StepName}' failed but workflow continues: {Error}",
+                        step.Name, ex.Message);
+                }
+                else
+                {
+                    Logger.LogError(
+                        "Step '{StepName}' failed permanently after {Attempts} attempts: {Error}",
+                        step.Name, stepExec.Attempts, ex.Message);
+                }
+            }
+        }
+        finally
+        {
+            stepExec.CompletedAt = DateTime.UtcNow;
+        }
+    }
+
+    /// <summary>
+    /// Resolves step data by replacing template variables with values from previous steps.
+    /// Supports ${stepId.fieldName} syntax for referencing outputs.
+    /// </summary>
+    private Dictionary<string, object> ResolveStepData(
+        Dictionary<string, object> templateData,
+        Dictionary<string, object> stepOutputs,
+        Dictionary<string, object> context)
+    {
+        var resolved = new Dictionary<string, object>();
+
+        foreach (var (key, value) in templateData)
+        {
+            if (value is string strValue && strValue.Contains("${"))
+            {
+                // Replace template variables
+                var resolvedValue = strValue;
+                foreach (var (stepId, output) in stepOutputs)
+                {
+                    // Simple replacement - in production, use proper template engine
+                    resolvedValue = resolvedValue.Replace($"${{{stepId}}}", output.ToString() ?? "");
+                }
+
+                // Replace context variables
+                foreach (var (ctxKey, ctxValue) in context)
+                {
+                    resolvedValue = resolvedValue.Replace($"${{context.{ctxKey}}}", ctxValue?.ToString() ?? "");
+                }
+
+                resolved[key] = resolvedValue;
+            }
+            else
+            {
+                resolved[key] = value;
+            }
+        }
+
+        return resolved;
+    }
+
+    /// <summary>
+    /// Waits for a task to complete within the specified timeout.
+    /// </summary>
+    private async Task<bool> WaitForTaskCompletionAsync(string taskId, TimeSpan timeout)
+    {
+        var startTime = DateTime.UtcNow;
+        var pollInterval = TimeSpan.FromSeconds(2);
+
+        while (DateTime.UtcNow - startTime < timeout)
+        {
+            var task = await TaskService.GetTaskStatusAsync(taskId);
+            if (task?.Status == AgentTaskStatus.Completed || task?.Status == AgentTaskStatus.Failed)
+            {
+                return task.Status == AgentTaskStatus.Completed;
+            }
+
+            await Task.Delay(pollInterval);
+        }
+
+        return false; // Timeout
+    }
+
+    #endregion
 }
 
-// Supporting classes for learning path optimization
+// Supporting records for learning path optimization
 
 public record LearningPath
 {
