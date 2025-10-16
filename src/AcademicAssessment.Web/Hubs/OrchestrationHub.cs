@@ -37,10 +37,11 @@ public class OrchestrationHub : Hub
     /// <summary>
     /// Request current orchestration metrics on demand.
     /// </summary>
-    public async Task RequestCurrentMetrics()
+    public Task RequestCurrentMetrics()
     {
         _logger.LogDebug("Client {ConnectionId} requested current metrics", Context.ConnectionId);
         // Metrics service will respond via BroadcastMetrics
+        return Task.CompletedTask;
     }
 
     public override async Task OnConnectedAsync()

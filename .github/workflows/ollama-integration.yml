@@ -84,7 +84,7 @@ jobs:
           dotnet run --no-build --configuration Release &
           APPHOST_PID=$!
           echo "APPHOST_PID=$APPHOST_PID" >> $GITHUB_ENV
-          
+
           # Wait for AppHost to start services (check health endpoint)
           echo "Waiting for services to be ready..."
           for i in {1..60}; do

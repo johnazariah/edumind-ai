@@ -90,9 +90,10 @@ jobs:
         run: |
           echo "Verifying PostgreSQL is ready..."
           pg_isready -h localhost -p 5432 -U edumind_test_user -d edumind_test
-          
+
           echo "Verifying Redis is ready..."
-          redis-cli -h localhost -p 6379 ping
+          # Test Redis with docker exec instead of redis-cli (not installed by default)
+          docker exec $(docker ps -qf "ancestor=redis:7-alpine") redis-cli ping
 
       - name: Apply database migrations
         env:
