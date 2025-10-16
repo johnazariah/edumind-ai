@@ -335,6 +335,9 @@ try
     // Changed from Singleton to Scoped because it depends on scoped repositories
     builder.Services.AddScoped<AcademicAssessment.Orchestration.StudentProgressOrchestrator>();
 
+    // Orchestration Metrics Service (Day 5 - Real-time Monitoring)
+    builder.Services.AddSingleton<AcademicAssessment.Web.Services.IOrchestrationMetricsService, AcademicAssessment.Web.Services.OrchestrationMetricsService>();
+
     // Mathematics Assessment Agent (Phase 3 & 4)
     // Now with LLM-enhanced semantic evaluation
     // Changed to Scoped because it depends on scoped repositories
@@ -447,9 +450,17 @@ try
     app.UseAuthorization();
 
     // ============================================================
+    // STATIC FILES (for monitoring dashboard)
+    // ============================================================
+    app.UseStaticFiles();
+
+    // ============================================================
     // HEALTH CHECK ENDPOINTS
+    // Note: Aspire's MapDefaultEndpoints() already maps health check endpoints
+    // Commenting out custom mappings to avoid ambiguous match errors
     // ============================================================
 
+    /*
     // Basic health check - returns 200 OK if the application is running
     app.MapHealthChecks("/health", new HealthCheckOptions
     {
@@ -523,6 +534,7 @@ try
           operation.Description = "Kubernetes liveness probe - checks if the application is running";
           return operation;
       });
+    */
 
     // ============================================================
     // CONTROLLERS & SIGNALR HUBS
@@ -531,6 +543,9 @@ try
 
     // A2A Agent Progress Hub - Real-time updates from agents
     app.MapHub<AcademicAssessment.Web.Hubs.AgentProgressHub>("/hubs/agent-progress");
+
+    // Orchestration Monitoring Hub - Real-time orchestration metrics (Day 5)
+    app.MapHub<AcademicAssessment.Web.Hubs.OrchestrationHub>("/hubs/orchestration");
 
     // app.MapHub<AssessmentHub>("/hubs/assessment");
     // app.MapHub<ProgressTrackingHub>("/hubs/progress");
@@ -599,6 +614,14 @@ try
     // - ChemistryAssessmentAgent
     // - BiologyAssessmentAgent
     // - EnglishAssessmentAgent
+
+    // ============================================================
+    // START ORCHESTRATION METRICS MONITORING (Day 5)
+    // ============================================================
+    Log.Information("Starting orchestration metrics monitoring...");
+    var metricsService = app.Services.GetRequiredService<AcademicAssessment.Web.Services.IOrchestrationMetricsService>();
+    metricsService.StartMonitoring(intervalSeconds: 5);
+    Log.Information("Orchestration metrics monitoring started (5s interval)");
 
     Log.Information("EduMind.AI Web API started successfully");
     Log.Information("Environment: {Environment}", app.Environment.EnvironmentName);
