@@ -116,14 +116,14 @@ Completed implementation summaries, old test results, and superseded documentati
 
 | What you need | Where to look |
 |---------------|---------------|
-| **Current work status** | [Task Journal](planning/TASK_JOURNAL.md) (includes Week 1 Days 1-4 details) |
+| **Current work status** | [Task Journal](planning/TASK_JOURNAL.md) (all completed work) |
+| **Sprint roadmap** | [Roadmap](planning/ROADMAP.md) (6-week plan with current status) |
 | **How to contribute** | [Development Workflow](instructions/DEVELOPMENT_WORKFLOW.md) |
 | **Set up dev environment** | [Dev Container Setup](development/setup/DEVCONTAINER_SETUP.md) |
 | **Understand architecture** | [Architecture Summary](architecture/ARCHITECTURE_SUMMARY.md) |
 | **Test the API** | [API Testing Guide](development/testing/API_TESTING_GUIDE.md) |
 | **Set up authentication** | [Authentication Setup](deployment/AUTHENTICATION_SETUP.md) |
 | **Deploy to Azure** | [Azure Deployment Strategy](deployment/AZURE_DEPLOYMENT_STRATEGY.md) |
-| **Sprint progress** | [Task Journal](planning/TASK_JOURNAL.md) + [Sprint Roadmap](planning/SPRINT_ROADMAP.md) |
 
 ### By Role
 
