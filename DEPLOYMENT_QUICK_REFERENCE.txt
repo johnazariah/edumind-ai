@@ -1,0 +1,250 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                                                ┃
+┃  🚀 EDUMIND.AI - AUTOMATED DEPLOYMENT QUICK REFERENCE          ┃
+┃                                                                ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 WHAT YOU GET
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Infrastructure as Code (Azure Bicep)
+   - Complete Azure resources in one deployment
+   - Environment-specific configurations
+   - Repeatable and version-controlled
+
+✅ Automated Scripts
+   - Master deployment script (deploy-infrastructure.sh)
+   - Google OAuth setup (setup-google-oauth.sh)
+   - Database migrations
+   - Secrets management
+
+✅ CI/CD Pipeline (GitHub Actions)
+   - Automated builds and tests
+   - Azure deployment
+   - Health checks
+   - Integration tests
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 QUICK START (AUTOMATED)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. ONE COMMAND DEPLOYMENT:
+
+   cd /workspaces/edumind-ai
+   ./deployment/scripts/deploy-infrastructure.sh dev
+
+2. FOLLOW INTERACTIVE PROMPTS:
+   
+   ✓ Azure authentication
+   ✓ Google OAuth setup
+   ✓ Azure AD B2C creation
+   ✓ Identity provider configuration
+   ✓ User flow setup
+   ✓ App registration
+
+3. SCRIPT HANDLES EVERYTHING ELSE:
+
+   ✓ Deploys all Azure resources
+   ✓ Stores secrets in Key Vault
+   ✓ Runs database migrations
+   ✓ Configures GitHub secrets
+   ✓ Saves configuration
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 WHAT GETS DEPLOYED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Azure Resources (via Bicep):
+  □ App Service Plan (Linux, B1 dev / P1v3 prod)
+  □ Web App (.NET 8.0, HTTPS only)
+  □ PostgreSQL Flexible Server (16)
+  □ Azure Cache for Redis
+  □ Key Vault (for secrets)
+  □ Application Insights
+  □ Log Analytics Workspace
+
+Azure AD B2C Configuration:
+  □ B2C Tenant (edumindai.onmicrosoft.com)
+  □ Google Identity Provider
+  □ User Flow (B2C_1_susi_google)
+  □ App Registration (EduMind.AI API)
+
+Database:
+  □ Schema migrations
+  □ Initial seed data (optional)
+
+GitHub:
+  □ Repository secrets
+  □ CI/CD workflow
+  □ Branch protection
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📁 KEY FILES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Deployment Scripts:
+  deployment/scripts/deploy-infrastructure.sh    # Master script
+  deployment/scripts/setup-google-oauth.sh       # Google OAuth
+  deployment/scripts/setup-azure-auth.sh         # Azure AD (non-B2C)
+
+Infrastructure as Code:
+  deployment/bicep/main.bicep                    # Bicep template
+  deployment/bicep/main.parameters.dev.json      # Dev parameters
+
+CI/CD:
+  .github/workflows/deploy-azure.yml             # Deployment pipeline
+  .github/workflows/ci.yml                       # Build & test
+
+Documentation:
+  deployment/README.md                           # Full deployment guide
+  docs/AZURE_AD_B2C_SETUP_GUIDE.md              # B2C manual setup
+  docs/AUTHENTICATION_SETUP.md                   # Auth providers
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏱️  TIME ESTIMATES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Automated deployment:           30-45 minutes
+  - Google OAuth setup:         5-10 minutes (interactive)
+  - Azure AD B2C setup:         10-15 minutes (interactive)
+  - Azure resources deploy:     10-15 minutes (automated)
+  - Configuration & testing:    5-10 minutes (automated)
+
+Manual deployment:              60-90 minutes
+  (Without automation scripts)
+
+CI/CD pipeline run:             8-12 minutes
+  - Build & test:              3-5 minutes
+  - Deploy:                    3-5 minutes
+  - Integration tests:         2-4 minutes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 COMMON COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Deploy to different environments:
+  ./deployment/scripts/deploy-infrastructure.sh dev
+  ./deployment/scripts/deploy-infrastructure.sh staging
+  ./deployment/scripts/deploy-infrastructure.sh prod
+
+Deploy only Azure resources (skip B2C):
+  az deployment group create \
+    --resource-group rg-edumind-dev \
+    --template-file deployment/bicep/main.bicep \
+    --parameters @deployment/bicep/main.parameters.dev.json
+
+Run database migrations:
+  dotnet ef database update \
+    --project src/AcademicAssessment.Infrastructure \
+    --startup-project src/AcademicAssessment.Web \
+    --connection "<connection-string>"
+
+Trigger CI/CD manually:
+  gh workflow run deploy-azure.yml \
+    --ref main \
+    --field environment=dev
+
+View deployment logs:
+  az deployment group show \
+    --name <deployment-name> \
+    --resource-group <resource-group> \
+    --query properties
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 SECURITY FEATURES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Secrets Management:
+  ✓ All secrets in Azure Key Vault
+  ✓ Managed Identity for Key Vault access
+  ✓ No secrets in code or config files
+  ✓ User Secrets for local development
+
+Network Security:
+  ✓ HTTPS only (TLS 1.2 minimum)
+  ✓ PostgreSQL SSL required
+  ✓ Redis SSL only
+  ✓ Firewall rules configured
+
+Authentication:
+  ✓ Azure AD B2C with Google OAuth
+  ✓ JWT token validation
+  ✓ Role-based access control
+  ✓ Secure token storage
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧪 TESTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Health check:
+  curl https://edumind-dev-api.azurewebsites.net/health
+
+Test authentication:
+  curl -H "Authorization: Bearer <token>" \
+    https://edumind-dev-api.azurewebsites.net/api/v1/students
+
+Run integration tests:
+  dotnet test tests/AcademicAssessment.Tests.Integration
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❓ TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Issue: "Azure CLI not authenticated"
+→ az login
+
+Issue: "Bicep deployment failed"
+→ az deployment group show --name <name> --resource-group <rg> \
+    --query properties.error
+
+Issue: "Database migration failed"
+→ Check PostgreSQL firewall rules
+→ az postgres flexible-server firewall-rule create ...
+
+Issue: "Google OAuth redirect URI mismatch"
+→ Ensure EXACT match (no trailing slash):
+  https://edumindai.b2clogin.com/edumindai.onmicrosoft.com/oauth2/authresp
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Full guides:
+  deployment/README.md                    # Complete deployment guide
+  docs/AZURE_AD_B2C_SETUP_GUIDE.md       # Manual B2C setup
+  docs/AUTHENTICATION_SETUP.md            # Auth providers
+  docs/PR_INTEGRATION_TESTS.md            # CI/CD testing
+  docs/OBSERVABILITY_STRATEGY.md          # Monitoring
+
+Azure resources:
+  Azure Bicep: https://docs.microsoft.com/azure/bicep/
+  Azure AD B2C: https://docs.microsoft.com/azure/active-directory-b2c/
+  Google OAuth: https://developers.google.com/identity/protocols/oauth2
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ POST-DEPLOYMENT CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After running deployment script:
+  □ Verify all resources in Azure Portal
+  □ Test health endpoint
+  □ Test authentication flow (Google login)
+  □ Run integration tests
+  □ Configure monitoring alerts
+  □ Review security settings
+  □ Update B2C app redirect URIs (add production URL)
+  □ Test CI/CD pipeline
+  □ Document any custom configurations
+  □ Plan backup and DR strategy
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 READY TO DEPLOY?
+
+  cd /workspaces/edumind-ai
+  ./deployment/scripts/deploy-infrastructure.sh dev
+
+🎉 That's all you need!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

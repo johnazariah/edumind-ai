@@ -166,3 +166,6 @@ tmp/
 *.tmp
 
 .fake
+# OAuth credentials (do not commit)
+.credentials/
+deployment/config/*.env
