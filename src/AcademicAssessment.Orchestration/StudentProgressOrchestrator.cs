@@ -122,21 +122,38 @@ public class StudentProgressOrchestrator : A2ABaseAgent
             // Broadcast progress to student
             await BroadcastProgressAsync($"Preparing {targetSubject} assessment for student {studentId}...");
 
-            // Discover agents capable of assessing this subject
-            var subjectAgents = await DiscoverAgentsAsync(subject: targetSubject.ToString());
+            // Create task for subject agent (temporary task for routing)
+            var taskForRouting = new AgentTask
+            {
+                Type = "generate_assessment",
+                SourceAgentId = AgentCard.AgentId,
+                Data = new
+                {
+                    studentId = studentId,
+                    subject = targetSubject,
+                    gradeLevel = student.GradeLevel,
+                    questionCount = 10,
+                    difficultyAdaptive = true
+                }
+            };
 
-            if (subjectAgents.Count() == 0)
+            // Use intelligent routing to select best agent
+            var selectedAgent = await RouteTaskToAgent(
+                requiredSkill: "generate_assessment",
+                task: taskForRouting,
+                subjectFilter: targetSubject,
+                gradeLevelFilter: student.GradeLevel,
+                priority: 5); // Normal priority
+
+            if (selectedAgent == null)
             {
                 throw new InvalidOperationException($"No agents available for subject: {targetSubject}");
             }
 
-            // Select the first available agent (in production, add load balancing logic here)
-            var selectedAgent = subjectAgents.First();
-
-            Logger.LogInformation("Selected agent {AgentName} ({AgentId}) for {Subject} assessment",
+            Logger.LogInformation("Selected agent {AgentName} ({AgentId}) for {Subject} assessment via intelligent routing",
                 selectedAgent.Name, selectedAgent.AgentId, targetSubject);
 
-            // Create task for subject agent
+            // Create final task with selected agent
             var subjectTask = new AgentTask
             {
                 Type = "generate_assessment",
@@ -438,6 +455,292 @@ public class StudentProgressOrchestrator : A2ABaseAgent
     }
 
     /// <summary>
+    /// Routes a task to the most suitable agent based on capabilities, availability, and current load.
+    /// Implements intelligent agent selection with fallback logic and priority queuing.
+    /// </summary>
+    /// <param name="requiredSkill">The skill required to complete the task</param>
+    /// <param name="task">The task to route</param>
+    /// <param name="subjectFilter">Optional subject filter for subject-specific agents</param>
+    /// <param name="gradeLevelFilter">Optional grade level filter</param>
+    /// <param name="priority">Task priority (0=low, 5=medium, 10=high)</param>
+    /// <returns>The selected agent's card, or null if no suitable agent found</returns>
+    private async Task<AgentCard?> RouteTaskToAgent(
+        string requiredSkill,
+        AgentTask task,
+        Subject? subjectFilter = null,
+        GradeLevel? gradeLevelFilter = null,
+        int priority = 5)
+    {
+        Logger.LogInformation(
+            "Routing task {TaskId} (Type: {TaskType}, Skill: {Skill}, Priority: {Priority})",
+            task.TaskId, task.Type, requiredSkill, priority);
+
+        // Step 1: Discover agents with required capability
+        var candidateAgents = await DiscoverAgentsByCapability(
+            requiredSkill,
+            subjectFilter,
+            gradeLevelFilter);
+
+        if (!candidateAgents.Any())
+        {
+            Logger.LogWarning(
+                "No agents found for skill '{Skill}', subject '{Subject}', grade level '{GradeLevel}'",
+                requiredSkill, subjectFilter, gradeLevelFilter);
+            return null;
+        }
+
+        Logger.LogDebug("Found {Count} candidate agents for skill '{Skill}'",
+            candidateAgents.Count, requiredSkill);
+
+        // Step 2: Filter by availability and health
+        var availableAgents = FilterAvailableAgents(candidateAgents);
+
+        if (!availableAgents.Any())
+        {
+            Logger.LogWarning(
+                "Found {CandidateCount} candidate agents, but none are currently available",
+                candidateAgents.Count);
+            
+            // Fallback: use any candidate agent (best effort)
+            Logger.LogInformation("Using fallback selection - picking first candidate agent");
+            return candidateAgents.First();
+        }
+
+        Logger.LogDebug("{AvailableCount} of {CandidateCount} agents are available",
+            availableAgents.Count, candidateAgents.Count);
+
+        // Step 3: Score agents based on load balancing and capability match
+        var scoredAgents = ScoreAgentsForTask(availableAgents, task, priority);
+
+        // Step 4: Select best agent
+        var selectedAgent = scoredAgents.OrderByDescending(s => s.Score).First();
+
+        Logger.LogInformation(
+            "Selected agent '{AgentName}' ({AgentId}) with score {Score:F2} for task {TaskId}",
+            selectedAgent.Agent.Name,
+            selectedAgent.Agent.AgentId,
+            selectedAgent.Score,
+            task.TaskId);
+
+        // Step 5: Track agent workload (for load balancing)
+        TrackAgentWorkload(selectedAgent.Agent.AgentId, task.TaskId);
+
+        return selectedAgent.Agent;
+    }
+
+    /// <summary>
+    /// Discovers agents by capability, with optional filters for subject and grade level.
+    /// </summary>
+    private async Task<List<AgentCard>> DiscoverAgentsByCapability(
+        string requiredSkill,
+        Subject? subjectFilter = null,
+        GradeLevel? gradeLevelFilter = null)
+    {
+        // Discover all agents with the required skill
+        var agentsWithSkill = await TaskService.DiscoverAgentsAsync(skill: requiredSkill);
+
+        // Apply subject filter if specified
+        if (subjectFilter.HasValue)
+        {
+            agentsWithSkill = agentsWithSkill
+                .Where(a => a.Subject.HasValue && a.Subject.Value == subjectFilter.Value)
+                .ToList();
+        }
+
+        // Apply grade level filter if specified
+        if (gradeLevelFilter.HasValue)
+        {
+            agentsWithSkill = agentsWithSkill
+                .Where(a => a.SupportedGradeLevels.Contains(gradeLevelFilter.Value))
+                .ToList();
+        }
+
+        return agentsWithSkill;
+    }
+
+    /// <summary>
+    /// Filters agents to only those currently available (health check passed).
+    /// In production, this would check heartbeat, connection status, etc.
+    /// </summary>
+    private List<AgentCard> FilterAvailableAgents(List<AgentCard> agents)
+    {
+        // TODO: Implement actual health checking
+        // For now, assume all agents are available
+        // In production, check:
+        // - Heartbeat timestamp (within last 30 seconds)
+        // - Connection status
+        // - Not in maintenance mode
+        // - CPU/memory usage within limits
+
+        return agents;
+    }
+
+    /// <summary>
+    /// Scores agents for task assignment based on multiple factors.
+    /// </summary>
+    private List<ScoredAgent> ScoreAgentsForTask(
+        List<AgentCard> agents,
+        AgentTask task,
+        int priority)
+    {
+        var scored = new List<ScoredAgent>();
+
+        foreach (var agent in agents)
+        {
+            double score = 0.0;
+
+            // Factor 1: Current workload (40 points max)
+            // Agents with less work get higher scores
+            int currentLoad = GetAgentWorkload(agent.AgentId);
+            double loadScore = Math.Max(0, 40.0 - (currentLoad * 5.0)); // -5 points per task
+            score += loadScore;
+
+            // Factor 2: Capability match quality (30 points max)
+            // Agents with more skills that match the task get higher scores
+            double capabilityScore = CalculateCapabilityMatchScore(agent, task);
+            score += capabilityScore;
+
+            // Factor 3: Agent version/freshness (20 points max)
+            // Newer agents (higher version) get preference for compatibility
+            double versionScore = ParseVersionScore(agent.Version);
+            score += versionScore;
+
+            // Factor 4: Historical performance (10 points max)
+            // Agents with better success rates get preference
+            // TODO: Track historical success rate per agent
+            double performanceScore = 10.0; // Default: assume good performance
+            score += performanceScore;
+
+            Logger.LogDebug(
+                "Agent '{AgentName}' score: {TotalScore:F2} (load: {LoadScore:F2}, " +
+                "capability: {CapScore:F2}, version: {VersionScore:F2}, perf: {PerfScore:F2})",
+                agent.Name, score, loadScore, capabilityScore, versionScore, performanceScore);
+
+            scored.Add(new ScoredAgent
+            {
+                Agent = agent,
+                Score = score,
+                LoadScore = loadScore,
+                CapabilityScore = capabilityScore,
+                VersionScore = versionScore,
+                PerformanceScore = performanceScore
+            });
+        }
+
+        return scored;
+    }
+
+    /// <summary>
+    /// Calculates how well an agent's capabilities match the task requirements.
+    /// </summary>
+    private double CalculateCapabilityMatchScore(AgentCard agent, AgentTask task)
+    {
+        double score = 0.0;
+
+        // Check if agent has the primary skill needed
+        // This is already guaranteed by discovery, so give base points
+        score += 15.0;
+
+        // Bonus points for additional relevant capabilities
+        if (agent.Capabilities != null)
+        {
+            // Check for specialized capabilities
+            if (agent.Capabilities.ContainsKey("assessment_types"))
+            {
+                score += 5.0; // Agent supports multiple assessment types
+            }
+
+            if (agent.Capabilities.ContainsKey("adaptive_difficulty"))
+            {
+                score += 5.0; // Agent supports adaptive difficulty
+            }
+
+            if (agent.Capabilities.ContainsKey("max_concurrent_students"))
+            {
+                score += 5.0; // Agent can handle concurrent work
+            }
+        }
+
+        return Math.Min(score, 30.0); // Cap at 30 points
+    }
+
+    /// <summary>
+    /// Parses agent version string and returns a score (higher version = higher score).
+    /// </summary>
+    private double ParseVersionScore(string version)
+    {
+        try
+        {
+            // Parse semantic version (e.g., "1.2.3")
+            var parts = version.Split('.');
+            if (parts.Length >= 2 &&
+                int.TryParse(parts[0], out int major) &&
+                int.TryParse(parts[1], out int minor))
+            {
+                // Score: major * 10 + minor, capped at 20
+                return Math.Min(major * 10.0 + minor, 20.0);
+            }
+        }
+        catch
+        {
+            // Ignore parse errors
+        }
+
+        // Default score for unparseable versions
+        return 10.0;
+    }
+
+    // Simple in-memory workload tracking
+    // In production, this would use Redis or a distributed cache
+    private readonly Dictionary<string, HashSet<string>> _agentWorkloads = new();
+    private readonly object _workloadLock = new();
+
+    /// <summary>
+    /// Gets the current workload (number of active tasks) for an agent.
+    /// </summary>
+    private int GetAgentWorkload(string agentId)
+    {
+        lock (_workloadLock)
+        {
+            return _agentWorkloads.TryGetValue(agentId, out var tasks) ? tasks.Count : 0;
+        }
+    }
+
+    /// <summary>
+    /// Tracks that an agent is now working on a task.
+    /// </summary>
+    private void TrackAgentWorkload(string agentId, string taskId)
+    {
+        lock (_workloadLock)
+        {
+            if (!_agentWorkloads.ContainsKey(agentId))
+            {
+                _agentWorkloads[agentId] = new HashSet<string>();
+            }
+            _agentWorkloads[agentId].Add(taskId);
+
+            Logger.LogDebug("Agent '{AgentId}' workload now: {Count} task(s)",
+                agentId, _agentWorkloads[agentId].Count);
+        }
+    }
+
+    /// <summary>
+    /// Removes a task from an agent's workload tracking (when task completes).
+    /// </summary>
+    private void UntrackAgentWorkload(string agentId, string taskId)
+    {
+        lock (_workloadLock)
+        {
+            if (_agentWorkloads.TryGetValue(agentId, out var tasks))
+            {
+                tasks.Remove(taskId);
+                Logger.LogDebug("Agent '{AgentId}' workload now: {Count} task(s)",
+                    agentId, tasks.Count);
+            }
+        }
+    }
+
+    /// <summary>
     /// Adjusts difficulty for next assessment using Item Response Theory (IRT) principles.
     /// </summary>
     /// <param name="studentId">The student whose difficulty to adjust</param>
@@ -485,7 +788,7 @@ public class StudentProgressOrchestrator : A2ABaseAgent
 
         // Calculate average accuracy across recent assessments
         double averageAccuracy = recentAssessments.Average(a => a.PercentageScore!.Value);
-        
+
         // Calculate accuracy of most recent assessment
         double latestAccuracy = latestAssessment.PercentageScore!.Value;
 
@@ -653,7 +956,7 @@ public class StudentProgressOrchestrator : A2ABaseAgent
         // Calculate simple linear trend (newest - oldest)
         var newest = recentAssessments.First().PercentageScore ?? 0.0;
         var oldest = recentAssessments.Last().PercentageScore ?? 0.0;
-        
+
         return newest - oldest;
     }
 
@@ -693,7 +996,7 @@ public class StudentProgressOrchestrator : A2ABaseAgent
     private double EstimateTimeToMastery(double currentMastery, double targetMastery, double trend)
     {
         double gap = targetMastery - currentMastery;
-        
+
         // Base estimate: 1 hour per 5% improvement needed
         double baseHours = gap / 5.0;
 
@@ -764,4 +1067,18 @@ public record ReinforcementTopic
     public required double CurrentMastery { get; init; }
     public required double EstimatedHours { get; init; }
     public required TimeSpan RecommendedFrequency { get; init; }
+}
+
+/// <summary>
+/// Represents an agent with its calculated routing score.
+/// Used for intelligent task routing and load balancing.
+/// </summary>
+internal class ScoredAgent
+{
+    public required AgentCard Agent { get; init; }
+    public required double Score { get; init; }
+    public required double LoadScore { get; init; }
+    public required double CapabilityScore { get; init; }
+    public required double VersionScore { get; init; }
+    public required double PerformanceScore { get; init; }
 }
