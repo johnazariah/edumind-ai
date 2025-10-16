@@ -1,73 +1,73 @@
 name: Reusable Code Quality Analysis
 
 on:
-  workflow_call:
-    inputs:
-      dotnet-version:
-        description: '.NET SDK version to use'
-        required: false
-        type: string
-        default: '9.0.x'
-      enable-format-check:
-        description: 'Check code formatting with dotnet format'
-        required: false
-        type: boolean
-        default: true
-      enable-analyzers:
-        description: 'Run static code analyzers'
-        required: false
-        type: boolean
-        default: true
-      fail-on-warnings:
-        description: 'Fail the build on analyzer warnings'
-        required: false
-        type: boolean
-        default: false
+    workflow_call:
+        inputs:
+            dotnet-version:
+                description: ".NET SDK version to use"
+                required: false
+                type: string
+                default: "9.0.x"
+            enable-format-check:
+                description: "Check code formatting with dotnet format"
+                required: false
+                type: boolean
+                default: true
+            enable-analyzers:
+                description: "Run static code analyzers"
+                required: false
+                type: boolean
+                default: true
+            fail-on-warnings:
+                description: "Fail the build on analyzer warnings"
+                required: false
+                type: boolean
+                default: false
 
 env:
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
-  DOTNET_CLI_TELEMETRY_OPTOUT: true
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+    DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  code-quality:
-    runs-on: ubuntu-latest
+    code-quality:
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ inputs.dotnet-version }}
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: ${{ inputs.dotnet-version }}
 
-      - name: Restore dependencies
-        run: dotnet restore EduMind.AI.sln
+            - name: Restore dependencies
+              run: dotnet restore EduMind.AI.sln
 
-      - name: Check code formatting
-        if: inputs.enable-format-check
-        run: |
-          dotnet format EduMind.AI.sln \
-            --verify-no-changes \
-            --verbosity diagnostic \
-            --severity info
+            - name: Check code formatting
+              if: inputs.enable-format-check
+              run: |
+                  dotnet format EduMind.AI.sln \
+                    --verify-no-changes \
+                    --verbosity diagnostic \
+                    --severity info
 
-      - name: Build with code analysis
-        if: inputs.enable-analyzers
-        run: |
-          dotnet build EduMind.AI.sln \
-            --configuration Release \
-            --no-restore \
-            /p:EnforceCodeStyleInBuild=true \
-            ${{ inputs.fail-on-warnings && '/p:TreatWarningsAsErrors=true' || '/p:TreatWarningsAsErrors=false' }}
+            - name: Build with code analysis
+              if: inputs.enable-analyzers
+              run: |
+                  dotnet build EduMind.AI.sln \
+                    --configuration Release \
+                    --no-restore \
+                    /p:EnforceCodeStyleInBuild=true \
+                    ${{ inputs.fail-on-warnings && '/p:TreatWarningsAsErrors=true' || '/p:TreatWarningsAsErrors=false' }}
 
-      - name: Upload build logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: code-quality-logs
-          path: |
-            **/*.binlog
-            **/BuildXL.log
-          retention-days: 7
-          if-no-files-found: ignore
+            - name: Upload build logs
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: code-quality-logs
+                  path: |
+                      **/*.binlog
+                      **/BuildXL.log
+                  retention-days: 7
+                  if-no-files-found: ignore

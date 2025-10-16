@@ -5,9 +5,11 @@ This directory contains reusable workflows that provide consistent build, test, 
 ## 📋 Available Workflows
 
 ### 1. `_reusable-dotnet-build.yml`
+
 **Purpose:** Build .NET solution and run unit/performance tests
 
 **Inputs:**
+
 - `dotnet-version` (string, default: `9.0.x`) - .NET SDK version
 - `configuration` (string, default: `Release`) - Build configuration
 - `run-unit-tests` (boolean, default: `true`) - Run unit tests
@@ -16,9 +18,11 @@ This directory contains reusable workflows that provide consistent build, test, 
 - `aspire-workload` (boolean, default: `true`) - Install Aspire workload
 
 **Outputs:**
+
 - `build-version` - Semantic version of the build
 
 **Example Usage:**
+
 ```yaml
 jobs:
   build:
@@ -31,15 +35,18 @@ jobs:
 ```
 
 ### 2. `_reusable-code-quality.yml`
+
 **Purpose:** Code formatting, linting, and static analysis
 
 **Inputs:**
+
 - `dotnet-version` (string, default: `9.0.x`) - .NET SDK version
 - `enable-format-check` (boolean, default: `true`) - Check code formatting
 - `enable-analyzers` (boolean, default: `true`) - Run static analyzers
 - `fail-on-warnings` (boolean, default: `false`) - Fail on analyzer warnings
 
 **Example Usage:**
+
 ```yaml
 jobs:
   code-quality:
@@ -51,15 +58,18 @@ jobs:
 ```
 
 ### 3. `_reusable-security-scan.yml`
+
 **Purpose:** Security scanning (CodeQL, dependency vulnerabilities, secrets)
 
 **Inputs:**
+
 - `enable-codeql` (boolean, default: `true`) - Run CodeQL analysis
 - `enable-dependency-scan` (boolean, default: `true`) - Scan for vulnerable dependencies
 - `enable-secret-scan` (boolean, default: `true`) - Scan for secrets
 - `codeql-languages` (string, default: `csharp,javascript`) - Languages for CodeQL
 
 **Example Usage:**
+
 ```yaml
 jobs:
   security:
@@ -71,9 +81,11 @@ jobs:
 ```
 
 ### 4. `_reusable-integration-tests.yml`
+
 **Purpose:** Run integration tests with PostgreSQL and Redis
 
 **Inputs:**
+
 - `dotnet-version` (string, default: `9.0.x`) - .NET SDK version
 - `configuration` (string, default: `Release`) - Build configuration
 - `api-base-url` (string, optional) - API URL for testing deployed environments
@@ -81,10 +93,12 @@ jobs:
 - `aspire-workload` (boolean, default: `true`) - Install Aspire workload
 
 **Secrets:**
+
 - `postgres-connection` (optional) - PostgreSQL connection string
 - `redis-connection` (optional) - Redis connection string
 
 **Example Usage:**
+
 ```yaml
 jobs:
   integration-tests:
@@ -97,21 +111,25 @@ jobs:
 ## 🎯 Benefits
 
 ### Consistency
+
 - Same build/test/scan process everywhere
 - Standardized tool versions and configurations
 - Predictable behavior across environments
 
 ### Maintainability
+
 - Update once, apply everywhere
 - No duplication across workflow files
 - Clear separation of concerns
 
 ### Visibility
+
 - Centralized workflow logic
 - Easy to audit and understand
 - Self-documenting with detailed inputs/outputs
 
 ### Flexibility
+
 - Highly configurable via inputs
 - Support both service containers and external services
 - Can be composed in different ways
@@ -119,6 +137,7 @@ jobs:
 ## 📖 How to Use in Your Workflows
 
 ### Basic CI Pipeline
+
 ```yaml
 name: CI
 
@@ -144,6 +163,7 @@ jobs:
 ```
 
 ### Deployment Pipeline
+
 ```yaml
 name: Deploy
 
@@ -179,18 +199,21 @@ jobs:
 ## 🔒 Security Scanning Features
 
 ### CodeQL
+
 - Analyzes C# and JavaScript code
 - Detects security vulnerabilities and code quality issues
 - Uses `security-extended` and `security-and-quality` query suites
 - Results visible in GitHub Security tab
 
 ### Dependency Scanning
+
 - Scans all NuGet packages (direct and transitive)
 - Identifies packages with known vulnerabilities
 - Generates report artifact
 - Non-blocking (warnings only)
 
 ### Secret Scanning
+
 - **TruffleHog:** Scans for leaked secrets in git history
 - **Gitleaks:** Additional secret detection
 - Checks full git history
@@ -199,6 +222,7 @@ jobs:
 ## 📊 Test Reporting
 
 All test workflows automatically:
+
 - Generate `.trx` test result files
 - Upload results as artifacts (30-day retention)
 - Publish results to GitHub Actions UI via `dorny/test-reporter`
@@ -208,12 +232,14 @@ All test workflows automatically:
 ## 🛠️ Maintenance
 
 ### Updating a Reusable Workflow
+
 1. Edit the reusable workflow file
 2. Test changes in a feature branch
 3. Merge to `main` once validated
 4. All workflows using it will automatically use the new version
 
 ### Best Practices
+
 - ✅ Keep workflows focused (single responsibility)
 - ✅ Make inputs optional with sensible defaults
 - ✅ Document all inputs and outputs
@@ -221,6 +247,7 @@ All test workflows automatically:
 - ✅ Test changes thoroughly before merging
 
 ### Versioning
+
 - Reusable workflows are referenced by branch/tag/SHA
 - For stability, consider tagging versions: `v1`, `v1.0.0`, etc.
 - Example: `uses: ./.github/workflows/_reusable-build.yml@v1`
