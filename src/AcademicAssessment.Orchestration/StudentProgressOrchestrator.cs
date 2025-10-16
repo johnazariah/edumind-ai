@@ -200,17 +200,17 @@ public class StudentProgressOrchestrator : A2ABaseAgent
 
         // Get all past assessments for this student
         var assessmentsResult = await _studentAssessmentRepository.GetByStudentIdAsync(studentId);
-        
+
         if (assessmentsResult is AcademicAssessment.Core.Common.Result<IReadOnlyList<StudentAssessment>>.Failure failure)
         {
-            Logger.LogWarning("Failed to load assessments for student {StudentId}: {Error}", 
+            Logger.LogWarning("Failed to load assessments for student {StudentId}: {Error}",
                 studentId, failure.Error.Message);
             // Default to Mathematics if we can't load history
             return Subject.Mathematics;
         }
 
         var assessments = ((AcademicAssessment.Core.Common.Result<IReadOnlyList<StudentAssessment>>.Success)assessmentsResult).Value;
-        
+
         if (!assessments.Any())
         {
             // No assessment history - start with Mathematics as foundation subject
@@ -230,8 +230,8 @@ public class StudentProgressOrchestrator : A2ABaseAgent
                 .ToList();
 
             double priority = CalculateSubjectPriority(
-                subject, 
-                subjectAssessments, 
+                subject,
+                subjectAssessments,
                 DateTime.UtcNow);
 
             subjectPriorities[subject] = priority;
@@ -241,11 +241,11 @@ public class StudentProgressOrchestrator : A2ABaseAgent
 
         // Select subject with highest priority
         var selectedSubject = subjectPriorities.OrderByDescending(kvp => kvp.Value).First().Key;
-        
+
         Logger.LogInformation(
-            "Selected {Subject} for student {StudentId} (priority: {Priority:F2})", 
-            selectedSubject, 
-            studentId, 
+            "Selected {Subject} for student {StudentId} (priority: {Priority:F2})",
+            selectedSubject,
+            studentId,
             subjectPriorities[selectedSubject]);
 
         return selectedSubject;
@@ -273,11 +273,11 @@ public class StudentProgressOrchestrator : A2ABaseAgent
         // Factor 2: Time since last assessment (recency)
         var lastAssessment = subjectAssessments.First();
         var daysSinceLastAssessment = (now - (lastAssessment.CompletedAt ?? lastAssessment.StartedAt!.Value).DateTime).TotalDays;
-        
+
         // Add priority based on days elapsed (max +40 at 30+ days)
         var recencyBonus = Math.Min(daysSinceLastAssessment * 1.33, 40.0);
         priority += recencyBonus;
-        Logger.LogDebug("{Subject}: {Days:F1} days since last assessment, adding +{Bonus:F1} priority", 
+        Logger.LogDebug("{Subject}: {Days:F1} days since last assessment, adding +{Bonus:F1} priority",
             subject, daysSinceLastAssessment, recencyBonus);
 
         // Factor 3: Performance trend (declining performance = higher priority)
@@ -293,7 +293,7 @@ public class StudentProgressOrchestrator : A2ABaseAgent
             {
                 // Calculate trend (negative = declining)
                 var trend = scores[0] - scores[^1]; // Most recent - oldest
-                
+
                 if (trend < 0) // Declining performance
                 {
                     var trendPenalty = Math.Abs(trend) * 0.3; // Up to +30 for 100% decline
@@ -318,7 +318,7 @@ public class StudentProgressOrchestrator : A2ABaseAgent
         if (completedAssessments.Any())
         {
             var avgScore = completedAssessments.Average(a => a.PercentageScore!.Value);
-            
+
             // Below 70% = need more practice
             if (avgScore < 70)
             {
@@ -337,9 +337,9 @@ public class StudentProgressOrchestrator : A2ABaseAgent
         }
 
         // Factor 5: Assessment frequency (avoid over-testing same subject)
-        var assessmentsLastWeek = subjectAssessments.Count(a => 
+        var assessmentsLastWeek = subjectAssessments.Count(a =>
             (now - (a.CompletedAt ?? a.StartedAt!.Value).DateTime).TotalDays <= 7);
-        
+
         if (assessmentsLastWeek >= 3)
         {
             priority -= 25.0; // Reduce priority if assessed too frequently
@@ -436,4 +436,332 @@ public class StudentProgressOrchestrator : A2ABaseAgent
 
         return await Task.FromResult(task);
     }
+
+    /// <summary>
+    /// Adjusts difficulty for next assessment using Item Response Theory (IRT) principles.
+    /// </summary>
+    /// <param name="studentId">The student whose difficulty to adjust</param>
+    /// <param name="subject">The subject being assessed</param>
+    /// <param name="assessmentHistory">Recent assessment history for this subject</param>
+    /// <returns>Adjusted difficulty level (IRT theta estimate) and recommended next difficulty</returns>
+    private (double currentAbility, double recommendedDifficulty) AdjustDifficulty(
+        Guid studentId,
+        Subject subject,
+        List<StudentAssessment> assessmentHistory)
+    {
+        Logger.LogDebug("Adjusting difficulty for Student {StudentId}, Subject: {Subject}",
+            studentId, subject);
+
+        // Default starting ability (IRT theta) for new students
+        const double DefaultAbility = 0.0;
+        const double DifficultyStep = 0.2;
+        const double MinDifficulty = -3.0;
+        const double MaxDifficulty = 3.0;
+
+        // If no history, start at default
+        if (!assessmentHistory.Any())
+        {
+            Logger.LogDebug("No assessment history - starting at default ability {DefaultAbility}",
+                DefaultAbility);
+            return (DefaultAbility, DefaultAbility);
+        }
+
+        // Get most recent completed assessments (up to last 5 for trend analysis)
+        var recentAssessments = assessmentHistory
+            .Where(a => a.Status == AssessmentStatus.Completed && a.PercentageScore.HasValue)
+            .OrderByDescending(a => a.CompletedAt)
+            .Take(5)
+            .ToList();
+
+        if (!recentAssessments.Any())
+        {
+            Logger.LogDebug("No completed assessments - starting at default ability");
+            return (DefaultAbility, DefaultAbility);
+        }
+
+        // Calculate current ability estimate from most recent assessment
+        var latestAssessment = recentAssessments.First();
+        double currentAbility = latestAssessment.EstimatedAbility ?? DefaultAbility;
+
+        // Calculate average accuracy across recent assessments
+        double averageAccuracy = recentAssessments.Average(a => a.PercentageScore!.Value);
+        
+        // Calculate accuracy of most recent assessment
+        double latestAccuracy = latestAssessment.PercentageScore!.Value;
+
+        Logger.LogDebug(
+            "Current ability: {CurrentAbility:F2}, Latest accuracy: {LatestAccuracy:F1}%, " +
+            "Average accuracy (last {Count}): {AverageAccuracy:F1}%",
+            currentAbility, latestAccuracy, recentAssessments.Count, averageAccuracy);
+
+        // IRT-based difficulty adjustment
+        double difficultyAdjustment = 0.0;
+
+        // Rule 1: High performance (>80%) - increase difficulty
+        if (latestAccuracy > 80.0)
+        {
+            difficultyAdjustment = DifficultyStep;
+            Logger.LogDebug("High performance ({Accuracy:F1}%) - increasing difficulty by {Step}",
+                latestAccuracy, DifficultyStep);
+        }
+        // Rule 2: Low performance (<50%) - decrease difficulty
+        else if (latestAccuracy < 50.0)
+        {
+            difficultyAdjustment = -DifficultyStep;
+            Logger.LogDebug("Low performance ({Accuracy:F1}%) - decreasing difficulty by {Step}",
+                latestAccuracy, DifficultyStep);
+        }
+        // Rule 3: Medium performance (50-80%) - fine-tune based on velocity
+        else
+        {
+            // Calculate velocity (change in performance over recent attempts)
+            if (recentAssessments.Count >= 3)
+            {
+                var oldest = recentAssessments.Last().PercentageScore!.Value;
+                var newest = recentAssessments.First().PercentageScore!.Value;
+                double velocity = newest - oldest;
+
+                // If improving rapidly, increase difficulty slightly
+                if (velocity > 10.0)
+                {
+                    difficultyAdjustment = DifficultyStep * 0.5;
+                    Logger.LogDebug(
+                        "Improving trend (velocity: +{Velocity:F1}%) - small difficulty increase",
+                        velocity);
+                }
+                // If declining, decrease difficulty slightly
+                else if (velocity < -10.0)
+                {
+                    difficultyAdjustment = -DifficultyStep * 0.5;
+                    Logger.LogDebug(
+                        "Declining trend (velocity: {Velocity:F1}%) - small difficulty decrease",
+                        velocity);
+                }
+                else
+                {
+                    Logger.LogDebug("Stable performance - maintaining current difficulty");
+                }
+            }
+        }
+
+        // Apply adjustment with bounds checking
+        double recommendedDifficulty = Math.Clamp(
+            currentAbility + difficultyAdjustment,
+            MinDifficulty,
+            MaxDifficulty);
+
+        Logger.LogInformation(
+            "Difficulty adjustment complete: Current={CurrentAbility:F2}, " +
+            "Recommended={RecommendedDifficulty:F2}, Change={Change:+F2}",
+            currentAbility, recommendedDifficulty, difficultyAdjustment);
+
+        return (currentAbility, recommendedDifficulty);
+    }
+
+    /// <summary>
+    /// Optimizes learning path by identifying knowledge gaps and sequencing topics.
+    /// </summary>
+    /// <param name="studentId">The student ID</param>
+    /// <param name="assessmentHistory">Complete assessment history across all subjects</param>
+    /// <returns>Optimized learning path with topic sequence and estimated time to mastery</returns>
+    private async Task<LearningPath> OptimizeLearningPathAsync(
+        Guid studentId,
+        IReadOnlyList<StudentAssessment> assessmentHistory)
+    {
+        Logger.LogDebug("Optimizing learning path for Student {StudentId}", studentId);
+
+        // Group assessments by subject to identify weak areas
+        var subjectPerformance = assessmentHistory
+            .Where(a => a.Status == AssessmentStatus.Completed && a.PercentageScore.HasValue)
+            .GroupBy(a => GetAssessmentSubject(a.AssessmentId))
+            .Select(g => new
+            {
+                Subject = g.Key,
+                AverageScore = g.Average(a => a.PercentageScore!.Value),
+                AssessmentCount = g.Count(),
+                LastAssessment = g.OrderByDescending(a => a.CompletedAt).First(),
+                Trend = CalculateTrend(g.OrderByDescending(a => a.CompletedAt).Take(3).ToList())
+            })
+            .OrderBy(s => s.AverageScore) // Weakest subjects first
+            .ToList();
+
+        Logger.LogDebug("Analyzed {Count} subjects for learning path optimization",
+            subjectPerformance.Count);
+
+        // Identify knowledge gaps (subjects with <70% average)
+        var knowledgeGaps = subjectPerformance
+            .Where(s => s.AverageScore < 70.0)
+            .Select(s => new KnowledgeGap
+            {
+                Subject = s.Subject,
+                CurrentMastery = s.AverageScore,
+                TargetMastery = 80.0, // Target 80% mastery
+                EstimatedHours = EstimateTimeToMastery(s.AverageScore, 80.0, s.Trend),
+                Priority = CalculateGapPriority(s.AverageScore, s.Trend, (s.LastAssessment.CompletedAt ?? DateTimeOffset.UtcNow).DateTime)
+            })
+            .OrderByDescending(g => g.Priority)
+            .ToList();
+
+        // Identify subjects needing reinforcement (70-85% average)
+        var reinforcementTopics = subjectPerformance
+            .Where(s => s.AverageScore >= 70.0 && s.AverageScore < 85.0)
+            .Select(s => new ReinforcementTopic
+            {
+                Subject = s.Subject,
+                CurrentMastery = s.AverageScore,
+                EstimatedHours = 2.0, // Quick reinforcement
+                RecommendedFrequency = TimeSpan.FromDays(7) // Weekly review
+            })
+            .ToList();
+
+        // Sequence topics by prerequisite dependencies (simplified for now)
+        var sequencedTopics = SequenceTopicsByPrerequisites(knowledgeGaps, reinforcementTopics);
+
+        // Calculate total estimated time
+        double totalEstimatedHours = knowledgeGaps.Sum(g => g.EstimatedHours) +
+                                      reinforcementTopics.Sum(r => r.EstimatedHours);
+
+        Logger.LogInformation(
+            "Learning path optimized: {GapCount} knowledge gaps, {ReinforcementCount} reinforcement topics, " +
+            "estimated {TotalHours:F1} hours",
+            knowledgeGaps.Count, reinforcementTopics.Count, totalEstimatedHours);
+
+        return new LearningPath
+        {
+            StudentId = studentId,
+            GeneratedAt = DateTime.UtcNow,
+            KnowledgeGaps = knowledgeGaps,
+            ReinforcementTopics = reinforcementTopics,
+            SequencedTopics = sequencedTopics,
+            TotalEstimatedHours = totalEstimatedHours,
+            EstimatedCompletionDate = DateTime.UtcNow.AddHours(totalEstimatedHours * 2) // Assume 30 min/day study
+        };
+    }
+
+    /// <summary>
+    /// Calculates performance trend from recent assessments.
+    /// </summary>
+    /// <param name="recentAssessments">Recent assessments ordered by date (newest first)</param>
+    /// <returns>Trend value: positive for improving, negative for declining</returns>
+    private double CalculateTrend(List<StudentAssessment> recentAssessments)
+    {
+        if (recentAssessments.Count < 2)
+        {
+            return 0.0; // Not enough data for trend
+        }
+
+        // Calculate simple linear trend (newest - oldest)
+        var newest = recentAssessments.First().PercentageScore ?? 0.0;
+        var oldest = recentAssessments.Last().PercentageScore ?? 0.0;
+        
+        return newest - oldest;
+    }
+
+    /// <summary>
+    /// Calculates priority for addressing a knowledge gap.
+    /// </summary>
+    private double CalculateGapPriority(double currentMastery, double trend, DateTime lastAssessment)
+    {
+        double priority = 0.0;
+
+        // Factor 1: Severity of gap (0-50 points)
+        priority += (70.0 - currentMastery) * 0.7; // Max 50 points for 0% mastery
+
+        // Factor 2: Declining trend (0-30 points)
+        if (trend < 0)
+        {
+            priority += Math.Abs(trend) * 0.3; // Up to 30 points for steep decline
+        }
+
+        // Factor 3: Recency (0-20 points)
+        var daysSinceLastAssessment = (DateTime.UtcNow - lastAssessment).TotalDays;
+        if (daysSinceLastAssessment > 30)
+        {
+            priority += 20.0; // High priority if not assessed recently
+        }
+        else if (daysSinceLastAssessment > 14)
+        {
+            priority += 10.0;
+        }
+
+        return priority;
+    }
+
+    /// <summary>
+    /// Estimates hours needed to reach target mastery level.
+    /// </summary>
+    private double EstimateTimeToMastery(double currentMastery, double targetMastery, double trend)
+    {
+        double gap = targetMastery - currentMastery;
+        
+        // Base estimate: 1 hour per 5% improvement needed
+        double baseHours = gap / 5.0;
+
+        // Adjust based on trend
+        if (trend > 0)
+        {
+            // Already improving - reduce estimate by 20%
+            return baseHours * 0.8;
+        }
+        else if (trend < -5.0)
+        {
+            // Declining significantly - increase estimate by 50%
+            return baseHours * 1.5;
+        }
+
+        return Math.Max(1.0, baseHours); // Minimum 1 hour
+    }
+
+    /// <summary>
+    /// Sequences topics by prerequisite dependencies (simplified algorithm).
+    /// </summary>
+    private List<string> SequenceTopicsByPrerequisites(
+        List<KnowledgeGap> gaps,
+        List<ReinforcementTopic> reinforcements)
+    {
+        // Simplified sequencing: prioritize by priority score
+        // In a full implementation, this would use a dependency graph
+        var sequence = new List<string>();
+
+        // Add critical gaps first
+        sequence.AddRange(gaps
+            .OrderByDescending(g => g.Priority)
+            .Select(g => $"Master {g.Subject} (Current: {g.CurrentMastery:F0}%, Target: {g.TargetMastery:F0}%)"));
+
+        // Add reinforcement topics
+        sequence.AddRange(reinforcements
+            .Select(r => $"Reinforce {r.Subject} (Current: {r.CurrentMastery:F0}%)"));
+
+        return sequence;
+    }
+}
+
+// Supporting classes for learning path optimization
+
+public record LearningPath
+{
+    public required Guid StudentId { get; init; }
+    public required DateTime GeneratedAt { get; init; }
+    public required List<KnowledgeGap> KnowledgeGaps { get; init; }
+    public required List<ReinforcementTopic> ReinforcementTopics { get; init; }
+    public required List<string> SequencedTopics { get; init; }
+    public required double TotalEstimatedHours { get; init; }
+    public required DateTime EstimatedCompletionDate { get; init; }
+}
+
+public record KnowledgeGap
+{
+    public required Subject Subject { get; init; }
+    public required double CurrentMastery { get; init; }
+    public required double TargetMastery { get; init; }
+    public required double EstimatedHours { get; init; }
+    public required double Priority { get; init; }
+}
+
+public record ReinforcementTopic
+{
+    public required Subject Subject { get; init; }
+    public required double CurrentMastery { get; init; }
+    public required double EstimatedHours { get; init; }
+    public required TimeSpan RecommendedFrequency { get; init; }
 }
