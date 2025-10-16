@@ -114,7 +114,7 @@ jobs:
                   sleep 30
                   HEALTH_URL="${{ steps.outputs.outputs.web-api-url }}/health"
                   echo "Checking health endpoint: $HEALTH_URL"
-                  
+
                   # Retry health check up to 5 times
                   for i in {1..5}; do
                     if curl -f -s $HEALTH_URL; then
@@ -124,7 +124,7 @@ jobs:
                     echo "Attempt $i failed, waiting 10s..."
                     sleep 10
                   done
-                  
+
                   echo "❌ Health check failed after 5 attempts"
                   exit 1
 

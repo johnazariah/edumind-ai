@@ -1,0 +1,141 @@
+name: Reusable Integration Tests
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        description: '.NET SDK version to use'
+        required: false
+        type: string
+        default: '9.0.x'
+      configuration:
+        description: 'Build configuration'
+        required: false
+        type: string
+        default: 'Release'
+      api-base-url:
+        description: 'Base URL for API tests (if testing deployed environment)'
+        required: false
+        type: string
+        default: ''
+      use-github-services:
+        description: 'Use GitHub Actions service containers for PostgreSQL/Redis'
+        required: false
+        type: boolean
+        default: true
+      aspire-workload:
+        description: 'Install Aspire workload'
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      postgres-connection:
+        description: 'PostgreSQL connection string (if not using service containers)'
+        required: false
+      redis-connection:
+        description: 'Redis connection string (if not using service containers)'
+        required: false
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  ASPNETCORE_ENVIRONMENT: Testing
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: edumind_test
+          POSTGRES_USER: edumind_test_user
+          POSTGRES_PASSWORD: edumind_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Install .NET Aspire workload
+        if: inputs.aspire-workload
+        run: dotnet workload install aspire
+
+      - name: Restore dependencies
+        run: dotnet restore EduMind.AI.sln
+
+      - name: Build solution
+        run: |
+          dotnet build EduMind.AI.sln \
+            --configuration ${{ inputs.configuration }} \
+            --no-restore
+
+      - name: Verify test services are ready
+        if: inputs.use-github-services
+        run: |
+          echo "Verifying PostgreSQL is ready..."
+          pg_isready -h localhost -p 5432 -U edumind_test_user -d edumind_test
+          
+          echo "Verifying Redis is ready..."
+          docker exec $(docker ps -qf "ancestor=redis:7-alpine") redis-cli ping
+
+      - name: Apply database migrations
+        if: inputs.use-github-services
+        env:
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_test_user;Password=edumind_test_password"
+        run: |
+          dotnet ef database update \
+            --project src/AcademicAssessment.Infrastructure \
+            --startup-project src/AcademicAssessment.Web \
+            --context AcademicContext
+
+      - name: Run integration tests
+        env:
+          ConnectionStrings__DefaultConnection: ${{ inputs.use-github-services && 'Host=localhost;Port=5432;Database=edumind_test;Username=edumind_test_user;Password=edumind_test_password' || secrets.postgres-connection }}
+          ConnectionStrings__RedisConnection: ${{ inputs.use-github-services && 'localhost:6379' || secrets.redis-connection }}
+          API_BASE_URL: ${{ inputs.api-base-url }}
+        run: |
+          dotnet test tests/AcademicAssessment.Tests.Integration \
+            --configuration ${{ inputs.configuration }} \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=integration-test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: "**/integration-test-results.trx"
+          retention-days: 30
+
+      - name: Publish test results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Integration Tests
+          path: "**/integration-test-results.trx"
+          reporter: dotnet-trx
+          fail-on-error: false

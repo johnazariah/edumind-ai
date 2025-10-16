@@ -1,0 +1,124 @@
+name: Reusable Security Scanning
+
+on:
+  workflow_call:
+    inputs:
+      enable-codeql:
+        description: 'Run CodeQL security analysis'
+        required: false
+        type: boolean
+        default: true
+      enable-dependency-scan:
+        description: 'Run dependency vulnerability scanning'
+        required: false
+        type: boolean
+        default: true
+      enable-secret-scan:
+        description: 'Run secret scanning with TruffleHog'
+        required: false
+        type: boolean
+        default: true
+      codeql-languages:
+        description: 'Languages for CodeQL analysis (comma-separated)'
+        required: false
+        type: string
+        default: 'csharp,javascript'
+
+jobs:
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    if: inputs.enable-codeql
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJSON(format('["{0}"]', inputs.codeql-languages)) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    if: inputs.enable-dependency-scan
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore EduMind.AI.sln
+
+      - name: List dependencies
+        run: |
+          dotnet list EduMind.AI.sln package --vulnerable --include-transitive \
+            > vulnerable-dependencies.txt 2>&1 || true
+          cat vulnerable-dependencies.txt
+
+      - name: Check for vulnerabilities
+        run: |
+          if grep -q "has the following vulnerable packages" vulnerable-dependencies.txt; then
+            echo "⚠️  Vulnerable dependencies found!"
+            echo "::warning::Vulnerable dependencies detected. Review vulnerable-dependencies.txt"
+            # Don't fail the build, just warn
+          else
+            echo "✅ No vulnerable dependencies found"
+          fi
+
+      - name: Upload dependency report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-vulnerability-report
+          path: vulnerable-dependencies.txt
+          retention-days: 30
+
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    if: inputs.enable-secret-scan
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for comprehensive scanning
+
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
