@@ -1,7 +1,14 @@
 name: OLLAMA Integration Tests
 
-# Run manually or on schedule (nightly)
+# Run on PRs to main, manually, or on schedule (nightly)
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/ollama-integration.yml"
   workflow_dispatch: # Manual trigger
     inputs:
       model:
@@ -54,23 +61,10 @@ jobs:
           curl -s http://localhost:11434/api/tags || (echo "OLLAMA not responding" && exit 1)
           echo "OLLAMA is responding"
 
-      - name: Setup test infrastructure (PostgreSQL and Redis)
+      - name: Setup test infrastructure with Aspire
         run: |
-          # Use GitHub Actions service containers instead of docker-compose
-          # Services are defined at the job level for Aspire compatibility
-          docker run -d --name postgres-test \
-            -e POSTGRES_DB=edumind_test \
-            -e POSTGRES_USER=edumind_user \
-            -e POSTGRES_PASSWORD=edumind_test_password \
-            -p 5432:5432 \
-            postgres:16-alpine
-
-          docker run -d --name redis-test \
-            -p 6379:6379 \
-            redis:7-alpine
-
-          sleep 10  # Wait for services to be ready
-          echo "Test infrastructure ready"
+          echo "Aspire will orchestrate PostgreSQL and Redis automatically"
+          echo "No manual docker-compose or service containers needed"
 
       - name: Restore dependencies
         run: dotnet restore EduMind.AI.sln
@@ -78,22 +72,35 @@ jobs:
       - name: Build solution
         run: dotnet build EduMind.AI.sln --configuration Release --no-restore
 
-      - name: Apply database migrations
+      - name: Start Aspire AppHost in background
         env:
-          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_user;Password=edumind_test_password"
+          LLM__Provider: Ollama
+          Ollama__BaseUrl: "http://localhost:11434"
+          Ollama__ModelName: ${{ env.OLLAMA_MODEL }}
+          ASPNETCORE_ENVIRONMENT: Testing
         run: |
-          dotnet ef database update \
-            --project src/AcademicAssessment.Infrastructure \
-            --startup-project src/AcademicAssessment.Web \
-            --context AcademicContext
+          echo "Starting Aspire AppHost (orchestrates all services)..."
+          cd src/EduMind.AppHost
+          dotnet run --no-build --configuration Release &
+          APPHOST_PID=$!
+          echo "APPHOST_PID=$APPHOST_PID" >> $GITHUB_ENV
+          
+          # Wait for AppHost to start services (check health endpoint)
+          echo "Waiting for services to be ready..."
+          for i in {1..60}; do
+            if curl -s http://localhost:5103/health | grep -q "Healthy"; then
+              echo "✅ Services ready!"
+              break
+            fi
+            echo "Waiting for services... ($i/60)"
+            sleep 2
+          done
 
       - name: Run integration tests with OLLAMA
         env:
           LLM__Provider: Ollama # Use real OLLAMA service
           Ollama__BaseUrl: "http://localhost:11434"
           Ollama__ModelName: ${{ env.OLLAMA_MODEL }}
-          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_user;Password=edumind_test_password"
-          ConnectionStrings__RedisConnection: "localhost:6379"
           ASPNETCORE_ENVIRONMENT: Testing
         run: |
           dotnet test tests/AcademicAssessment.Tests.Integration \
@@ -136,9 +143,12 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker stop postgres-test redis-test || true
-          docker rm postgres-test redis-test || true
+          # Stop Aspire AppHost (kills all orchestrated services)
+          kill $APPHOST_PID || true
+          pkill -f "EduMind.AppHost" || true
           pkill -f ollama || true
+          # Aspire cleanup
+          docker ps -q | xargs -r docker stop || true
 
       - name: Comment on PR with OLLAMA results
         uses: actions/github-script@v7
