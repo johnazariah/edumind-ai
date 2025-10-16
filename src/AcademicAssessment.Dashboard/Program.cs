@@ -2,6 +2,9 @@ using AcademicAssessment.Dashboard.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add Aspire ServiceDefaults (OpenTelemetry, Service Discovery, Health Checks)
+builder.AddServiceDefaults();
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

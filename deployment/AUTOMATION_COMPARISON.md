@@ -3,6 +3,7 @@
 ## 📊 Summary
 
 **Before (Manual Process):**
+
 - 581 lines of manual instructions in `AZURE_AD_B2C_SETUP_GUIDE.md`
 - ~60-90 minutes of error-prone manual steps
 - High risk of configuration mistakes
@@ -10,6 +11,7 @@
 - No CI/CD automation
 
 **After (Automated Process):**
+
 - Single command: `./deployment/scripts/deploy-infrastructure.sh dev`
 - ~30-45 minutes (includes interactive Azure portal steps)
 - Infrastructure as Code with Bicep
@@ -39,6 +41,7 @@
 **Total:** ~90 minutes + no infrastructure automation + no CI/CD
 
 **Problems:**
+
 - Easy to miss a step
 - Configuration drift between environments
 - Hard to troubleshoot
@@ -65,6 +68,7 @@
 **Total:** ~30-45 minutes + full infrastructure automation + complete CI/CD
 
 **Benefits:**
+
 - ✅ Single command deployment
 - ✅ Infrastructure as Code (version-controlled)
 - ✅ Repeatable across environments
@@ -79,7 +83,8 @@
 
 ### **Part 1: Google OAuth Setup**
 
-#### Before (Manual):
+#### Before (Manual)
+
 ```
 1. Go to Google Cloud Console
 2. Click "Select a project" → "New Project"
@@ -99,12 +104,14 @@
 16. Store somewhere (not secure)
 ```
 
-#### After (Automated):
+#### After (Automated)
+
 ```bash
 ./deployment/scripts/setup-google-oauth.sh edumindai
 ```
 
 Script:
+
 - ✅ Guides you through each step
 - ✅ Provides exact values to copy/paste
 - ✅ Validates redirect URI format
@@ -116,7 +123,8 @@ Script:
 
 ### **Part 2-6: Azure AD B2C Configuration**
 
-#### Before (Manual):
+#### Before (Manual)
+
 ```
 Multiple Azure Portal pages:
 - Create tenant (portal only)
@@ -135,12 +143,14 @@ No validation of settings
 No tracking of what's been done
 ```
 
-#### After (Automated):
+#### After (Automated)
+
 ```bash
 ./deployment/scripts/deploy-infrastructure.sh dev
 ```
 
 Script:
+
 - ✅ Guides you through each Azure portal step
 - ✅ Shows exact values to use
 - ✅ Waits for confirmation at each step
@@ -153,7 +163,8 @@ Script:
 
 ### **Part 7: Azure Infrastructure**
 
-#### Before (Manual):
+#### Before (Manual)
+
 ```
 NO AUTOMATION AT ALL
 
@@ -173,7 +184,8 @@ Risk: Very High
 Repeatability: None
 ```
 
-#### After (Automated):
+#### After (Automated)
+
 ```bicep
 // deployment/bicep/main.bicep
 // Complete infrastructure in ~200 lines
@@ -198,7 +210,8 @@ Repeatability: 100%
 
 ### **Part 8: Configuration & Testing**
 
-#### Before (Manual):
+#### Before (Manual)
+
 ```
 Update appsettings.json manually:
 - Copy values one by one
@@ -210,7 +223,8 @@ Update appsettings.json manually:
 - No automated health checks
 ```
 
-#### After (Automated):
+#### After (Automated)
+
 ```bash
 # Script automatically:
 ✅ Retrieves all values from Azure
@@ -227,7 +241,8 @@ Update appsettings.json manually:
 
 ### **CI/CD Pipeline**
 
-#### Before (Manual):
+#### Before (Manual)
+
 ```
 NO CI/CD PIPELINE
 
@@ -242,7 +257,8 @@ Every deployment required:
 - No rollback plan
 ```
 
-#### After (Automated):
+#### After (Automated)
+
 ```yaml
 # .github/workflows/deploy-azure.yml
 
@@ -363,30 +379,35 @@ Manual triggers available for different environments
 ## 💡 Key Improvements
 
 ### 1. **Error Prevention**
+
 - Exact values provided (no typos)
 - Validation at each step
 - Automatic retry on transient failures
 - Clear error messages
 
 ### 2. **Time Efficiency**
+
 - One command for full deployment
 - Parallel resource creation
 - No waiting between steps
 - CI/CD pipeline for subsequent deployments
 
 ### 3. **Consistency**
+
 - Same process every time
 - No missed steps
 - Configuration drift prevented
 - Easy to replicate across teams
 
 ### 4. **Maintainability**
+
 - Infrastructure in version control
 - Changes tracked in git
 - Easy to update
 - Self-documenting
 
 ### 5. **Team Collaboration**
+
 - Anyone can deploy
 - No special knowledge needed
 - Scripts are the documentation
@@ -397,12 +418,14 @@ Manual triggers available for different environments
 ## 🚀 Next Steps
 
 Your manual guide (`AZURE_AD_B2C_SETUP_GUIDE.md`) is now:
+
 - ✅ **Preserved as reference** documentation
 - ✅ **Supplemented with automation** for 95% of steps
 - ✅ **Enhanced with IaC** for infrastructure
 - ✅ **Extended with CI/CD** pipeline
 
 You can now:
+
 1. Deploy to any environment in ~45 minutes
 2. Redeploy via CI/CD in ~10 minutes
 3. Have confidence in consistency

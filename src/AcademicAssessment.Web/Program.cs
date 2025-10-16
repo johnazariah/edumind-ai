@@ -41,6 +41,11 @@ try
     var builder = WebApplication.CreateBuilder(args);
 
     // ============================================================
+    // ASPIRE SERVICE DEFAULTS - OpenTelemetry, Service Discovery, Health Checks
+    // ============================================================
+    builder.AddServiceDefaults();
+
+    // ============================================================
     // LOGGING - Use Serilog
     // ============================================================
     builder.Host.UseSerilog();
