@@ -235,6 +235,10 @@ public class StudentProgressOrchestrator : A2ABaseAgent
             return Subject.Mathematics;
         }
 
+        // Load assessment subjects for all assessments (to avoid N+1 queries)
+        var assessmentIds = assessments.Select(a => a.AssessmentId).ToList();
+        var subjectMap = await LoadAssessmentSubjectsAsync(assessmentIds);
+
         // Calculate priority scores for each subject
         var subjectPriorities = new Dictionary<Subject, double>();
         var allSubjects = Enum.GetValues<Subject>();
@@ -242,7 +246,7 @@ public class StudentProgressOrchestrator : A2ABaseAgent
         foreach (var subject in allSubjects)
         {
             var subjectAssessments = assessments
-                .Where(a => GetAssessmentSubject(a.AssessmentId) == subject)
+                .Where(a => GetAssessmentSubject(a.AssessmentId, subjectMap) == subject)
                 .OrderByDescending(a => a.CompletedAt ?? a.StartedAt)
                 .ToList();
 
@@ -368,15 +372,52 @@ public class StudentProgressOrchestrator : A2ABaseAgent
     }
 
     /// <summary>
-    /// Gets the subject for an assessment.
-    /// TODO: In production, query the Assessment entity to get its subject.
-    /// For now, we'll extract from assessment metadata or default to Mathematics.
+    /// Gets the subject for an assessment by querying the assessment repository.
+    /// Uses caching to avoid repeated database queries for the same assessment.
     /// </summary>
-    private Subject GetAssessmentSubject(Guid assessmentId)
+    private async Task<Dictionary<Guid, Subject>> LoadAssessmentSubjectsAsync(
+        IEnumerable<Guid> assessmentIds,
+        CancellationToken cancellationToken = default)
     {
-        // TODO: Query database to get assessment's subject
-        // For now, return Mathematics as placeholder
-        // This should be replaced with: await _assessmentRepository.GetSubjectAsync(assessmentId)
+        var subjectMap = new Dictionary<Guid, Subject>();
+        var uniqueIds = assessmentIds.Distinct().ToList();
+
+        Logger.LogDebug("Loading subjects for {Count} unique assessments", uniqueIds.Count);
+
+        foreach (var assessmentId in uniqueIds)
+        {
+            var assessmentResult = await _assessmentRepository.GetByIdAsync(assessmentId, cancellationToken);
+
+            if (assessmentResult is AcademicAssessment.Core.Common.Result<Assessment>.Success success)
+            {
+                subjectMap[assessmentId] = success.Value.Subject;
+                Logger.LogTrace("Assessment {AssessmentId} is for subject {Subject}",
+                    assessmentId, success.Value.Subject);
+            }
+            else
+            {
+                // If assessment not found, log warning and default to Mathematics
+                Logger.LogWarning("Assessment {AssessmentId} not found, defaulting to Mathematics",
+                    assessmentId);
+                subjectMap[assessmentId] = Subject.Mathematics;
+            }
+        }
+
+        return subjectMap;
+    }
+
+    /// <summary>
+    /// Gets the subject for an assessment from a pre-loaded lookup dictionary.
+    /// </summary>
+    private Subject GetAssessmentSubject(Guid assessmentId, Dictionary<Guid, Subject> subjectMap)
+    {
+        if (subjectMap.TryGetValue(assessmentId, out var subject))
+        {
+            return subject;
+        }
+
+        // Fallback to Mathematics if not in map (shouldn't happen if LoadAssessmentSubjectsAsync was called properly)
+        Logger.LogWarning("Assessment {AssessmentId} not in subject map, defaulting to Mathematics", assessmentId);
         return Subject.Mathematics;
     }
 
@@ -500,7 +541,7 @@ public class StudentProgressOrchestrator : A2ABaseAgent
             Logger.LogWarning(
                 "Found {CandidateCount} candidate agents, but none are currently available",
                 candidateAgents.Count);
-            
+
             // Fallback: use any candidate agent (best effort)
             Logger.LogInformation("Using fallback selection - picking first candidate agent");
             return candidateAgents.First();
@@ -873,10 +914,14 @@ public class StudentProgressOrchestrator : A2ABaseAgent
     {
         Logger.LogDebug("Optimizing learning path for Student {StudentId}", studentId);
 
+        // Load assessment subjects for all assessments (to avoid N+1 queries)
+        var assessmentIds = assessmentHistory.Select(a => a.AssessmentId).ToList();
+        var subjectMap = await LoadAssessmentSubjectsAsync(assessmentIds);
+
         // Group assessments by subject to identify weak areas
         var subjectPerformance = assessmentHistory
             .Where(a => a.Status == AssessmentStatus.Completed && a.PercentageScore.HasValue)
-            .GroupBy(a => GetAssessmentSubject(a.AssessmentId))
+            .GroupBy(a => GetAssessmentSubject(a.AssessmentId, subjectMap))
             .Select(g => new
             {
                 Subject = g.Key,

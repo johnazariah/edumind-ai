@@ -134,19 +134,34 @@ public class StudentProgressOrchestratorTests
             Times.Once);
     }
 
-    [Fact(Skip = "Requires GetAssessmentSubject() stub to be implemented with proper subject mapping")]
+    [Fact]
     public async Task DetermineNextSubject_WithNeverAssessedSubject_ShouldPrioritizeIt()
     {
         // Arrange
         var studentId = Guid.NewGuid();
         var student = CreateTestStudent(studentId, GradeLevel.Grade9);
 
+        // Create assessment IDs
+        var mathAssessmentId1 = Guid.NewGuid();
+        var mathAssessmentId2 = Guid.NewGuid();
+
         // Only Mathematics assessments - Biology never assessed
         var assessments = new List<StudentAssessment>
         {
-            CreateCompletedAssessment(studentId, Subject.Mathematics, 75.0, DateTime.UtcNow.AddDays(-5)),
-            CreateCompletedAssessment(studentId, Subject.Mathematics, 80.0, DateTime.UtcNow.AddDays(-2)),
+            CreateCompletedAssessment(studentId, mathAssessmentId1, 75.0, DateTime.UtcNow.AddDays(-5)),
+            CreateCompletedAssessment(studentId, mathAssessmentId2, 80.0, DateTime.UtcNow.AddDays(-2)),
         };
+
+        // Mock assessment repository to return assessment entities with subjects
+        _mockAssessmentRepository
+            .Setup(r => r.GetByIdAsync(mathAssessmentId1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Result<Assessment>.Success(
+                CreateTestAssessment(mathAssessmentId1, Subject.Mathematics)));
+
+        _mockAssessmentRepository
+            .Setup(r => r.GetByIdAsync(mathAssessmentId2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Result<Assessment>.Success(
+                CreateTestAssessment(mathAssessmentId2, Subject.Mathematics)));
 
         _mockStudentRepository
             .Setup(r => r.GetByIdAsync(studentId, It.IsAny<CancellationToken>()))
@@ -162,6 +177,7 @@ public class StudentProgressOrchestratorTests
         {
             CreateTestAgentCard("BiologyAgent", Subject.Biology),
             CreateTestAgentCard("MathAgent", Subject.Mathematics),
+            CreateTestAgentCard("PhysicsAgent", Subject.Physics),
         };
         _mockTaskService
             .Setup(s => s.DiscoverAgentsAsync(null, "generate_assessment"))
@@ -659,6 +675,15 @@ public class StudentProgressOrchestratorTests
         DateTime completedAt)
     {
         var assessmentId = Guid.NewGuid();
+        return CreateCompletedAssessment(studentId, assessmentId, percentageScore, completedAt);
+    }
+
+    private StudentAssessment CreateCompletedAssessment(
+        Guid studentId,
+        Guid assessmentId,
+        double percentageScore,
+        DateTime completedAt)
+    {
         var correctAnswers = (int)(percentageScore / 10);
         var totalQuestions = 10;
 
@@ -678,6 +703,24 @@ public class StudentProgressOrchestratorTests
             EstimatedAbility = 0.0,
             CreatedAt = completedAt.AddMinutes(-15),
             UpdatedAt = completedAt
+        };
+    }
+
+    private Assessment CreateTestAssessment(Guid id, Subject subject)
+    {
+        return new Assessment
+        {
+            Id = id,
+            CourseId = Guid.NewGuid(),
+            Subject = subject,
+            Title = $"{subject} Assessment",
+            Description = $"Test assessment for {subject}",
+            AssessmentType = AssessmentType.Practice,
+            GradeLevel = GradeLevel.Grade9,
+            TotalPoints = 100,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
     }
 
