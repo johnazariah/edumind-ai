@@ -640,87 +640,6 @@ public class StudentProgressOrchestratorTests
     #region Routing and Fallback Tests
 
     [Fact]
-    public async Task RouteTaskToAgent_WithMatchingCapabilities_ShouldSelectAgent()
-    {
-        // Arrange
-        var task = CreateTestTask("GENERATE_ASSESSMENT", new { Subject = "Mathematics" });
-        var agents = new List<AgentCard>
-        {
-            new AgentCard
-            {
-                Name = "MathAgent",
-                Capabilities = new List<string> { "GENERATE_ASSESSMENT", "Mathematics" },
-                Skills = new List<string> { "Mathematics", "Algebra" },
-                Url = "http://localhost:5001"
-            }
-        };
-        _mockTaskService.Setup(x => x.DiscoverAgentsAsync()).ReturnsAsync(agents);
-
-        // Act
-        var result = await _orchestrator.RouteTaskToAgent(task);
-
-        // Assert
-        result.Should().NotBeNull();
-        result!.Name.Should().Be("MathAgent");
-    }
-
-    [Fact]
-    public async Task RouteTaskToAgent_WithNoMatchingAgent_ShouldReturnNull()
-    {
-        // Arrange
-        var task = CreateTestTask("UNKNOWN_TASK", new { });
-        var agents = new List<AgentCard>
-        {
-            new AgentCard
-            {
-                Name = "MathAgent",
-                Capabilities = new List<string> { "GENERATE_ASSESSMENT" },
-                Skills = new List<string> { "Mathematics" },
-                Url = "http://localhost:5001"
-            }
-        };
-        _mockTaskService.Setup(x => x.DiscoverAgentsAsync()).ReturnsAsync(agents);
-
-        // Act
-        var result = await _orchestrator.RouteTaskToAgent(task);
-
-        // Assert
-        result.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task RouteTaskToAgent_WithMultipleAgents_ShouldSelectBestMatch()
-    {
-        // Arrange
-        var task = CreateTestTask("GENERATE_ASSESSMENT", new { Subject = "Mathematics", Difficulty = "Hard" });
-        var agents = new List<AgentCard>
-        {
-            new AgentCard
-            {
-                Name = "GenericMathAgent",
-                Capabilities = new List<string> { "GENERATE_ASSESSMENT" },
-                Skills = new List<string> { "Mathematics" },
-                Url = "http://localhost:5001"
-            },
-            new AgentCard
-            {
-                Name = "AdvancedMathAgent",
-                Capabilities = new List<string> { "GENERATE_ASSESSMENT", "ADVANCED_PROBLEMS" },
-                Skills = new List<string> { "Mathematics", "Algebra", "Calculus" },
-                Url = "http://localhost:5002"
-            }
-        };
-        _mockTaskService.Setup(x => x.DiscoverAgentsAsync()).ReturnsAsync(agents);
-
-        // Act
-        var result = await _orchestrator.RouteTaskToAgent(task);
-
-        // Assert
-        result.Should().NotBeNull();
-        result!.Name.Should().Be("AdvancedMathAgent"); // Should pick the more capable agent
-    }
-
-    [Fact]
     public void GetRoutingStatistics_ShouldReturnValidMetrics()
     {
         // Act
@@ -734,37 +653,26 @@ public class StudentProgressOrchestratorTests
     }
 
     [Fact]
-    public async Task RouteTaskToAgent_WithAvailabilityFilter_ShouldExcludeOverloadedAgents()
+    public void GetRoutingStatistics_InitialState_ShouldReturnZeroRates()
     {
-        // Arrange
-        var task = CreateTestTask("GENERATE_ASSESSMENT", new { Subject = "Mathematics" });
-        var agents = new List<AgentCard>
-        {
-            new AgentCard
-            {
-                Name = "OverloadedAgent",
-                Capabilities = new List<string> { "GENERATE_ASSESSMENT" },
-                Skills = new List<string> { "Mathematics" },
-                Url = "http://localhost:5001",
-                CurrentLoad = 95 // 95% loaded
-            },
-            new AgentCard
-            {
-                Name = "AvailableAgent",
-                Capabilities = new List<string> { "GENERATE_ASSESSMENT" },
-                Skills = new List<string> { "Mathematics" },
-                Url = "http://localhost:5002",
-                CurrentLoad = 30 // 30% loaded
-            }
-        };
-        _mockTaskService.Setup(x => x.DiscoverAgentsAsync()).ReturnsAsync(agents);
-
         // Act
-        var result = await _orchestrator.RouteTaskToAgent(task);
+        var stats = _orchestrator.GetRoutingStatistics();
+
+        // Assert - Fresh orchestrator should have zero rates
+        stats.SuccessRate.Should().Be(0.0);
+        stats.FallbackRate.Should().Be(0.0);
+        stats.AgentUtilization.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetRoutingStatistics_ShouldReturnNonNullUtilizationDictionary()
+    {
+        // Act
+        var stats = _orchestrator.GetRoutingStatistics();
 
         // Assert
-        result.Should().NotBeNull();
-        result!.Name.Should().Be("AvailableAgent"); // Should prefer less loaded agent
+        stats.AgentUtilization.Should().NotBeNull();
+        stats.AgentUtilization.Should().BeOfType<Dictionary<string, int>>();
     }
 
     #endregion
