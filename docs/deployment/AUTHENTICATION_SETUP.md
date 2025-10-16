@@ -66,6 +66,7 @@ psql -h localhost -U edumind_user -d edumind_dev
 **Initial Migration**: `20251015005710_InitialCreate`
 
 **Tables Created**:
+
 - Users, Schools, Classes, Students, Courses
 - Assessments, Questions
 - StudentAssessments, StudentResponses
@@ -159,7 +160,7 @@ az login --use-device-code
 ```
 
 - Displays a code
-- Visit: https://microsoft.com/devicelogin
+- Visit: <https://microsoft.com/devicelogin>
 - Enter code and authenticate
 
 #### Option 3: Service Principal (for CI/CD)
@@ -179,7 +180,7 @@ To create app registrations, you need one of these Azure AD roles:
 - **Cloud Application Administrator**
 - **Global Administrator**
 
-Check your roles: https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RolesAndAdministrators
+Check your roles: <https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RolesAndAdministrators>
 
 ### Useful Azure CLI Commands
 
@@ -243,6 +244,7 @@ az logout
 **File**: `src/AcademicAssessment.Infrastructure/Context/TenantContextJwt.cs`
 
 **Features**:
+
 - Extracts user information from JWT claims
 - Supports standard claims (sub, oid, email, name, role)
 - Supports Azure AD B2C extension attributes (extension_SchoolId, extension_ClassIds)
@@ -250,6 +252,7 @@ az logout
 - Role hierarchy support (SystemAdmin > BusinessAdmin > SchoolAdmin > CourseAdmin > Teacher > Student)
 
 **Key Properties**:
+
 - `UserId`: From `sub`, `oid`, or `NameIdentifier` claim
 - `Email`: From `email` or `preferred_username` claim
 - `FullName`: From `name` claim (falls back to email)
@@ -258,6 +261,7 @@ az logout
 - `ClassIds`: From `classIds`, `class_ids`, or `extension_ClassIds` claim (comma-separated)
 
 **Key Methods**:
+
 - `HasAccessToSchool(Guid schoolId)`: Checks if user can access a specific school
 - `HasAccessToClass(Guid classId)`: Checks if user can access a specific class
 - `HasRole(UserRole minimumRole)`: Checks if user has at least the specified role level
@@ -281,6 +285,7 @@ builder.Services.AddAuthentication();  // No authentication required
 ### Authorization Policies
 
 **Role-Based Policies**:
+
 - `StudentPolicy`: Requires Student role
 - `TeacherPolicy`: Requires Teacher role
 - `SchoolAdminPolicy`: Requires SchoolAdmin role
@@ -289,6 +294,7 @@ builder.Services.AddAuthentication();  // No authentication required
 - `SystemAdminPolicy`: Requires SystemAdmin role
 
 **Combined Policies**:
+
 - `AdminPolicy`: Requires SchoolAdmin, BusinessAdmin, or SystemAdmin role
 - `EducatorPolicy`: Requires Teacher, SchoolAdmin, or CourseAdmin role
 - `AllUsersPolicy`: Requires any authenticated user
@@ -349,7 +355,8 @@ gcloud alpha iap oauth-clients create $BRAND
 ```
 
 **Google Cloud Console Setup**:
-1. Go to: https://console.cloud.google.com/apis/credentials
+
+1. Go to: <https://console.cloud.google.com/apis/credentials>
 2. Create OAuth 2.0 Client ID
 3. Application type: Web application
 4. Authorized redirect URIs: `https://edumindai.b2clogin.com/edumindai.onmicrosoft.com/oauth2/authresp`
@@ -528,6 +535,7 @@ public class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSch
 ### Production Testing (With JWT)
 
 **1. Obtain JWT Token:**
+
 - Use Azure AD B2C user flow to sign in
 - Copy the access token from the response
 
@@ -539,6 +547,7 @@ curl -H "Authorization: Bearer <jwt-token>" \
 ```
 
 **3. Expected Responses:**
+
 - `200 OK`: Successfully retrieved data
 - `401 Unauthorized`: Missing or invalid JWT token
 - `403 Forbidden`: Valid token but insufficient permissions
@@ -617,6 +626,7 @@ builder.Configuration.AddAzureKeyVault(
 ```
 
 **5. Rotate secrets regularly**
+
 - Azure AD: Every 90 days
 - GitHub PAT: Every 30-90 days
 - Google: Every 90 days
@@ -648,6 +658,7 @@ docker-compose up -d
 ### Azure: "You don't have permission to manage app registrations"
 
 **Solution:**
+
 - Ask Azure AD admin to grant you "Application Administrator" role
 - Or ask admin to run `setup-azure-auth.sh` and give you the output
 
@@ -662,12 +673,14 @@ az login --use-device-code
 ### Authentication: 401 Unauthorized
 
 **Possible Causes:**
+
 1. Missing JWT token in Authorization header
 2. Token has expired
 3. Token issuer doesn't match configuration
 4. Authentication:Enabled is false
 
 **Solution:**
+
 - Check Authorization header format: `Bearer <token>`
 - Verify token hasn't expired (check `exp` claim)
 - Verify `AzureAdB2C:Instance` and `AzureAdB2C:TenantId` match token issuer
@@ -675,11 +688,13 @@ az login --use-device-code
 ### Authentication: 403 Forbidden
 
 **Possible Causes:**
+
 1. Valid token but insufficient permissions
 2. User role doesn't meet policy requirements
 3. Row-level security blocks access (wrong SchoolId)
 
 **Solution:**
+
 - Check user role in JWT token
 - Verify authorization policy requirements
 - Check `extension_SchoolId` matches resource
@@ -794,15 +809,15 @@ gh auth login
 
 ## Additional Resources
 
-- **Azure CLI Docs:** https://docs.microsoft.com/en-us/cli/azure/
-- **GitHub CLI Docs:** https://cli.github.com/manual/
-- **Google Cloud CLI Docs:** https://cloud.google.com/sdk/docs
-- **Microsoft Identity Docs:** https://docs.microsoft.com/en-us/azure/active-directory/develop/
-- **ASP.NET Core Authentication:** https://docs.microsoft.com/en-us/aspnet/core/security/authentication/
-- **Azure AD B2C Documentation:** https://docs.microsoft.com/en-us/azure/active-directory-b2c/
-- **Microsoft.Identity.Web Documentation:** https://docs.microsoft.com/en-us/azure/active-directory/develop/microsoft-identity-web
-- **EF Core Migrations:** https://docs.microsoft.com/en-us/ef/core/managing-schemas/migrations/
-- **PostgreSQL Docker Image:** https://hub.docker.com/_/postgres
+- **Azure CLI Docs:** <https://docs.microsoft.com/en-us/cli/azure/>
+- **GitHub CLI Docs:** <https://cli.github.com/manual/>
+- **Google Cloud CLI Docs:** <https://cloud.google.com/sdk/docs>
+- **Microsoft Identity Docs:** <https://docs.microsoft.com/en-us/azure/active-directory/develop/>
+- **ASP.NET Core Authentication:** <https://docs.microsoft.com/en-us/aspnet/core/security/authentication/>
+- **Azure AD B2C Documentation:** <https://docs.microsoft.com/en-us/azure/active-directory-b2c/>
+- **Microsoft.Identity.Web Documentation:** <https://docs.microsoft.com/en-us/azure/active-directory/develop/microsoft-identity-web>
+- **EF Core Migrations:** <https://docs.microsoft.com/en-us/ef/core/managing-schemas/migrations/>
+- **PostgreSQL Docker Image:** <https://hub.docker.com/_/postgres>
 
 ---
 

@@ -55,11 +55,13 @@
 ### Best Practices
 
 ✅ **DO:**
+
 - Use lowercase with hyphens
 - Keep descriptions short and descriptive (2-4 words)
 - Delete branches after merging
 
 ❌ **DON'T:**
+
 - Use spaces or underscores
 - Include issue numbers in branch name (put in commit message instead)
 - Create branches from outdated main
@@ -110,6 +112,7 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 ### Scope (Optional)
 
 Indicates which part of codebase is affected:
+
 - `orchestrator` - Orchestration layer
 - `agents` - Agent implementations
 - `analytics` - Analytics service
@@ -199,6 +202,7 @@ git push origin feature/your-branch-name
 ### Before Creating a PR
 
 1. **Ensure branch is up to date with main:**
+
    ```bash
    git checkout main
    git pull origin main
@@ -208,6 +212,7 @@ git push origin feature/your-branch-name
    ```
 
 2. **Run full test suite:**
+
    ```bash
    dotnet build
    dotnet test
@@ -252,6 +257,7 @@ Closes #1" \
 ```
 
 Examples:
+
 - `feat: Complete orchestrator decision-making (Week 1 Day 1)`
 - `fix: Resolve circuit breaker timeout issue`
 - `docs: Consolidate and reorganize documentation`
@@ -283,6 +289,7 @@ Relates to #456
 ### PR Review Checklist
 
 **For PR Author:**
+
 - [ ] All tests passing
 - [ ] Code follows project conventions
 - [ ] No merge conflicts
@@ -291,6 +298,7 @@ Relates to #456
 - [ ] Meaningful commit messages
 
 **For Reviewers:**
+
 - [ ] Code is understandable
 - [ ] Tests cover new functionality
 - [ ] No obvious bugs or security issues
@@ -371,6 +379,7 @@ dotnet test /p:CollectCoverage=true
 ### When to Update Documentation
 
 **Always update documentation when:**
+
 - Adding new features or APIs
 - Changing architecture or design patterns
 - Completing sprint tasks or milestones
@@ -444,6 +453,7 @@ dotnet format --verify-no-changes
 ### Code Review Self-Checklist
 
 Before requesting review:
+
 - [ ] Is this the simplest solution?
 - [ ] Are all edge cases handled?
 - [ ] Is error handling appropriate?
@@ -459,6 +469,7 @@ Before requesting review:
 ### Daily Workflow
 
 1. **Start of Day:**
+
    ```bash
    # Pull latest changes
    git checkout main
