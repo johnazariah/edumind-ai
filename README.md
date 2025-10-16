@@ -1,9 +1,11 @@
 # EduMind.AI - Academic Assessment Multi-Agent System
 
 [![CI](https://github.com/johnazariah/edumind-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/johnazariah/edumind-ai/actions/workflows/ci.yml)
-[![.NET Version](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
+[![.NET Version](https://img.shields.io/badge/.NET-9.0-blue)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Coverage](https://img.shields.io/badge/coverage-53%25-yellow)](https://github.com/johnazariah/edumind-ai)
+[![Coverage](https://img.shields.io/badge/coverage-68%25-yellow)](https://github.com/johnazariah/edumind-ai)
+[![Tests](https://img.shields.io/badge/tests-40/59_passing-yellow)](docs/TEST_STATUS.md)
+[![Sprint](https://img.shields.io/badge/sprint-6_weeks-blue)](docs/SPRINT_EXECUTIVE_SUMMARY.md)
 
 ## Overview
 
@@ -51,6 +53,39 @@ See [PRIVACY_EXECUTIVE_SUMMARY.md](docs/PRIVACY_EXECUTIVE_SUMMARY.md) for comple
 - **Scalable Architecture**: Supports 1000+ concurrent students with <2s response times
 - **Multi-Tenant SaaS**: White-box deployment serving multiple schools concurrently
 - **Comprehensive Analytics**: Statistical analysis and predictive modeling for intervention identification
+
+## 🚀 Current Sprint: 6-Week Production Push
+
+**Status:** Week 1 Starting October 16, 2025 | **Goal:** Production-Ready System
+
+We're executing an aggressive 6-week sprint to take EduMind.AI from prototype to production:
+
+| Week | Focus | Priority | Status |
+|------|-------|----------|--------|
+| **Week 1** | Complete Orchestrator Logic | P1 Critical | 🔵 Starting |
+| **Week 2-3** | Build Student Assessment UI | P2 High | ⚪ Planned |
+| **Week 4** | Integration Testing | P3 Medium | ⚪ Planned |
+| **Week 5-6** | Azure Deployment | P4 Production | ⚪ Planned |
+
+### Quick Links
+
+- 📋 **[Sprint Executive Summary](docs/SPRINT_EXECUTIVE_SUMMARY.md)** - Overview and goals
+- 🗺️ **[Complete Roadmap](docs/SPRINT_ROADMAP.md)** - All 67 tasks detailed
+- ✅ **[Week 1 Day 1 Checklist](docs/WEEK1_DAY1_CHECKLIST.md)** - Start here!
+- 🧪 **[Test Status](docs/TEST_STATUS.md)** - 40/59 passing (68%)
+- 📊 **[Project Board Setup](docs/PROJECT_SETUP_GUIDE.md)** - GitHub Projects
+
+### Week 1 Goals (Oct 16-22)
+
+**Focus:** Intelligent Multi-Agent Orchestration
+
+- ✅ Implement orchestrator decision-making algorithm
+- ✅ Complete A2A protocol for agent communication
+- ✅ Add real-time progress tracking via SignalR
+- ✅ Implement error handling and resilience
+- ✅ Achieve >80% test coverage
+
+**To Start:** Open [WEEK1_DAY1_CHECKLIST.md](docs/WEEK1_DAY1_CHECKLIST.md)
 
 ## 🏗️ Architecture
 
