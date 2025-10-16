@@ -129,6 +129,7 @@ dotnet run --project src/EduMind.AppHost
 ```
 
 This automatically starts:
+
 - PostgreSQL (database)
 - Redis (cache)
 - OLLAMA (free local LLM for development/testing)
@@ -183,6 +184,7 @@ EduMind.AI supports multiple LLM providers:
    - Perfect for CI/CD pipelines
 
 Configure in `appsettings.json`:
+
 ```json
 {
   "LLM": {

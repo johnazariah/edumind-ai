@@ -2,168 +2,168 @@ name: OLLAMA Integration Tests
 
 # Run manually or on schedule (nightly)
 on:
-    workflow_dispatch: # Manual trigger
-        inputs:
-            model:
-                description: "OLLAMA model to use"
-                required: false
-                default: "llama3.2:3b"
-    schedule:
-        - cron: "0 2 * * *" # Run at 2 AM UTC daily
+  workflow_dispatch: # Manual trigger
+    inputs:
+      model:
+        description: "OLLAMA model to use"
+        required: false
+        default: "llama3.2:3b"
+  schedule:
+    - cron: "0 2 * * *" # Run at 2 AM UTC daily
 
 env:
-    DOTNET_VERSION: "9.0.x"
-    OLLAMA_MODEL: ${{ github.event.inputs.model || 'llama3.2:3b' }}
+  DOTNET_VERSION: "9.0.x"
+  OLLAMA_MODEL: ${{ github.event.inputs.model || 'llama3.2:3b' }}
 
 jobs:
-    ollama-integration-test:
-        runs-on: ubuntu-latest
-        timeout-minutes: 30 # OLLAMA tests can be slow
+  ollama-integration-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30 # OLLAMA tests can be slow
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Setup .NET
-              uses: actions/setup-dotnet@v4
-              with:
-                  dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-            - name: Install .NET Aspire workload
-              run: dotnet workload install aspire
+      - name: Install .NET Aspire workload
+        run: dotnet workload install aspire
 
-            - name: Install OLLAMA
-              run: |
-                  curl -fsSL https://ollama.com/install.sh | sh
-                  echo "OLLAMA installed successfully"
+      - name: Install OLLAMA
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          echo "OLLAMA installed successfully"
 
-            - name: Start OLLAMA service
-              run: |
-                  ollama serve &
-                  sleep 5
-                  echo "OLLAMA service started"
+      - name: Start OLLAMA service
+        run: |
+          ollama serve &
+          sleep 5
+          echo "OLLAMA service started"
 
-            - name: Pull OLLAMA model
-              run: |
-                  echo "Pulling model: ${{ env.OLLAMA_MODEL }}"
-                  ollama pull ${{ env.OLLAMA_MODEL }}
-                  echo "Model pulled successfully"
+      - name: Pull OLLAMA model
+        run: |
+          echo "Pulling model: ${{ env.OLLAMA_MODEL }}"
+          ollama pull ${{ env.OLLAMA_MODEL }}
+          echo "Model pulled successfully"
 
-            - name: Verify OLLAMA is running
-              run: |
-                  curl -s http://localhost:11434/api/tags || (echo "OLLAMA not responding" && exit 1)
-                  echo "OLLAMA is responding"
+      - name: Verify OLLAMA is running
+        run: |
+          curl -s http://localhost:11434/api/tags || (echo "OLLAMA not responding" && exit 1)
+          echo "OLLAMA is responding"
 
-            - name: Setup test infrastructure (PostgreSQL and Redis)
-              run: |
-                  # Use GitHub Actions service containers instead of docker-compose
-                  # Services are defined at the job level for Aspire compatibility
-                  docker run -d --name postgres-test \
-                    -e POSTGRES_DB=edumind_test \
-                    -e POSTGRES_USER=edumind_user \
-                    -e POSTGRES_PASSWORD=edumind_test_password \
-                    -p 5432:5432 \
-                    postgres:16-alpine
-                  
-                  docker run -d --name redis-test \
-                    -p 6379:6379 \
-                    redis:7-alpine
-                  
-                  sleep 10  # Wait for services to be ready
-                  echo "Test infrastructure ready"
+      - name: Setup test infrastructure (PostgreSQL and Redis)
+        run: |
+          # Use GitHub Actions service containers instead of docker-compose
+          # Services are defined at the job level for Aspire compatibility
+          docker run -d --name postgres-test \
+            -e POSTGRES_DB=edumind_test \
+            -e POSTGRES_USER=edumind_user \
+            -e POSTGRES_PASSWORD=edumind_test_password \
+            -p 5432:5432 \
+            postgres:16-alpine
 
-            - name: Restore dependencies
-              run: dotnet restore EduMind.AI.sln
+          docker run -d --name redis-test \
+            -p 6379:6379 \
+            redis:7-alpine
 
-            - name: Build solution
-              run: dotnet build EduMind.AI.sln --configuration Release --no-restore
+          sleep 10  # Wait for services to be ready
+          echo "Test infrastructure ready"
 
-            - name: Apply database migrations
-              env:
-                  ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_user;Password=edumind_test_password"
-              run: |
-                  dotnet ef database update \
-                    --project src/AcademicAssessment.Infrastructure \
-                    --startup-project src/AcademicAssessment.Web \
-                    --context AcademicContext
+      - name: Restore dependencies
+        run: dotnet restore EduMind.AI.sln
 
-            - name: Run integration tests with OLLAMA
-              env:
-                  LLM__Provider: Ollama # Use real OLLAMA service
-                  Ollama__BaseUrl: "http://localhost:11434"
-                  Ollama__ModelName: ${{ env.OLLAMA_MODEL }}
-                  ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_user;Password=edumind_test_password"
-                  ConnectionStrings__RedisConnection: "localhost:6379"
-                  ASPNETCORE_ENVIRONMENT: Testing
-              run: |
-                  dotnet test tests/AcademicAssessment.Tests.Integration \
-                    --configuration Release \
-                    --no-build \
-                    --verbosity normal \
-                    --logger "trx;LogFileName=ollama-integration-results.trx"
+      - name: Build solution
+        run: dotnet build EduMind.AI.sln --configuration Release --no-restore
 
-            - name: Run OLLAMA test script
-              env:
-                  API_BASE: "http://localhost:5103/api/v1"
-                  OLLAMA_BASE: "http://localhost:11434"
-              run: |
-                  chmod +x tests/test-multi-agent-ollama.sh
-                  # Install bc for floating point comparisons
-                  sudo apt-get update && sudo apt-get install -y bc
-                  # Run the test script
-                  tests/test-multi-agent-ollama.sh || true  # Don't fail on script errors
-              timeout-minutes: 10
+      - name: Apply database migrations
+        env:
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_user;Password=edumind_test_password"
+        run: |
+          dotnet ef database update \
+            --project src/AcademicAssessment.Infrastructure \
+            --startup-project src/AcademicAssessment.Web \
+            --context AcademicContext
 
-            - name: Upload OLLAMA test results
-              uses: actions/upload-artifact@v4
-              if: always()
-              with:
-                  name: ollama-test-results
-                  path: |
-                      **/*ollama-integration-results.trx
-                      /tmp/ollama-test-full.log
-                  retention-days: 30
+      - name: Run integration tests with OLLAMA
+        env:
+          LLM__Provider: Ollama # Use real OLLAMA service
+          Ollama__BaseUrl: "http://localhost:11434"
+          Ollama__ModelName: ${{ env.OLLAMA_MODEL }}
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=edumind_test;Username=edumind_user;Password=edumind_test_password"
+          ConnectionStrings__RedisConnection: "localhost:6379"
+          ASPNETCORE_ENVIRONMENT: Testing
+        run: |
+          dotnet test tests/AcademicAssessment.Tests.Integration \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=ollama-integration-results.trx"
 
-            - name: Publish test results
-              uses: dorny/test-reporter@v1
-              if: always()
-              with:
-                  name: OLLAMA Integration Tests
-                  path: "**/ollama-integration-results.trx"
-                  reporter: dotnet-trx
-                  fail-on-error: false # Don't fail on slow OLLAMA tests
+      - name: Run OLLAMA test script
+        env:
+          API_BASE: "http://localhost:5103/api/v1"
+          OLLAMA_BASE: "http://localhost:11434"
+        run: |
+          chmod +x tests/test-multi-agent-ollama.sh
+          # Install bc for floating point comparisons
+          sudo apt-get update && sudo apt-get install -y bc
+          # Run the test script
+          tests/test-multi-agent-ollama.sh || true  # Don't fail on script errors
+        timeout-minutes: 10
 
-            - name: Cleanup
-              if: always()
-              run: |
-                  docker stop postgres-test redis-test || true
-                  docker rm postgres-test redis-test || true
-                  pkill -f ollama || true
+      - name: Upload OLLAMA test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ollama-test-results
+          path: |
+            **/*ollama-integration-results.trx
+            /tmp/ollama-test-full.log
+          retention-days: 30
 
-            - name: Comment on PR with OLLAMA results
-              uses: actions/github-script@v7
-              if: github.event_name == 'pull_request'
-              with:
-                  script: |
-                      const fs = require('fs');
-                      let comment = '## 🤖 OLLAMA Integration Test Results\n\n';
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: OLLAMA Integration Tests
+          path: "**/ollama-integration-results.trx"
+          reporter: dotnet-trx
+          fail-on-error: false # Don't fail on slow OLLAMA tests
 
-                      try {
-                        const logContent = fs.readFileSync('/tmp/ollama-test-full.log', 'utf8');
-                        const lines = logContent.split('\n');
-                        
-                        // Extract summary
-                        const summary = lines.filter(line => line.includes('✅') || line.includes('❌'));
-                        comment += summary.join('\n');
-                        
-                        comment += '\n\n**Note:** OLLAMA tests use CPU inference and may be slow (20-60s per evaluation).';
-                      } catch (error) {
-                        comment += '⚠️ Could not read OLLAMA test results.\n';
-                      }
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop postgres-test redis-test || true
+          docker rm postgres-test redis-test || true
+          pkill -f ollama || true
 
-                      github.rest.issues.createComment({
-                        issue_number: context.issue.number,
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        body: comment
-                      });
+      - name: Comment on PR with OLLAMA results
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+            let comment = '## 🤖 OLLAMA Integration Test Results\n\n';
+
+            try {
+              const logContent = fs.readFileSync('/tmp/ollama-test-full.log', 'utf8');
+              const lines = logContent.split('\n');
+              
+              // Extract summary
+              const summary = lines.filter(line => line.includes('✅') || line.includes('❌'));
+              comment += summary.join('\n');
+              
+              comment += '\n\n**Note:** OLLAMA tests use CPU inference and may be slow (20-60s per evaluation).';
+            } catch (error) {
+              comment += '⚠️ Could not read OLLAMA test results.\n';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

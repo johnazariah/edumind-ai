@@ -40,6 +40,7 @@
 4. **Simplified CI**: GitHub Actions service containers replace docker-compose for tests
 
 **Files Changed**:
+
 - Deleted: `docker-compose.yml`, `docker-compose.test.yml`, `deployment/` folder
 - Updated: `.github/workflows/ci.yml`, `.github/workflows/ollama-integration.yml`
 - Created: `.github/workflows/deploy-azure-azd.yml`, updated `DEPLOYMENT_QUICK_REFERENCE.txt`
