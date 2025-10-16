@@ -569,6 +569,338 @@ public class StudentProgressOrchestrator : A2ABaseAgent
         return selectedAgent.Agent;
     }
 
+    // Priority Queue for task scheduling
+    private readonly System.Collections.Concurrent.ConcurrentQueue<QueuedTask> _taskQueue = new();
+    private readonly RoutingStatistics _routingStats = new();
+    private readonly Dictionary<string, int> _agentFailureCount = new();
+    private readonly Dictionary<string, DateTime> _agentCircuitOpenUntil = new();
+    private const int CircuitBreakerThreshold = 3; // Failures before circuit opens
+    private readonly TimeSpan CircuitBreakerTimeout = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Routes a task with advanced fallback strategies including retry logic and circuit breaker.
+    /// This is the enhanced version that wraps RouteTaskToAgent with production-ready resilience.
+    /// </summary>
+    private async Task<AgentCard?> RouteTaskWithFallback(
+        string requiredSkill,
+        AgentTask task,
+        Subject? subjectFilter = null,
+        GradeLevel? gradeLevelFilter = null,
+        int priority = 5,
+        int maxRetries = 3)
+    {
+        _routingStats.TotalRoutingAttempts++;
+
+        Logger.LogInformation(
+            "Routing task {TaskId} with fallback (Priority: {Priority}, MaxRetries: {MaxRetries})",
+            task.TaskId, priority, maxRetries);
+
+        AgentCard? selectedAgent = null;
+        int attempt = 0;
+
+        while (attempt < maxRetries && selectedAgent == null)
+        {
+            attempt++;
+
+            Logger.LogDebug("Routing attempt {Attempt}/{MaxRetries} for task {TaskId}",
+                attempt, maxRetries, task.TaskId);
+
+            // Try primary routing
+            selectedAgent = await RouteTaskToAgent(
+                requiredSkill,
+                task,
+                subjectFilter,
+                gradeLevelFilter,
+                priority);
+
+            if (selectedAgent != null)
+            {
+                // Check circuit breaker
+                if (IsAgentCircuitOpen(selectedAgent.AgentId))
+                {
+                    Logger.LogWarning(
+                        "Agent '{AgentName}' circuit is open, trying fallback",
+                        selectedAgent.Name);
+                    selectedAgent = null; // Force fallback
+                    continue;
+                }
+
+                _routingStats.SuccessfulRoutings++;
+                TrackAgentUtilization(selectedAgent.AgentId);
+
+                Logger.LogInformation(
+                    "Successfully routed task {TaskId} to agent '{AgentName}' on attempt {Attempt}",
+                    task.TaskId, selectedAgent.Name, attempt);
+
+                return selectedAgent;
+            }
+
+            // Primary routing failed - try fallback strategies
+            Logger.LogWarning(
+                "Primary routing failed for task {TaskId} (attempt {Attempt}), trying fallback strategies",
+                task.TaskId, attempt);
+
+            // Fallback Strategy 1: Relax filters
+            if (subjectFilter.HasValue || gradeLevelFilter.HasValue)
+            {
+                Logger.LogInformation("Fallback strategy 1: Relaxing filters");
+                selectedAgent = await RouteTaskToAgent(
+                    requiredSkill,
+                    task,
+                    subjectFilter: null, // Remove subject filter
+                    gradeLevelFilter: null, // Remove grade level filter
+                    priority);
+
+                if (selectedAgent != null)
+                {
+                    _routingStats.FallbackSelections++;
+                    Logger.LogInformation(
+                        "Fallback successful (relaxed filters): task {TaskId} → agent '{AgentName}'",
+                        task.TaskId, selectedAgent.Name);
+                    return selectedAgent;
+                }
+            }
+
+            // Fallback Strategy 2: Try generic orchestration skill
+            Logger.LogInformation("Fallback strategy 2: Looking for generic agents");
+            selectedAgent = await RouteTaskToAgent(
+                "coordinate_agents", // Generic orchestration skill
+                task,
+                null,
+                null,
+                priority);
+
+            if (selectedAgent != null)
+            {
+                _routingStats.FallbackSelections++;
+                Logger.LogInformation(
+                    "Fallback successful (generic agent): task {TaskId} → agent '{AgentName}'",
+                    task.TaskId, selectedAgent.Name);
+                return selectedAgent;
+            }
+
+            // Wait before retry (exponential backoff)
+            if (attempt < maxRetries)
+            {
+                var delayMs = (int)Math.Pow(2, attempt) * 100; // 200ms, 400ms, 800ms
+                Logger.LogInformation(
+                    "Waiting {DelayMs}ms before retry attempt {NextAttempt}",
+                    delayMs, attempt + 1);
+                await Task.Delay(delayMs);
+            }
+        }
+
+        // All attempts failed
+        _routingStats.FailedRoutings++;
+        Logger.LogError(
+            "Failed to route task {TaskId} after {Attempts} attempts",
+            task.TaskId, attempt);
+
+        return null;
+    }
+
+    /// <summary>
+    /// Enqueues a task for later processing based on priority.
+    /// High-priority tasks are processed first.
+    /// </summary>
+    private void EnqueueTask(
+        AgentTask task,
+        string requiredSkill,
+        int priority,
+        Subject? subjectFilter = null,
+        GradeLevel? gradeLevelFilter = null)
+    {
+        var queuedTask = new QueuedTask
+        {
+            Task = task,
+            Priority = priority,
+            QueuedAt = DateTime.UtcNow,
+            RequiredSkill = requiredSkill,
+            SubjectFilter = subjectFilter,
+            GradeLevelFilter = gradeLevelFilter,
+            RetryCount = 0
+        };
+
+        _taskQueue.Enqueue(queuedTask);
+
+        Logger.LogInformation(
+            "Task {TaskId} enqueued with priority {Priority} (Queue size: {QueueSize})",
+            task.TaskId, priority, _taskQueue.Count);
+    }
+
+    /// <summary>
+    /// Processes queued tasks in priority order.
+    /// This would typically run in a background service.
+    /// </summary>
+    private async Task<int> ProcessTaskQueue(CancellationToken cancellationToken = default)
+    {
+        int processedCount = 0;
+        var tasksToProcess = new List<QueuedTask>();
+
+        // Dequeue all current tasks
+        while (_taskQueue.TryDequeue(out var queuedTask))
+        {
+            tasksToProcess.Add(queuedTask);
+        }
+
+        if (!tasksToProcess.Any())
+        {
+            Logger.LogDebug("Task queue is empty, nothing to process");
+            return 0;
+        }
+
+        // Sort by priority (high to low), then by queued time (FIFO within same priority)
+        var sortedTasks = tasksToProcess
+            .OrderByDescending(t => t.Priority)
+            .ThenBy(t => t.QueuedAt)
+            .ToList();
+
+        Logger.LogInformation(
+            "Processing {Count} queued tasks (priorities: {Priorities})",
+            sortedTasks.Count,
+            string.Join(", ", sortedTasks.Select(t => t.Priority)));
+
+        foreach (var queuedTask in sortedTasks)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                // Re-enqueue remaining tasks
+                foreach (var remainingTask in sortedTasks.Skip(processedCount))
+                {
+                    _taskQueue.Enqueue(remainingTask);
+                }
+                break;
+            }
+
+            try
+            {
+                var agent = await RouteTaskWithFallback(
+                    queuedTask.RequiredSkill,
+                    queuedTask.Task,
+                    queuedTask.SubjectFilter,
+                    queuedTask.GradeLevelFilter,
+                    queuedTask.Priority);
+
+                if (agent != null)
+                {
+                    // Send task to agent
+                    await TaskService.SendTaskAsync(agent.AgentId, queuedTask.Task);
+                    processedCount++;
+
+                    Logger.LogInformation(
+                        "Queued task {TaskId} processed successfully by agent '{AgentName}'",
+                        queuedTask.Task.TaskId, agent.Name);
+                }
+                else
+                {
+                    // Re-enqueue if max retries not reached
+                    queuedTask.RetryCount++;
+                    if (queuedTask.RetryCount < 3)
+                    {
+                        _taskQueue.Enqueue(queuedTask);
+                        Logger.LogWarning(
+                            "Task {TaskId} re-enqueued (retry {RetryCount}/3)",
+                            queuedTask.Task.TaskId, queuedTask.RetryCount);
+                    }
+                    else
+                    {
+                        Logger.LogError(
+                            "Task {TaskId} failed after {RetryCount} retries, moving to dead letter queue",
+                            queuedTask.Task.TaskId, queuedTask.RetryCount);
+                        // TODO: Move to dead letter queue for manual intervention
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex,
+                    "Error processing queued task {TaskId}: {Error}",
+                    queuedTask.Task.TaskId, ex.Message);
+
+                // Re-enqueue for retry
+                if (queuedTask.RetryCount < 3)
+                {
+                    queuedTask.RetryCount++;
+                    _taskQueue.Enqueue(queuedTask);
+                }
+            }
+        }
+
+        Logger.LogInformation("Processed {ProcessedCount}/{TotalCount} queued tasks",
+            processedCount, sortedTasks.Count);
+
+        return processedCount;
+    }
+
+    /// <summary>
+    /// Checks if an agent's circuit breaker is open (agent is temporarily unavailable).
+    /// </summary>
+    private bool IsAgentCircuitOpen(string agentId)
+    {
+        if (_agentCircuitOpenUntil.TryGetValue(agentId, out var openUntil))
+        {
+            if (DateTime.UtcNow < openUntil)
+            {
+                return true; // Circuit still open
+            }
+            else
+            {
+                // Circuit timeout expired, close it
+                _agentCircuitOpenUntil.Remove(agentId);
+                _agentFailureCount[agentId] = 0;
+                Logger.LogInformation("Circuit breaker closed for agent '{AgentId}'", agentId);
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Records a failure for an agent and opens circuit breaker if threshold exceeded.
+    /// </summary>
+    private void RecordAgentFailure(string agentId, string agentName)
+    {
+        if (!_agentFailureCount.ContainsKey(agentId))
+        {
+            _agentFailureCount[agentId] = 0;
+        }
+
+        _agentFailureCount[agentId]++;
+        _routingStats.FailedAgents.TryGetValue(agentId, out var currentCount);
+        _routingStats.FailedAgents[agentId] = currentCount + 1;
+
+        Logger.LogWarning(
+            "Agent '{AgentName}' failure recorded (count: {FailureCount})",
+            agentName, _agentFailureCount[agentId]);
+
+        if (_agentFailureCount[agentId] >= CircuitBreakerThreshold)
+        {
+            // Open circuit breaker
+            _agentCircuitOpenUntil[agentId] = DateTime.UtcNow.Add(CircuitBreakerTimeout);
+
+            Logger.LogError(
+                "Circuit breaker OPENED for agent '{AgentName}' after {FailureCount} failures. " +
+                "Agent will be unavailable for {TimeoutMinutes} minutes",
+                agentName, _agentFailureCount[agentId], CircuitBreakerTimeout.TotalMinutes);
+        }
+    }
+
+    /// <summary>
+    /// Tracks agent utilization for monitoring and analytics.
+    /// </summary>
+    private void TrackAgentUtilization(string agentId)
+    {
+        if (!_routingStats.AgentUtilization.ContainsKey(agentId))
+        {
+            _routingStats.AgentUtilization[agentId] = 0;
+        }
+        _routingStats.AgentUtilization[agentId]++;
+    }
+
+    /// <summary>
+    /// Gets current routing statistics for monitoring and diagnostics.
+    /// </summary>
+    public RoutingStatistics GetRoutingStatistics() => _routingStats;
+
     /// <summary>
     /// Discovers agents by capability, with optional filters for subject and grade level.
     /// </summary>
@@ -1126,4 +1458,44 @@ internal class ScoredAgent
     public required double CapabilityScore { get; init; }
     public required double VersionScore { get; init; }
     public required double PerformanceScore { get; init; }
+}
+
+/// <summary>
+/// Represents a queued task waiting to be routed to an agent.
+/// Supports priority-based task scheduling.
+/// </summary>
+internal class QueuedTask
+{
+    public required AgentTask Task { get; init; }
+    public required int Priority { get; init; }
+    public required DateTime QueuedAt { get; init; }
+    public required string RequiredSkill { get; init; }
+    public Subject? SubjectFilter { get; init; }
+    public GradeLevel? GradeLevelFilter { get; init; }
+    public int RetryCount { get; set; }
+    public DateTime? LastAttemptAt { get; set; }
+}
+
+/// <summary>
+/// Represents statistics for agent routing and fallback scenarios.
+/// Used for monitoring and optimization.
+/// </summary>
+public class RoutingStatistics
+{
+    public int TotalRoutingAttempts { get; set; }
+    public int SuccessfulRoutings { get; set; }
+    public int FallbackSelections { get; set; }
+    public int FailedRoutings { get; set; }
+    public Dictionary<string, int> AgentUtilization { get; } = new();
+    public Dictionary<string, int> FailedAgents { get; } = new();
+
+    public double SuccessRate =>
+        TotalRoutingAttempts > 0
+            ? (double)SuccessfulRoutings / TotalRoutingAttempts * 100.0
+            : 0.0;
+
+    public double FallbackRate =>
+        TotalRoutingAttempts > 0
+            ? (double)FallbackSelections / TotalRoutingAttempts * 100.0
+            : 0.0;
 }
