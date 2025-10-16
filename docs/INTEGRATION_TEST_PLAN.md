@@ -361,15 +361,18 @@ private AgentCard CreateTestAgentCard(string agentId, Subject subject)
 ## Implementation Priority
 
 ### Phase 1: Core Workflows ⭐ CURRENT
+
 - ✅ Unit tests for orchestrator logic
 - ✅ GetAssessmentSubject() implementation with batch loading
 - ⏳ **Scenario 1**: End-to-end student assessment workflow
 
 ### Phase 2: Advanced Orchestration
+
 - **Scenario 2**: Learning path optimization with multiple agents
 - **Scenario 3**: Agent failure handling
 
 ### Phase 3: Performance & Scale
+
 - **Scenario 4**: Performance under load testing
 - **Scenario 5**: Concurrent orchestration testing
 
