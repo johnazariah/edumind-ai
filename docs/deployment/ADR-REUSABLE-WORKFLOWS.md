@@ -16,6 +16,7 @@ The EduMind.AI project has multiple GitHub Actions workflows (CI, deployment, Ol
 - **Maintenance burden** - updating build logic requires changes in multiple files
 
 **Key Issues:**
+
 1. ~200+ lines of duplicated build/test logic across workflows
 2. Inconsistent .NET versions, configurations, and flags
 3. No centralized code quality or security scanning
@@ -34,18 +35,22 @@ The EduMind.AI project has multiple GitHub Actions workflows (CI, deployment, Ol
 ## Considered Options
 
 ### Option 1: Status Quo (No Change)
+
 - **Pros:** No migration effort
 - **Cons:** Continued duplication, inconsistency, maintenance burden
 
 ### Option 2: Composite Actions
+
 - **Pros:** Can be used within jobs, portable
 - **Cons:** Cannot define jobs/services, limited scope
 
 ### Option 3: Reusable Workflows ✅ **SELECTED**
+
 - **Pros:** Full workflow/job reuse, supports services, highly configurable
 - **Cons:** Slight learning curve, must be in same repo or public
 
 ### Option 4: External GitHub Actions Marketplace
+
 - **Pros:** Community-maintained, pre-built
 - **Cons:** Less control, potential security/maintenance issues, vendor lock-in
 
@@ -75,6 +80,7 @@ We will create 4 reusable workflows that encapsulate common CI/CD patterns:
 **Purpose:** Standardized build and unit test execution
 
 **Key Features:**
+
 - Configurable .NET SDK version (default: 9.0.x)
 - Optional Aspire workload installation
 - Build configuration (Debug/Release)
@@ -85,6 +91,7 @@ We will create 4 reusable workflows that encapsulate common CI/CD patterns:
 - Artifact upload for test results
 
 **Inputs:**
+
 ```yaml
 dotnet-version: string (default: '9.0.x')
 configuration: string (default: 'Release')
@@ -95,11 +102,13 @@ aspire-workload: boolean (default: true)
 ```
 
 **Outputs:**
+
 ```yaml
 build-version: string (semantic version)
 ```
 
 **Usage Example:**
+
 ```yaml
 jobs:
   build:
@@ -115,12 +124,14 @@ jobs:
 **Purpose:** Enforce code formatting and static analysis standards
 
 **Key Features:**
+
 - `dotnet format` verification (ensures consistent style)
 - Roslyn analyzer execution (code quality rules)
 - Optional fail-on-warnings mode
 - Build log artifact upload for debugging
 
 **Inputs:**
+
 ```yaml
 dotnet-version: string (default: '9.0.x')
 enable-format-check: boolean (default: true)
@@ -129,6 +140,7 @@ fail-on-warnings: boolean (default: false)
 ```
 
 **Standards Enforced:**
+
 - EditorConfig rules (.editorconfig)
 - StyleCop analyzers
 - Microsoft.CodeAnalysis.NetAnalyzers
@@ -142,6 +154,7 @@ fail-on-warnings: boolean (default: false)
 **Key Features:**
 
 #### CodeQL Analysis
+
 - Static analysis for C# and JavaScript
 - `security-extended` query suite
 - `security-and-quality` query suite
@@ -149,18 +162,21 @@ fail-on-warnings: boolean (default: false)
 - SARIF output for integration with other tools
 
 #### Dependency Scanning
+
 - Scans all NuGet packages (direct + transitive)
 - Identifies CVEs and security advisories
 - Generates vulnerability report artifact
 - Non-blocking (warnings only)
 
 #### Secret Scanning
+
 - **TruffleHog OSS:** High-entropy string detection
 - **Gitleaks:** Pattern-based secret detection
 - Scans full git history (not just diffs)
 - Verified secrets fail the pipeline
 
 **Inputs:**
+
 ```yaml
 enable-codeql: boolean (default: true)
 enable-dependency-scan: boolean (default: true)
@@ -169,6 +185,7 @@ codeql-languages: string (default: 'csharp,javascript')
 ```
 
 **Security Standards:**
+
 - OWASP Top 10
 - CWE (Common Weakness Enumeration)
 - SANS Top 25
@@ -179,6 +196,7 @@ codeql-languages: string (default: 'csharp,javascript')
 **Purpose:** Run integration tests with required infrastructure
 
 **Key Features:**
+
 - **Service Containers:** PostgreSQL 16 + Redis 7
 - Health checks for all services
 - Automatic database migrations (EF Core)
@@ -188,6 +206,7 @@ codeql-languages: string (default: 'csharp,javascript')
 - `.trx` artifact upload
 
 **Inputs:**
+
 ```yaml
 dotnet-version: string (default: '9.0.x')
 configuration: string (default: 'Release')
@@ -197,12 +216,14 @@ aspire-workload: boolean (default: true)
 ```
 
 **Secrets:**
+
 ```yaml
 postgres-connection: string (optional)
 redis-connection: string (optional)
 ```
 
 **Service Configuration:**
+
 ```yaml
 services:
   postgres:
@@ -245,6 +266,7 @@ services:
 ### Before (Duplicated)
 
 **ci.yml (214 lines):**
+
 ```yaml
 - Setup .NET
 - Install Aspire
@@ -257,6 +279,7 @@ services:
 ```
 
 **deploy-azure-azd.yml (159 lines):**
+
 ```yaml
 - Setup .NET
 - Install Aspire
@@ -268,6 +291,7 @@ services:
 ```
 
 **ollama-integration.yml (170 lines):**
+
 ```yaml
 - Setup .NET
 - Install Aspire
@@ -282,6 +306,7 @@ services:
 ### After (Reusable)
 
 **ci.yml (simplified):**
+
 ```yaml
 jobs:
   build:
@@ -304,6 +329,7 @@ jobs:
 ```
 
 **deploy-azure-azd.yml (simplified):**
+
 ```yaml
 jobs:
   build:
@@ -332,33 +358,39 @@ jobs:
 ## Benefits
 
 ### 1. Consistency
+
 - ✅ Same .NET version, build flags, and configurations everywhere
 - ✅ Predictable behavior across all pipelines
 - ✅ Uniform test execution and reporting
 
 ### 2. Maintainability
+
 - ✅ Update build process once → applies to all workflows
 - ✅ Single source of truth for each concern
 - ✅ Clear separation of responsibilities
 
 ### 3. Security
+
 - ✅ Standardized security scanning (CodeQL, secrets, dependencies)
 - ✅ Enforced code quality checks
 - ✅ Audit trail in GitHub Security tab
 - ✅ Compliance-ready (SOC 2, ISO 27001)
 
 ### 4. Developer Experience
+
 - ✅ Self-documenting workflow files
 - ✅ Easy to understand pipeline structure
 - ✅ Comprehensive README documentation
 - ✅ Clear input/output contracts
 
 ### 5. Scalability
+
 - ✅ Easy to add new workflows (just reference reusables)
 - ✅ Easy to add new checks (update reusable once)
 - ✅ Supports versioning (can pin to specific versions)
 
 ### 6. Cost Optimization
+
 - ✅ Faster builds (less duplication)
 - ✅ Efficient caching strategies
 - ✅ Parallel job execution
@@ -404,6 +436,7 @@ This architecture supports:
 ## Migration Plan
 
 ### Phase 1: Create Reusable Workflows ✅ **COMPLETE**
+
 - [x] Create `_reusable-dotnet-build.yml`
 - [x] Create `_reusable-code-quality.yml`
 - [x] Create `_reusable-security-scan.yml`
@@ -411,6 +444,7 @@ This architecture supports:
 - [x] Create documentation (README.md, this ADR)
 
 ### Phase 2: Refactor Existing Workflows (In Progress)
+
 - [ ] Refactor `ci.yml` to use reusables
 - [ ] Refactor `deploy-azure-azd.yml` to use reusables
 - [ ] Refactor `ollama-integration.yml` to use reusables
@@ -418,12 +452,14 @@ This architecture supports:
 - [ ] Merge to main after validation
 
 ### Phase 3: Enable Security Features (Future)
+
 - [ ] Enable CodeQL on pull requests
 - [ ] Configure Dependabot for automated dependency updates
 - [ ] Set up GitHub Advanced Security (if available)
 - [ ] Integrate with external security tools (Snyk, etc.)
 
 ### Phase 4: Optimization (Future)
+
 - [ ] Implement build caching strategies
 - [ ] Add matrix builds for multi-platform testing
 - [ ] Optimize for GitHub Actions billing
@@ -432,6 +468,7 @@ This architecture supports:
 ## Monitoring and Metrics
 
 **Success Metrics:**
+
 - Lines of YAML reduced: Target ~60%
 - Build consistency: 100% same process
 - Security coverage: 100% of PRs scanned
@@ -439,6 +476,7 @@ This architecture supports:
 - Developer satisfaction: Survey after 3 months
 
 **Monitoring:**
+
 - GitHub Actions usage dashboard
 - Security alert trends (GitHub Security tab)
 - Build time trends
@@ -462,6 +500,7 @@ This architecture supports:
 ## Appendix: Example Usage Patterns
 
 ### Pattern 1: Basic CI Pipeline
+
 ```yaml
 name: CI
 on: [push, pull_request]
@@ -483,6 +522,7 @@ jobs:
 ```
 
 ### Pattern 2: Deployment Pipeline
+
 ```yaml
 name: Deploy
 on:
@@ -513,6 +553,7 @@ jobs:
 ```
 
 ### Pattern 3: Security-Only Scan
+
 ```yaml
 name: Security Scan
 on:

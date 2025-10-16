@@ -80,15 +80,18 @@ This folder contains all documentation related to EduMind.AI deployment architec
 ## 🚀 Deployment Models
 
 ### 1. Local Development (Aspire)
+
 ```bash
 cd src/EduMind.AppHost
 dotnet run
 ```
+
 - Aspire orchestrates all services automatically
-- Aspire dashboard at http://localhost:15888
-- Web API at http://localhost:5103
+- Aspire dashboard at <http://localhost:15888>
+- Web API at <http://localhost:5103>
 
 ### 2. CI/CD (GitHub Actions)
+
 ```yaml
 # Uses reusable workflows
 jobs:
@@ -101,10 +104,12 @@ jobs:
 ```
 
 ### 3. Azure Cloud (Azure Developer CLI)
+
 ```bash
 azd init
 azd up --environment dev
 ```
+
 - Deploys to Azure Container Apps
 - Managed PostgreSQL and Redis
 - Azure Monitor + Application Insights
@@ -142,18 +147,21 @@ PR/Push
 ## 🔐 Security & Compliance
 
 ### Automated Security Scanning
+
 - **CodeQL:** SAST for C# and JavaScript
 - **Dependency Scanning:** NuGet package vulnerabilities
 - **Secret Scanning:** Prevents credential leaks
 - **Code Formatting:** Enforces style standards
 
 ### Compliance Standards
+
 - ✅ SOC 2 Type II ready
 - ✅ ISO 27001 compatible
 - ✅ GDPR compliant (secret scanning)
 - ✅ OWASP Top 10 coverage (CodeQL)
 
 ### Access Control
+
 - Federated identity (OIDC) for Azure
 - Branch protection rules
 - Required status checks
@@ -168,6 +176,7 @@ PR/Push
 | **Production** | `main` | Live customer environment | Multi-region |
 
 ### Promotion Flow
+
 ```
 feature/* → develop → staging → main
               │          │        │
@@ -179,17 +188,20 @@ feature/* → develop → staging → main
 ## 📖 Key Technologies
 
 ### Infrastructure
+
 - **Azure Container Apps:** Serverless container hosting
 - **Azure Database for PostgreSQL:** Managed database
 - **Azure Cache for Redis:** Managed caching
 - **Azure Monitor:** Observability and alerting
 
 ### CI/CD
+
 - **GitHub Actions:** Automation platform
 - **Azure Developer CLI (azd):** Deployment orchestration
 - **.NET Aspire:** Local orchestration and cloud provisioning
 
 ### Security
+
 - **CodeQL:** Static application security testing (SAST)
 - **TruffleHog:** Secret detection
 - **Gitleaks:** Secret scanning
@@ -198,16 +210,19 @@ feature/* → develop → staging → main
 ## 📝 Quick Start Guides
 
 ### For Developers
+
 1. Read [Aspire Migration Log](./ASPIRE_MIGRATION_LOG.md)
 2. Review [ADR: Reusable Workflows](./ADR-REUSABLE-WORKFLOWS.md)
 3. Check [Authentication Setup](./AUTHENTICATION_SETUP.md) for auth flows
 
 ### For DevOps Engineers
+
 1. Review [Azure Deployment Strategy](./AZURE_DEPLOYMENT_STRATEGY.md)
 2. Understand reusable workflows in [ADR](./ADR-REUSABLE-WORKFLOWS.md)
 3. Check GitHub Actions workflows in `../../.github/workflows/`
 
 ### For Security/Compliance
+
 1. Review [ADR: Reusable Workflows](./ADR-REUSABLE-WORKFLOWS.md) - Security section
 2. Check GitHub Security tab for scan results
 3. Review branch protection rules
@@ -216,19 +231,24 @@ feature/* → develop → staging → main
 ## 🔧 Maintenance
 
 ### Updating Build Process
+
 All build changes should be made in:
+
 - `.github/workflows/_reusable-dotnet-build.yml`
 - Changes automatically apply to all workflows
 
 ### Adding Security Checks
+
 Update `.github/workflows/_reusable-security-scan.yml`
 
 ### Updating Infrastructure
+
 Edit `src/EduMind.AppHost/Program.cs` for Aspire orchestration
 
 ## 📞 Support
 
 For questions about:
+
 - **Deployment architecture:** Review this README and linked ADRs
 - **CI/CD issues:** Check [ADR: Reusable Workflows](./ADR-REUSABLE-WORKFLOWS.md)
 - **Azure infrastructure:** See [Azure Deployment Strategy](./AZURE_DEPLOYMENT_STRATEGY.md)
