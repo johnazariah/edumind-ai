@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AcademicAssessment.Core\AcademicAssessment.Core.csproj" />
+    <ProjectReference Include="..\AcademicAssessment.Orchestration\AcademicAssessment.Orchestration.csproj" />
   </ItemGroup>
 
   <ItemGroup>

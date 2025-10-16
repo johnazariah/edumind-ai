@@ -53,6 +53,7 @@ These tests expect 200 OK but receive 404 Not Found, indicating missing endpoint
 - `GetRecommendedTopics_WithValidStudent_ReturnsOk` - 404
 
 **Possible Causes:**
+
 - Missing test data seeding
 - Incorrect endpoint URLs in tests
 - Database not initialized with required test data
@@ -62,6 +63,7 @@ These tests expect 200 OK but receive 404 Not Found, indicating missing endpoint
 - `GetSubjectPerformance_ReturnsCorrectStructure` - Expected `totalQuestions` field missing from JSON response
 
 **Cause:**
+
 - API response model doesn't match test expectations
 - Need to verify DTO structure
 
@@ -82,6 +84,7 @@ These tests expect 200 OK but receive 404 Not Found, indicating missing endpoint
 - `GetProgressOverTime_WithInvalidDateRange_ReturnsBadRequest` - Expected 400 but got 404
 
 **Cause:**
+
 - Validation might not be triggering before route matching fails
 
 ### Category 5: Multi-Endpoint Tests (1 test)
@@ -127,6 +130,7 @@ These tests expect 200 OK but receive 404 Not Found, indicating missing endpoint
 ## Configuration
 
 ### Web API
+
 - **Serializer:** Newtonsoft.Json 12.0.1
 - **Environment:** Development
 - **Database:** In-Memory (EF Core)
@@ -134,6 +138,7 @@ These tests expect 200 OK but receive 404 Not Found, indicating missing endpoint
 - **Authorization:** 9 role-based policies configured
 
 ### Test Factory
+
 - **Environment:** Development (changed from "Testing")
 - **Configuration:** In-memory with Authentication:Enabled = true
 - **JWT Validation:** Custom test parameters with known test user IDs

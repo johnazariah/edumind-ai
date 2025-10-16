@@ -1,5 +1,6 @@
 using AcademicAssessment.Core.Interfaces;
 using AcademicAssessment.Core.Models;
+using AcademicAssessment.Orchestration.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AcademicAssessment.Infrastructure.Data;
@@ -31,6 +32,12 @@ public sealed class AcademicContext : DbContext
     public DbSet<StudentAssessment> StudentAssessments => Set<StudentAssessment>();
     public DbSet<StudentResponse> StudentResponses => Set<StudentResponse>();
 
+    // Orchestration DbSets
+    public DbSet<WorkflowExecutionEntity> WorkflowExecutions => Set<WorkflowExecutionEntity>();
+    public DbSet<CircuitBreakerStateEntity> CircuitBreakerStates => Set<CircuitBreakerStateEntity>();
+    public DbSet<RoutingDecisionEntity> RoutingDecisions => Set<RoutingDecisionEntity>();
+    public DbSet<RoutingStatisticsEntity> RoutingStatistics => Set<RoutingStatisticsEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -45,6 +52,9 @@ public sealed class AcademicContext : DbContext
         ConfigureQuestions(modelBuilder);
         ConfigureStudentAssessments(modelBuilder);
         ConfigureStudentResponses(modelBuilder);
+
+        // Configure orchestration entities
+        ConfigureOrchestrationEntities(modelBuilder);
 
         // Apply row-level security filters
         ApplyTenantFilters(modelBuilder);
@@ -455,5 +465,84 @@ public sealed class AcademicContext : DbContext
 
         // Schools - business admins and system admins see all
         // Note: No filter needed as only admins can access schools
+
+        // Orchestration entities - filter by tenant
+        modelBuilder.Entity<WorkflowExecutionEntity>().HasQueryFilter(e =>
+            _tenantContext.Role >= Core.Enums.UserRole.BusinessAdmin ||
+            e.TenantId == _tenantContext.SchoolId);
+
+        modelBuilder.Entity<CircuitBreakerStateEntity>().HasQueryFilter(e =>
+            _tenantContext.Role >= Core.Enums.UserRole.BusinessAdmin ||
+            e.TenantId == _tenantContext.SchoolId);
+
+        modelBuilder.Entity<RoutingDecisionEntity>().HasQueryFilter(e =>
+            _tenantContext.Role >= Core.Enums.UserRole.BusinessAdmin ||
+            e.TenantId == _tenantContext.SchoolId);
+
+        modelBuilder.Entity<RoutingStatisticsEntity>().HasQueryFilter(e =>
+            _tenantContext.Role >= Core.Enums.UserRole.BusinessAdmin ||
+            e.TenantId == _tenantContext.SchoolId);
+    }
+
+    private static void ConfigureOrchestrationEntities(ModelBuilder modelBuilder)
+    {
+        // WorkflowExecutionEntity configuration
+        modelBuilder.Entity<WorkflowExecutionEntity>(entity =>
+        {
+            entity.HasKey(e => e.ExecutionId);
+            entity.Property(e => e.ExecutionId).HasMaxLength(100);
+            entity.Property(e => e.WorkflowName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Status).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.WorkflowDefinitionJson).IsRequired();
+            entity.Property(e => e.InitiatedBy).HasMaxLength(100);
+            entity.Property(e => e.Tags).HasMaxLength(500);
+
+            entity.HasIndex(e => e.TenantId);
+            entity.HasIndex(e => new { e.TenantId, e.WorkflowName });
+            entity.HasIndex(e => new { e.TenantId, e.Status });
+            entity.HasIndex(e => e.StartedAt);
+        });
+
+        // CircuitBreakerStateEntity configuration
+        modelBuilder.Entity<CircuitBreakerStateEntity>(entity =>
+        {
+            entity.HasKey(e => e.AgentKey);
+            entity.Property(e => e.AgentKey).HasMaxLength(200);
+            entity.Property(e => e.State).HasMaxLength(20).IsRequired();
+
+            entity.HasIndex(e => e.TenantId);
+            entity.HasIndex(e => new { e.TenantId, e.State });
+            entity.HasIndex(e => e.LastUpdated);
+        });
+
+        // RoutingDecisionEntity configuration
+        modelBuilder.Entity<RoutingDecisionEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TaskId).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.TaskType).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.RequiredCapability).HasMaxLength(100);
+            entity.Property(e => e.SelectedAgent).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.WorkflowExecutionId).HasMaxLength(100);
+            entity.Property(e => e.WorkflowStepId).HasMaxLength(100);
+
+            entity.HasIndex(e => e.TenantId);
+            entity.HasIndex(e => e.TaskId);
+            entity.HasIndex(e => new { e.TenantId, e.TaskType });
+            entity.HasIndex(e => new { e.TenantId, e.SelectedAgent });
+            entity.HasIndex(e => e.WorkflowExecutionId);
+            entity.HasIndex(e => e.RoutedAt);
+        });
+
+        // RoutingStatisticsEntity configuration
+        modelBuilder.Entity<RoutingStatisticsEntity>(entity =>
+        {
+            entity.HasKey(e => e.AgentKey);
+            entity.Property(e => e.AgentKey).HasMaxLength(200);
+
+            entity.HasIndex(e => e.TenantId);
+            entity.HasIndex(e => new { e.TenantId, e.SuccessRate });
+            entity.HasIndex(e => e.LastUpdated);
+        });
     }
 }

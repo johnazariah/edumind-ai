@@ -240,7 +240,7 @@ echo "For brevity, showing pattern. Repeat for all tasks in SPRINT_ROADMAP.md"
 
 1. **Board View by Status**
    - Columns: Backlog, Todo, In Progress, In Review, Done
-   
+
 2. **Timeline View by Week**
    - Group by: Week
    - Sort by: Priority
@@ -253,7 +253,7 @@ echo "For brevity, showing pattern. Repeat for all tasks in SPRINT_ROADMAP.md"
 
 If you prefer the web UI:
 
-1. Go to https://github.com/johnazariah/edumind-ai
+1. Go to <https://github.com/johnazariah/edumind-ai>
 2. Click "Projects" tab
 3. Click "New project"
 4. Choose "Board" template
@@ -265,6 +265,7 @@ If you prefer the web UI:
 ## Daily Workflow
 
 ### Morning Standup
+
 ```bash
 # See today's tasks
 gh issue list --repo johnazariah/edumind-ai --assignee "@me" --state open --label "in-progress"
@@ -274,6 +275,7 @@ gh issue edit <issue-number> --add-label "in-progress"
 ```
 
 ### Task Completion
+
 ```bash
 # When done, move to "In Review"
 gh issue edit <issue-number> --remove-label "in-progress" --add-label "in-review"
@@ -283,6 +285,7 @@ gh issue close <issue-number> --comment "Completed and merged to main"
 ```
 
 ### End of Week Review
+
 ```bash
 # See week's completed tasks
 gh issue list --repo johnazariah/edumind-ai --state closed --label "week-1"
@@ -294,11 +297,13 @@ gh issue list --repo johnazariah/edumind-ai --state open --label "week-1"
 ## Integration with VS Code
 
 Install the GitHub Pull Requests and Issues extension:
+
 ```bash
 code --install-extension GitHub.vscode-pull-request-github
 ```
 
 Then you can:
+
 - View and create issues directly in VS Code
 - Link commits to issues
 - Track progress without leaving the editor
@@ -306,7 +311,9 @@ Then you can:
 ## Automation
 
 ### Auto-close on Merge
+
 Add to commit messages:
+
 ```
 fix: Implement orchestrator decision-making algorithm
 
@@ -314,7 +321,9 @@ Closes #123
 ```
 
 ### Progress Updates
+
 Use issue comments for daily updates:
+
 ```bash
 gh issue comment <issue-number> --body "Progress: Implemented agent selection logic. Next: difficulty adjustment."
 ```
@@ -322,6 +331,7 @@ gh issue comment <issue-number> --body "Progress: Implemented agent selection lo
 ## Useful Queries
 
 ### Burndown Chart Data
+
 ```bash
 # Issues completed this week
 gh issue list --repo johnazariah/edumind-ai --state closed --label "week-1" --json number,title,closedAt
@@ -331,6 +341,7 @@ gh issue list --repo johnazariah/edumind-ai --state open --label "week-1" --json
 ```
 
 ### Blocked Tasks
+
 ```bash
 # See blocked items
 gh issue list --repo johnazariah/edumind-ai --state open --label "blocked"
@@ -338,8 +349,8 @@ gh issue list --repo johnazariah/edumind-ai --state open --label "blocked"
 
 ## References
 
-- GitHub Projects Docs: https://docs.github.com/en/issues/planning-and-tracking-with-projects
-- GitHub CLI Docs: https://cli.github.com/manual/
+- GitHub Projects Docs: <https://docs.github.com/en/issues/planning-and-tracking-with-projects>
+- GitHub CLI Docs: <https://cli.github.com/manual/>
 - Sprint Roadmap: `/docs/SPRINT_ROADMAP.md`
 
 ---

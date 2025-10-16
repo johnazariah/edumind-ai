@@ -19,6 +19,7 @@
 **Location:** `StudentProgressOrchestrator.cs` lines ~650-750
 
 **Features:**
+
 - **3 Retry Attempts:** Each routing attempt includes retry logic with exponential backoff (200ms → 400ms → 800ms)
 - **2 Fallback Strategies:**
   1. **Relaxed Filtering:** If strict routing fails, retry with relaxed requirements (ignore load, lower skill threshold)
@@ -27,6 +28,7 @@
 - **Automatic Statistics:** Tracks success rates, fallback usage, and performance metrics
 
 **Key Code:**
+
 ```csharp
 private async Task<AgentCard?> RouteTaskWithFallback(AgentTask task)
 {
@@ -52,12 +54,14 @@ private async Task<AgentCard?> RouteTaskWithFallback(AgentTask task)
 **Location:** `StudentProgressOrchestrator.cs` lines ~750-850
 
 **Features:**
+
 - **Priority Levels:** 0-10 scale (10 = highest priority)
 - **FIFO Within Priority:** Tasks with same priority processed in order received
 - **Background Processing:** Queue processed asynchronously without blocking main thread
 - **Retry Tracking:** Failed tasks can be re-queued with incremented retry count
 
 **Key Components:**
+
 ```csharp
 // Queue management
 private readonly ConcurrentQueue<QueuedTask> _taskQueue = new();
@@ -81,12 +85,14 @@ private async Task ProcessTaskQueue()
 **Location:** `StudentProgressOrchestrator.cs` lines ~850-920
 
 **Features:**
+
 - **Failure Threshold:** Circuit opens after 3 consecutive failures
 - **Timeout:** Circuit remains open for 5 minutes before auto-reset
 - **Automatic Recovery:** Closed circuits allow retry attempts
 - **Per-Agent Tracking:** Each agent has independent circuit state
 
 **Key Code:**
+
 ```csharp
 private bool IsAgentCircuitOpen(string agentName)
 {
@@ -123,12 +129,14 @@ private void RecordAgentFailure(string agentName)
 **Location:** `StudentProgressOrchestrator.cs` lines ~920-950
 
 **Metrics Tracked:**
+
 - **Success Rate:** Percentage of tasks routed successfully on first attempt
 - **Fallback Rate:** Percentage of tasks requiring fallback strategies
 - **Agent Utilization:** Usage count per agent for load balancing analysis
 - **Total Requests:** Overall routing volume
 
 **Public API:**
+
 ```csharp
 public RoutingStatistics GetRoutingStatistics()
 {
@@ -148,6 +156,7 @@ public RoutingStatistics GetRoutingStatistics()
 ## 🧪 Testing Coverage
 
 ### New Tests Added
+
 **File:** `StudentProgressOrchestratorTests.cs`
 
 5 new unit tests added covering:
@@ -173,6 +182,7 @@ public RoutingStatistics GetRoutingStatistics()
    - Verifies preference for available agents (30% vs 95% load)
 
 ### Test Results
+
 ```
 Total Tests:     380
 Passed:          377 ✅
@@ -188,6 +198,7 @@ Duration:        3.3 seconds
 ## 🏗️ Architecture Impact
 
 ### Class Structure
+
 ```
 StudentProgressOrchestrator
 ├── Core Routing
@@ -205,6 +216,7 @@ StudentProgressOrchestrator
 ```
 
 ### Supporting Types
+
 ```csharp
 public record QueuedTask(
     AgentTask Task,
@@ -241,11 +253,13 @@ private record CircuitBreakerState(
 ## 🔄 Integration Points
 
 ### Dependencies
+
 - **ITaskService:** Agent discovery and task submission
 - **Existing Routing:** `RouteTaskToAgent()` base method reused
 - **Logging:** Error and diagnostic logging via ILogger
 
 ### Backward Compatibility
+
 - ✅ All existing routing calls continue to work unchanged
 - ✅ New features are opt-in via `RouteTaskWithFallback()`
 - ✅ Statistics available but don't impact core functionality
@@ -253,6 +267,7 @@ private record CircuitBreakerState(
 ## 🚀 Usage Examples
 
 ### Basic Priority Routing
+
 ```csharp
 // High-priority task (grade report generation)
 var task = new AgentTask 
@@ -272,6 +287,7 @@ orchestrator.EnqueueTask(syncTask, priority: 2); // Low priority
 ```
 
 ### Resilient Routing with Fallback
+
 ```csharp
 var task = new AgentTask 
 { 
@@ -288,6 +304,7 @@ if (agent != null)
 ```
 
 ### Monitoring Routing Health
+
 ```csharp
 var stats = orchestrator.GetRoutingStatistics();
 Console.WriteLine($"Success Rate: {stats.SuccessRate:P2}"); // e.g., "95.50%"
