@@ -59,12 +59,17 @@ public static class JwtTokenGenerator
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(TestSecret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        var now = DateTime.UtcNow;
+        // For expired tokens, set both notBefore and expires in the past
+        var notBefore = expirationMinutes < 0 ? now.AddMinutes(expirationMinutes - 5) : now;
+        var expires = now.AddMinutes(expirationMinutes);
+
         var token = new JwtSecurityToken(
             issuer: TestIssuer,
             audience: TestAudience,
             claims: claims,
-            notBefore: DateTime.UtcNow,
-            expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
+            notBefore: notBefore,
+            expires: expires,
             signingCredentials: credentials
         );
 

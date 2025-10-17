@@ -411,15 +411,68 @@ public class StudentAnalyticsController : ControllerBase
     /// </remarks>
     private async Task<bool> CanAccessStudentDataAsync(Guid studentId)
     {
-        // TODO: Implement proper authorization logic when authentication is added
-        // For now, allow all access in development
-        // 
-        // Production implementation should:
-        // 1. Check if user is the student (UserId == studentId)
-        // 2. Check if user is a teacher with student in their classes
-        // 3. Check if user is school admin with student in their school
-        // 4. Check if user is course admin or system admin
+        var currentUserId = _tenantContext.UserId;
+        var currentRole = _tenantContext.Role;
+        var currentSchoolId = _tenantContext.SchoolId;
 
-        return await Task.FromResult(true); // Temporary - allow all access for development
+        // System admins and business admins can access all student data
+        if (currentRole == UserRole.SystemAdmin || currentRole == UserRole.BusinessAdmin)
+        {
+            return true;
+        }
+
+        // Students can only access their own data
+        if (currentRole == UserRole.Student)
+        {
+            return currentUserId == studentId;
+        }
+
+        // Course admins can access all students
+        if (currentRole == UserRole.CourseAdmin)
+        {
+            return true;
+        }
+
+        // Teachers and School Admins: must be in the same school as the student
+        if (currentRole == UserRole.Teacher || currentRole == UserRole.SchoolAdmin)
+        {
+            // If current user has no school, deny access
+            if (!currentSchoolId.HasValue)
+            {
+                return false;
+            }
+
+            // Get the student's school from the repository
+            var studentRepository = HttpContext.RequestServices.GetRequiredService<IStudentRepository>();
+            var studentResult = await studentRepository.GetByIdAsync(studentId);
+
+            if (studentResult is not Result<Core.Models.Student>.Success success)
+            {
+                return false;
+            }
+
+            var student = success.Value;
+
+            // Check if student is in the same school
+            if (student.SchoolId != currentSchoolId.Value)
+            {
+                return false;
+            }
+
+            // School admins can access all students in their school
+            if (currentRole == UserRole.SchoolAdmin)
+            {
+                return true;
+            }
+
+            // Teachers can only access students in their classes
+            if (currentRole == UserRole.Teacher)
+            {
+                var classIds = _tenantContext.ClassIds ?? new List<Guid>();
+                return student.ClassIds.Any(classId => classIds.Contains(classId));
+            }
+        }
+
+        return false;
     }
 }
