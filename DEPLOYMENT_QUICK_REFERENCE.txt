@@ -1,0 +1,259 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                                                ┃
+┃  🚀 EDUMIND.AI - .NET ASPIRE DEPLOYMENT QUICK REFERENCE        ┃
+┃                                                                ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 ABOUT .NET ASPIRE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EduMind.AI now uses .NET Aspire 9.5.1 for cloud-native development.
+
+✅ What Aspire Provides:
+   - Orchestration for local development
+   - Built-in observability (OpenTelemetry)
+   - Service discovery
+   - Health checks and resilience
+   - Simplified cloud deployment via Azure Developer CLI (azd)
+
+✅ What Replaced:
+   - Docker Compose → Aspire orchestration
+   - Manual Bicep templates → azd infrastructure
+   - Custom deployment scripts → azd workflows
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 QUICK START (LOCAL DEVELOPMENT)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. RUN THE ENTIRE STACK WITH ONE COMMAND:
+
+   cd /workspaces/edumind-ai
+   dotnet run --project src/EduMind.AppHost
+
+2. WHAT GETS STARTED:
+   
+   ✓ PostgreSQL (port 5432)
+   ✓ Redis (port 6379)
+   ✓ OLLAMA (port 11434)
+   ✓ Web API (dynamic port)
+   ✓ Dashboard (dynamic port)
+   ✓ Student App (dynamic port)
+
+3. ASPIRE DASHBOARD:
+
+   Opens automatically at https://localhost:17191
+   
+   - View all services
+   - Real-time logs
+   - Distributed tracing
+   - Metrics and health
+   - Environment variables
+   - Console access
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧪 TESTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. UNIT TESTS:
+
+   dotnet test tests/AcademicAssessment.Tests.Unit
+
+2. INTEGRATION TESTS:
+
+   # Start Aspire stack first
+   dotnet run --project src/EduMind.AppHost &
+   
+   # Wait for services to be ready, then run tests
+   dotnet test tests/AcademicAssessment.Tests.Integration
+
+3. PERFORMANCE TESTS:
+
+   dotnet test tests/AcademicAssessment.Tests.Performance
+
+4. ALL TESTS WITH COVERAGE:
+
+   dotnet test --collect:"XPlat Code Coverage"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☁️ AZURE DEPLOYMENT (RECOMMENDED)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+.NET Aspire integrates with Azure Developer CLI (azd) for seamless
+cloud deployment.
+
+1. INSTALL AZURE DEVELOPER CLI:
+
+   # Linux
+   curl -fsSL https://aka.ms/install-azd.sh | bash
+
+   # Windows
+   winget install microsoft.azd
+
+   # macOS
+   brew install azd
+
+2. INITIALIZE AZD PROJECT:
+
+   cd /workspaces/edumind-ai
+   azd init
+
+   When prompted:
+   - Environment name: dev (or staging/prod)
+   - Azure subscription: Select your subscription
+   - Azure location: Select region (e.g., eastus)
+
+3. DEPLOY TO AZURE:
+
+   azd up
+
+   This will:
+   ✓ Provision Azure resources (Container Apps, PostgreSQL, Redis, etc.)
+   ✓ Build and containerize all services
+   ✓ Deploy to Azure Container Apps
+   ✓ Configure service connections
+   ✓ Set up monitoring and logging
+
+4. SUBSEQUENT DEPLOYMENTS:
+
+   # Deploy code changes only
+   azd deploy
+
+   # Update infrastructure and code
+   azd up
+
+5. VIEW DEPLOYMENT:
+
+   # Open Azure portal
+   azd show
+
+   # View environment variables
+   azd env get-values
+
+   # View logs
+   azd monitor
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 CONFIGURATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. ASPIRE CONFIGURATION:
+
+   - AppHost: src/EduMind.AppHost/Program.cs
+   - Service Defaults: src/EduMind.ServiceDefaults/Extensions.cs
+
+2. APPLICATION SETTINGS:
+
+   - Web API: src/AcademicAssessment.Web/appsettings.json
+   - Dashboard: src/AcademicAssessment.Dashboard/appsettings.json
+   - Student App: src/AcademicAssessment.StudentApp/appsettings.json
+
+3. ENVIRONMENT VARIABLES:
+
+   Set via Aspire AppHost or Azure App Configuration:
+   
+   - ConnectionStrings__DefaultConnection (auto-configured by Aspire)
+   - ConnectionStrings__RedisConnection (auto-configured by Aspire)
+   - Ollama__BaseUrl (auto-configured by Aspire)
+   - LLM__Provider (Stub, Ollama, or AzureOpenAI)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 MONITORING & OBSERVABILITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. LOCAL DEVELOPMENT:
+
+   Aspire Dashboard at https://localhost:17191
+   
+   - Live logs from all services
+   - Distributed tracing (OpenTelemetry)
+   - Metrics and counters
+   - Health checks
+   - Resource utilization
+
+2. AZURE PRODUCTION:
+
+   Application Insights (auto-configured by azd)
+   
+   - Request/response telemetry
+   - Exception tracking
+   - Performance monitoring
+   - Custom metrics
+   - Log aggregation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 SECRETS MANAGEMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. LOCAL DEVELOPMENT:
+
+   Use .NET User Secrets:
+   
+   cd src/AcademicAssessment.Web
+   dotnet user-secrets set "ConnectionStrings:DefaultConnection" "your-connection-string"
+
+2. AZURE DEPLOYMENT:
+
+   Azure Key Vault (auto-configured by azd)
+   
+   azd env set SECRET_NAME "secret-value"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🆘 TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. ASPIRE NOT STARTING:
+
+   # Check .NET version
+   dotnet --version  # Should be 9.0.x
+
+   # Restore workloads
+   dotnet workload restore
+
+2. SERVICES NOT CONNECTING:
+
+   # Check Aspire Dashboard for service status
+   # View logs for connection errors
+   # Verify service discovery is working
+
+3. DATABASE MIGRATIONS:
+
+   # Run migrations manually if needed
+   dotnet ef database update \
+     --project src/AcademicAssessment.Infrastructure \
+     --startup-project src/AcademicAssessment.Web
+
+4. AZURE DEPLOYMENT ISSUES:
+
+   # Check deployment logs
+   azd monitor --logs
+
+   # Re-provision infrastructure
+   azd down
+   azd up
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 ADDITIONAL RESOURCES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- .NET Aspire Docs: https://learn.microsoft.com/dotnet/aspire/
+- Azure Developer CLI: https://learn.microsoft.com/azure/developer/azure-developer-cli/
+- Migration Log: docs/ASPIRE_MIGRATION_LOG.md
+- Architecture: docs/ARCHITECTURE_SUMMARY.md
+- Task Journal: docs/TASK_JOURNAL.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ KEY BENEFITS OF ASPIRE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Simplified local development (one command to start everything)
+✓ Built-in observability (no manual OpenTelemetry setup)
+✓ Consistent dev/prod experience
+✓ Easy cloud deployment (azd up)
+✓ Service discovery and health checks
+✓ Less boilerplate and configuration
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Last Updated: October 16, 2025
+Version: 2.0 (Aspire-based)

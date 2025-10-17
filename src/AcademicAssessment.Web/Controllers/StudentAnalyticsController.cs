@@ -1,6 +1,7 @@
 using AcademicAssessment.Core.Common;
 using AcademicAssessment.Core.Enums;
 using AcademicAssessment.Core.Interfaces;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,6 +13,7 @@ namespace AcademicAssessment.Web.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v{version:apiVersion}/students/{studentId:guid}/analytics")]
+[ApiVersion("1.0")]
 [Produces("application/json")]
 [Authorize(Policy = "AllUsersPolicy")]
 public class StudentAnalyticsController : ControllerBase
@@ -138,16 +140,17 @@ public class StudentAnalyticsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets learning objective mastery data for a student
+    /// Gets recommended topics for a student to study based on performance analysis
     /// </summary>
     /// <param name="studentId">The unique identifier of the student</param>
-    /// <param name="subject">Optional subject filter (if null, returns data for all subjects)</param>
+    /// <param name="subject">Optional subject filter</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of learning objectives with mastery levels and statuses</returns>
-    /// <response code="200">Returns the learning objective mastery data</response>
+    /// <returns>Recommended topics with priority and reasoning</returns>
+    /// <response code="200">Returns the recommended topics</response>
+    /// <response code="400">Bad request - Invalid subject parameter</response>
     /// <response code="403">Forbidden - User doesn't have access to this student's data</response>
-    /// <response code="404">Not found - No data available for the specified criteria</response>
-    [HttpGet("learning-objectives")]
+    /// <response code="404">Not found - No data available for recommendations</response>
+    [HttpGet("recommended-topics")]
     [ProducesResponseType(typeof(IReadOnlyList<LearningObjectiveMastery>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -229,17 +232,17 @@ public class StudentAnalyticsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets priority-ordered list of areas where the student needs improvement
+    /// Gets priority-ordered list of weak areas where the student needs improvement
     /// </summary>
     /// <param name="studentId">The unique identifier of the student</param>
-    /// <param name="topN">Number of top improvement areas to return (default: 5, max: 20)</param>
+    /// <param name="topN">Number of top weak areas to return (default: 5, max: 20)</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of improvement areas with priority levels and recommended actions</returns>
-    /// <response code="200">Returns the improvement areas</response>
+    /// <returns>List of weak areas with priority levels and recommended actions</returns>
+    /// <response code="200">Returns the weak areas</response>
     /// <response code="400">Bad request - Invalid topN parameter</response>
     /// <response code="403">Forbidden - User doesn't have access to this student's data</response>
-    /// <response code="404">Not found - No data available to identify improvement areas</response>
-    [HttpGet("improvement-areas")]
+    /// <response code="404">Not found - No data available to identify weak areas</response>
+    [HttpGet("weak-areas")]
     [ProducesResponseType(typeof(IReadOnlyList<ImprovementArea>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -295,7 +298,7 @@ public class StudentAnalyticsController : ControllerBase
     /// <response code="400">Bad request - Invalid date parameters</response>
     /// <response code="403">Forbidden - User doesn't have access to this student's data</response>
     /// <response code="404">Not found - No assessment data available for the specified date range</response>
-    [HttpGet("progress-timeline")]
+    [HttpGet("progress-over-time")]
     [ProducesResponseType(typeof(ProgressTimeline), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -408,15 +411,68 @@ public class StudentAnalyticsController : ControllerBase
     /// </remarks>
     private async Task<bool> CanAccessStudentDataAsync(Guid studentId)
     {
-        // TODO: Implement proper authorization logic when authentication is added
-        // For now, allow all access in development
-        // 
-        // Production implementation should:
-        // 1. Check if user is the student (UserId == studentId)
-        // 2. Check if user is a teacher with student in their classes
-        // 3. Check if user is school admin with student in their school
-        // 4. Check if user is course admin or system admin
+        var currentUserId = _tenantContext.UserId;
+        var currentRole = _tenantContext.Role;
+        var currentSchoolId = _tenantContext.SchoolId;
 
-        return await Task.FromResult(true); // Temporary - allow all access for development
+        // System admins and business admins can access all student data
+        if (currentRole == UserRole.SystemAdmin || currentRole == UserRole.BusinessAdmin)
+        {
+            return true;
+        }
+
+        // Students can only access their own data
+        if (currentRole == UserRole.Student)
+        {
+            return currentUserId == studentId;
+        }
+
+        // Course admins can access all students
+        if (currentRole == UserRole.CourseAdmin)
+        {
+            return true;
+        }
+
+        // Teachers and School Admins: must be in the same school as the student
+        if (currentRole == UserRole.Teacher || currentRole == UserRole.SchoolAdmin)
+        {
+            // If current user has no school, deny access
+            if (!currentSchoolId.HasValue)
+            {
+                return false;
+            }
+
+            // Get the student's school from the repository
+            var studentRepository = HttpContext.RequestServices.GetRequiredService<IStudentRepository>();
+            var studentResult = await studentRepository.GetByIdAsync(studentId);
+
+            if (studentResult is not Result<Core.Models.Student>.Success success)
+            {
+                return false;
+            }
+
+            var student = success.Value;
+
+            // Check if student is in the same school
+            if (student.SchoolId != currentSchoolId.Value)
+            {
+                return false;
+            }
+
+            // School admins can access all students in their school
+            if (currentRole == UserRole.SchoolAdmin)
+            {
+                return true;
+            }
+
+            // Teachers can only access students in their classes
+            if (currentRole == UserRole.Teacher)
+            {
+                var classIds = _tenantContext.ClassIds ?? new List<Guid>();
+                return student.ClassIds.Any(classId => classIds.Contains(classId));
+            }
+        }
+
+        return false;
     }
 }

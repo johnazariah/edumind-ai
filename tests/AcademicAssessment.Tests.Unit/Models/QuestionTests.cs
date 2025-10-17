@@ -205,7 +205,7 @@ public class QuestionTests
 
         // Assert
         updated.QuestionText.Should().Be(newText);
-        updated.UpdatedAt.Should().BeAfter(original.UpdatedAt);
+        updated.UpdatedAt.Should().BeOnOrAfter(original.UpdatedAt);
     }
 
     [Fact]

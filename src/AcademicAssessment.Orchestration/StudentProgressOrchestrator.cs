@@ -3,6 +3,8 @@ using AcademicAssessment.Agents.Shared.Interfaces;
 using AcademicAssessment.Agents.Shared.Models;
 using AcademicAssessment.Core.Enums;
 using AcademicAssessment.Core.Interfaces;
+using AcademicAssessment.Core.Models;
+using AcademicAssessment.Orchestration.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AcademicAssessment.Orchestration;
@@ -120,21 +122,38 @@ public class StudentProgressOrchestrator : A2ABaseAgent
             // Broadcast progress to student
             await BroadcastProgressAsync($"Preparing {targetSubject} assessment for student {studentId}...");
 
-            // Discover agents capable of assessing this subject
-            var subjectAgents = await DiscoverAgentsAsync(subject: targetSubject.ToString());
+            // Create task for subject agent (temporary task for routing)
+            var taskForRouting = new AgentTask
+            {
+                Type = "generate_assessment",
+                SourceAgentId = AgentCard.AgentId,
+                Data = new
+                {
+                    studentId = studentId,
+                    subject = targetSubject,
+                    gradeLevel = student.GradeLevel,
+                    questionCount = 10,
+                    difficultyAdaptive = true
+                }
+            };
 
-            if (subjectAgents.Count() == 0)
+            // Use intelligent routing to select best agent
+            var selectedAgent = await RouteTaskToAgent(
+                requiredSkill: "generate_assessment",
+                task: taskForRouting,
+                subjectFilter: targetSubject,
+                gradeLevelFilter: student.GradeLevel,
+                priority: 5); // Normal priority
+
+            if (selectedAgent == null)
             {
                 throw new InvalidOperationException($"No agents available for subject: {targetSubject}");
             }
 
-            // Select the first available agent (in production, add load balancing logic here)
-            var selectedAgent = subjectAgents.First();
-
-            Logger.LogInformation("Selected agent {AgentName} ({AgentId}) for {Subject} assessment",
+            Logger.LogInformation("Selected agent {AgentName} ({AgentId}) for {Subject} assessment via intelligent routing",
                 selectedAgent.Name, selectedAgent.AgentId, targetSubject);
 
-            // Create task for subject agent
+            // Create final task with selected agent
             var subjectTask = new AgentTask
             {
                 Type = "generate_assessment",
@@ -185,7 +204,7 @@ public class StudentProgressOrchestrator : A2ABaseAgent
     }
 
     /// <summary>
-    /// Determines which subject should be assessed next for a student.
+    /// Determines which subject should be assessed next for a student using intelligent prioritization.
     /// Priority logic:
     /// 1. Never assessed subjects (highest priority)
     /// 2. Subjects with declining performance trends
@@ -196,15 +215,209 @@ public class StudentProgressOrchestrator : A2ABaseAgent
     {
         Logger.LogDebug("Determining next assessment subject for student {StudentId}", studentId);
 
-        // TODO: Implement proper subject selection logic
-        // For Phase 2, we'll use Mathematics as the default subject
-        // In Phase 3, we'll enhance this with proper priority calculation based on:
-        // - Time since last assessment per subject
-        // - Average scores per subject  
-        // - Performance trends
-        // - Grade level curriculum requirements
+        // Get all past assessments for this student
+        var assessmentsResult = await _studentAssessmentRepository.GetByStudentIdAsync(studentId);
 
-        Logger.LogInformation("Selecting Mathematics as assessment subject for student {StudentId} (Phase 2 default)", studentId);
+        if (assessmentsResult is AcademicAssessment.Core.Common.Result<IReadOnlyList<StudentAssessment>>.Failure failure)
+        {
+            Logger.LogWarning("Failed to load assessments for student {StudentId}: {Error}",
+                studentId, failure.Error.Message);
+            // Default to Mathematics if we can't load history
+            return Subject.Mathematics;
+        }
+
+        var assessments = ((AcademicAssessment.Core.Common.Result<IReadOnlyList<StudentAssessment>>.Success)assessmentsResult).Value;
+
+        if (!assessments.Any())
+        {
+            // No assessment history - start with Mathematics as foundation subject
+            Logger.LogInformation("Student {StudentId} has no assessment history, starting with Mathematics", studentId);
+            return Subject.Mathematics;
+        }
+
+        // Load assessment subjects for all assessments (to avoid N+1 queries)
+        var assessmentIds = assessments.Select(a => a.AssessmentId).ToList();
+        var subjectMap = await LoadAssessmentSubjectsAsync(assessmentIds);
+
+        // Calculate priority scores for each subject
+        var subjectPriorities = new Dictionary<Subject, double>();
+        var allSubjects = Enum.GetValues<Subject>();
+
+        foreach (var subject in allSubjects)
+        {
+            var subjectAssessments = assessments
+                .Where(a => GetAssessmentSubject(a.AssessmentId, subjectMap) == subject)
+                .OrderByDescending(a => a.CompletedAt ?? a.StartedAt)
+                .ToList();
+
+            double priority = CalculateSubjectPriority(
+                subject,
+                subjectAssessments,
+                DateTime.UtcNow);
+
+            subjectPriorities[subject] = priority;
+
+            Logger.LogDebug("Subject {Subject} priority: {Priority:F2}", subject, priority);
+        }
+
+        // Select subject with highest priority
+        var selectedSubject = subjectPriorities.OrderByDescending(kvp => kvp.Value).First().Key;
+
+        Logger.LogInformation(
+            "Selected {Subject} for student {StudentId} (priority: {Priority:F2})",
+            selectedSubject,
+            studentId,
+            subjectPriorities[selectedSubject]);
+
+        return selectedSubject;
+    }
+
+    /// <summary>
+    /// Calculates priority score for a subject based on multiple factors.
+    /// Higher score = higher priority for assessment.
+    /// </summary>
+    private double CalculateSubjectPriority(
+        Subject subject,
+        List<StudentAssessment> subjectAssessments,
+        DateTime now)
+    {
+        // Base priority starts at 50
+        double priority = 50.0;
+
+        // Factor 1: Never assessed (highest priority boost)
+        if (!subjectAssessments.Any())
+        {
+            Logger.LogDebug("{Subject}: Never assessed, adding +100 priority", subject);
+            return priority + 100.0;
+        }
+
+        // Factor 2: Time since last assessment (recency)
+        var lastAssessment = subjectAssessments.First();
+        var daysSinceLastAssessment = (now - (lastAssessment.CompletedAt ?? lastAssessment.StartedAt!.Value).DateTime).TotalDays;
+
+        // Add priority based on days elapsed (max +40 at 30+ days)
+        var recencyBonus = Math.Min(daysSinceLastAssessment * 1.33, 40.0);
+        priority += recencyBonus;
+        Logger.LogDebug("{Subject}: {Days:F1} days since last assessment, adding +{Bonus:F1} priority",
+            subject, daysSinceLastAssessment, recencyBonus);
+
+        // Factor 3: Performance trend (declining performance = higher priority)
+        if (subjectAssessments.Count >= 3)
+        {
+            var recentThree = subjectAssessments.Take(3).ToList();
+            var scores = recentThree
+                .Where(a => a.PercentageScore.HasValue)
+                .Select(a => a.PercentageScore!.Value)
+                .ToList();
+
+            if (scores.Count >= 2)
+            {
+                // Calculate trend (negative = declining)
+                var trend = scores[0] - scores[^1]; // Most recent - oldest
+
+                if (trend < 0) // Declining performance
+                {
+                    var trendPenalty = Math.Abs(trend) * 0.3; // Up to +30 for 100% decline
+                    priority += trendPenalty;
+                    Logger.LogDebug("{Subject}: Declining trend ({Trend:F1}%), adding +{Penalty:F1} priority",
+                        subject, trend, trendPenalty);
+                }
+                else if (trend > 20) // Strong improvement
+                {
+                    priority -= 10.0; // Reduce priority for subjects doing well
+                    Logger.LogDebug("{Subject}: Strong improvement (+{Trend:F1}%), reducing priority by 10",
+                        subject, trend);
+                }
+            }
+        }
+
+        // Factor 4: Average mastery level (low mastery = higher priority)
+        var completedAssessments = subjectAssessments
+            .Where(a => a.Status == AssessmentStatus.Completed && a.PercentageScore.HasValue)
+            .ToList();
+
+        if (completedAssessments.Any())
+        {
+            var avgScore = completedAssessments.Average(a => a.PercentageScore!.Value);
+
+            // Below 70% = need more practice
+            if (avgScore < 70)
+            {
+                var masteryBonus = (70 - avgScore) * 0.4; // Up to +28 for 0% avg
+                priority += masteryBonus;
+                Logger.LogDebug("{Subject}: Low mastery ({Avg:F1}%), adding +{Bonus:F1} priority",
+                    subject, avgScore, masteryBonus);
+            }
+            // Above 90% = doing well, reduce priority
+            else if (avgScore > 90)
+            {
+                priority -= 15.0;
+                Logger.LogDebug("{Subject}: High mastery ({Avg:F1}%), reducing priority by 15",
+                    subject, avgScore);
+            }
+        }
+
+        // Factor 5: Assessment frequency (avoid over-testing same subject)
+        var assessmentsLastWeek = subjectAssessments.Count(a =>
+            (now - (a.CompletedAt ?? a.StartedAt!.Value).DateTime).TotalDays <= 7);
+
+        if (assessmentsLastWeek >= 3)
+        {
+            priority -= 25.0; // Reduce priority if assessed too frequently
+            Logger.LogDebug("{Subject}: {Count} assessments in last week, reducing priority by 25",
+                subject, assessmentsLastWeek);
+        }
+
+        return Math.Max(0, priority); // Never negative
+    }
+
+    /// <summary>
+    /// Gets the subject for an assessment by querying the assessment repository.
+    /// Uses caching to avoid repeated database queries for the same assessment.
+    /// </summary>
+    private async Task<Dictionary<Guid, Subject>> LoadAssessmentSubjectsAsync(
+        IEnumerable<Guid> assessmentIds,
+        CancellationToken cancellationToken = default)
+    {
+        var subjectMap = new Dictionary<Guid, Subject>();
+        var uniqueIds = assessmentIds.Distinct().ToList();
+
+        Logger.LogDebug("Loading subjects for {Count} unique assessments", uniqueIds.Count);
+
+        foreach (var assessmentId in uniqueIds)
+        {
+            var assessmentResult = await _assessmentRepository.GetByIdAsync(assessmentId, cancellationToken);
+
+            if (assessmentResult is AcademicAssessment.Core.Common.Result<Assessment>.Success success)
+            {
+                subjectMap[assessmentId] = success.Value.Subject;
+                Logger.LogTrace("Assessment {AssessmentId} is for subject {Subject}",
+                    assessmentId, success.Value.Subject);
+            }
+            else
+            {
+                // If assessment not found, log warning and default to Mathematics
+                Logger.LogWarning("Assessment {AssessmentId} not found, defaulting to Mathematics",
+                    assessmentId);
+                subjectMap[assessmentId] = Subject.Mathematics;
+            }
+        }
+
+        return subjectMap;
+    }
+
+    /// <summary>
+    /// Gets the subject for an assessment from a pre-loaded lookup dictionary.
+    /// </summary>
+    private Subject GetAssessmentSubject(Guid assessmentId, Dictionary<Guid, Subject> subjectMap)
+    {
+        if (subjectMap.TryGetValue(assessmentId, out var subject))
+        {
+            return subject;
+        }
+
+        // Fallback to Mathematics if not in map (shouldn't happen if LoadAssessmentSubjectsAsync was called properly)
+        Logger.LogWarning("Assessment {AssessmentId} not in subject map, defaulting to Mathematics", assessmentId);
         return Subject.Mathematics;
     }
 
@@ -281,4 +494,1336 @@ public class StudentProgressOrchestrator : A2ABaseAgent
 
         return await Task.FromResult(task);
     }
+
+    /// <summary>
+    /// Routes a task to the most suitable agent based on capabilities, availability, and current load.
+    /// Implements intelligent agent selection with fallback logic and priority queuing.
+    /// </summary>
+    /// <param name="requiredSkill">The skill required to complete the task</param>
+    /// <param name="task">The task to route</param>
+    /// <param name="subjectFilter">Optional subject filter for subject-specific agents</param>
+    /// <param name="gradeLevelFilter">Optional grade level filter</param>
+    /// <param name="priority">Task priority (0=low, 5=medium, 10=high)</param>
+    /// <returns>The selected agent's card, or null if no suitable agent found</returns>
+    private async Task<AgentCard?> RouteTaskToAgent(
+        string requiredSkill,
+        AgentTask task,
+        Subject? subjectFilter = null,
+        GradeLevel? gradeLevelFilter = null,
+        int priority = 5)
+    {
+        Logger.LogInformation(
+            "Routing task {TaskId} (Type: {TaskType}, Skill: {Skill}, Priority: {Priority})",
+            task.TaskId, task.Type, requiredSkill, priority);
+
+        // Step 1: Discover agents with required capability
+        var candidateAgents = await DiscoverAgentsByCapability(
+            requiredSkill,
+            subjectFilter,
+            gradeLevelFilter);
+
+        if (!candidateAgents.Any())
+        {
+            Logger.LogWarning(
+                "No agents found for skill '{Skill}', subject '{Subject}', grade level '{GradeLevel}'",
+                requiredSkill, subjectFilter, gradeLevelFilter);
+            return null;
+        }
+
+        Logger.LogDebug("Found {Count} candidate agents for skill '{Skill}'",
+            candidateAgents.Count, requiredSkill);
+
+        // Step 2: Filter by availability and health
+        var availableAgents = FilterAvailableAgents(candidateAgents);
+
+        if (!availableAgents.Any())
+        {
+            Logger.LogWarning(
+                "Found {CandidateCount} candidate agents, but none are currently available",
+                candidateAgents.Count);
+
+            // Fallback: use any candidate agent (best effort)
+            Logger.LogInformation("Using fallback selection - picking first candidate agent");
+            return candidateAgents.First();
+        }
+
+        Logger.LogDebug("{AvailableCount} of {CandidateCount} agents are available",
+            availableAgents.Count, candidateAgents.Count);
+
+        // Step 3: Score agents based on load balancing and capability match
+        var scoredAgents = ScoreAgentsForTask(availableAgents, task, priority);
+
+        // Step 4: Select best agent
+        var selectedAgent = scoredAgents.OrderByDescending(s => s.Score).First();
+
+        Logger.LogInformation(
+            "Selected agent '{AgentName}' ({AgentId}) with score {Score:F2} for task {TaskId}",
+            selectedAgent.Agent.Name,
+            selectedAgent.Agent.AgentId,
+            selectedAgent.Score,
+            task.TaskId);
+
+        // Step 5: Track agent workload (for load balancing)
+        TrackAgentWorkload(selectedAgent.Agent.AgentId, task.TaskId);
+
+        return selectedAgent.Agent;
+    }
+
+    // Priority Queue for task scheduling
+    private readonly System.Collections.Concurrent.ConcurrentQueue<QueuedTask> _taskQueue = new();
+    private readonly RoutingStatistics _routingStats = new();
+    private readonly Dictionary<string, int> _agentFailureCount = new();
+    private readonly Dictionary<string, DateTime> _agentCircuitOpenUntil = new();
+    private const int CircuitBreakerThreshold = 3; // Failures before circuit opens
+    private readonly TimeSpan CircuitBreakerTimeout = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Routes a task with advanced fallback strategies including retry logic and circuit breaker.
+    /// This is the enhanced version that wraps RouteTaskToAgent with production-ready resilience.
+    /// </summary>
+    private async Task<AgentCard?> RouteTaskWithFallback(
+        string requiredSkill,
+        AgentTask task,
+        Subject? subjectFilter = null,
+        GradeLevel? gradeLevelFilter = null,
+        int priority = 5,
+        int maxRetries = 3)
+    {
+        _routingStats.TotalRoutingAttempts++;
+
+        Logger.LogInformation(
+            "Routing task {TaskId} with fallback (Priority: {Priority}, MaxRetries: {MaxRetries})",
+            task.TaskId, priority, maxRetries);
+
+        AgentCard? selectedAgent = null;
+        int attempt = 0;
+
+        while (attempt < maxRetries && selectedAgent == null)
+        {
+            attempt++;
+
+            Logger.LogDebug("Routing attempt {Attempt}/{MaxRetries} for task {TaskId}",
+                attempt, maxRetries, task.TaskId);
+
+            // Try primary routing
+            selectedAgent = await RouteTaskToAgent(
+                requiredSkill,
+                task,
+                subjectFilter,
+                gradeLevelFilter,
+                priority);
+
+            if (selectedAgent != null)
+            {
+                // Check circuit breaker
+                if (IsAgentCircuitOpen(selectedAgent.AgentId))
+                {
+                    Logger.LogWarning(
+                        "Agent '{AgentName}' circuit is open, trying fallback",
+                        selectedAgent.Name);
+                    selectedAgent = null; // Force fallback
+                    continue;
+                }
+
+                _routingStats.SuccessfulRoutings++;
+                TrackAgentUtilization(selectedAgent.AgentId);
+
+                Logger.LogInformation(
+                    "Successfully routed task {TaskId} to agent '{AgentName}' on attempt {Attempt}",
+                    task.TaskId, selectedAgent.Name, attempt);
+
+                return selectedAgent;
+            }
+
+            // Primary routing failed - try fallback strategies
+            Logger.LogWarning(
+                "Primary routing failed for task {TaskId} (attempt {Attempt}), trying fallback strategies",
+                task.TaskId, attempt);
+
+            // Fallback Strategy 1: Relax filters
+            if (subjectFilter.HasValue || gradeLevelFilter.HasValue)
+            {
+                Logger.LogInformation("Fallback strategy 1: Relaxing filters");
+                selectedAgent = await RouteTaskToAgent(
+                    requiredSkill,
+                    task,
+                    subjectFilter: null, // Remove subject filter
+                    gradeLevelFilter: null, // Remove grade level filter
+                    priority);
+
+                if (selectedAgent != null)
+                {
+                    _routingStats.FallbackSelections++;
+                    Logger.LogInformation(
+                        "Fallback successful (relaxed filters): task {TaskId} → agent '{AgentName}'",
+                        task.TaskId, selectedAgent.Name);
+                    return selectedAgent;
+                }
+            }
+
+            // Fallback Strategy 2: Try generic orchestration skill
+            Logger.LogInformation("Fallback strategy 2: Looking for generic agents");
+            selectedAgent = await RouteTaskToAgent(
+                "coordinate_agents", // Generic orchestration skill
+                task,
+                null,
+                null,
+                priority);
+
+            if (selectedAgent != null)
+            {
+                _routingStats.FallbackSelections++;
+                Logger.LogInformation(
+                    "Fallback successful (generic agent): task {TaskId} → agent '{AgentName}'",
+                    task.TaskId, selectedAgent.Name);
+                return selectedAgent;
+            }
+
+            // Wait before retry (exponential backoff)
+            if (attempt < maxRetries)
+            {
+                var delayMs = (int)Math.Pow(2, attempt) * 100; // 200ms, 400ms, 800ms
+                Logger.LogInformation(
+                    "Waiting {DelayMs}ms before retry attempt {NextAttempt}",
+                    delayMs, attempt + 1);
+                await Task.Delay(delayMs);
+            }
+        }
+
+        // All attempts failed
+        _routingStats.FailedRoutings++;
+        Logger.LogError(
+            "Failed to route task {TaskId} after {Attempts} attempts",
+            task.TaskId, attempt);
+
+        return null;
+    }
+
+    /// <summary>
+    /// Enqueues a task for later processing based on priority.
+    /// High-priority tasks are processed first.
+    /// </summary>
+    private void EnqueueTask(
+        AgentTask task,
+        string requiredSkill,
+        int priority,
+        Subject? subjectFilter = null,
+        GradeLevel? gradeLevelFilter = null)
+    {
+        var queuedTask = new QueuedTask
+        {
+            Task = task,
+            Priority = priority,
+            QueuedAt = DateTime.UtcNow,
+            RequiredSkill = requiredSkill,
+            SubjectFilter = subjectFilter,
+            GradeLevelFilter = gradeLevelFilter,
+            RetryCount = 0
+        };
+
+        _taskQueue.Enqueue(queuedTask);
+
+        Logger.LogInformation(
+            "Task {TaskId} enqueued with priority {Priority} (Queue size: {QueueSize})",
+            task.TaskId, priority, _taskQueue.Count);
+    }
+
+    /// <summary>
+    /// Processes queued tasks in priority order.
+    /// This would typically run in a background service.
+    /// </summary>
+    private async Task<int> ProcessTaskQueue(CancellationToken cancellationToken = default)
+    {
+        int processedCount = 0;
+        var tasksToProcess = new List<QueuedTask>();
+
+        // Dequeue all current tasks
+        while (_taskQueue.TryDequeue(out var queuedTask))
+        {
+            tasksToProcess.Add(queuedTask);
+        }
+
+        if (!tasksToProcess.Any())
+        {
+            Logger.LogDebug("Task queue is empty, nothing to process");
+            return 0;
+        }
+
+        // Sort by priority (high to low), then by queued time (FIFO within same priority)
+        var sortedTasks = tasksToProcess
+            .OrderByDescending(t => t.Priority)
+            .ThenBy(t => t.QueuedAt)
+            .ToList();
+
+        Logger.LogInformation(
+            "Processing {Count} queued tasks (priorities: {Priorities})",
+            sortedTasks.Count,
+            string.Join(", ", sortedTasks.Select(t => t.Priority)));
+
+        foreach (var queuedTask in sortedTasks)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                // Re-enqueue remaining tasks
+                foreach (var remainingTask in sortedTasks.Skip(processedCount))
+                {
+                    _taskQueue.Enqueue(remainingTask);
+                }
+                break;
+            }
+
+            try
+            {
+                var agent = await RouteTaskWithFallback(
+                    queuedTask.RequiredSkill,
+                    queuedTask.Task,
+                    queuedTask.SubjectFilter,
+                    queuedTask.GradeLevelFilter,
+                    queuedTask.Priority);
+
+                if (agent != null)
+                {
+                    // Send task to agent
+                    await TaskService.SendTaskAsync(agent.AgentId, queuedTask.Task);
+                    processedCount++;
+
+                    Logger.LogInformation(
+                        "Queued task {TaskId} processed successfully by agent '{AgentName}'",
+                        queuedTask.Task.TaskId, agent.Name);
+                }
+                else
+                {
+                    // Re-enqueue if max retries not reached
+                    queuedTask.RetryCount++;
+                    if (queuedTask.RetryCount < 3)
+                    {
+                        _taskQueue.Enqueue(queuedTask);
+                        Logger.LogWarning(
+                            "Task {TaskId} re-enqueued (retry {RetryCount}/3)",
+                            queuedTask.Task.TaskId, queuedTask.RetryCount);
+                    }
+                    else
+                    {
+                        Logger.LogError(
+                            "Task {TaskId} failed after {RetryCount} retries, moving to dead letter queue",
+                            queuedTask.Task.TaskId, queuedTask.RetryCount);
+                        // TODO: Move to dead letter queue for manual intervention
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex,
+                    "Error processing queued task {TaskId}: {Error}",
+                    queuedTask.Task.TaskId, ex.Message);
+
+                // Re-enqueue for retry
+                if (queuedTask.RetryCount < 3)
+                {
+                    queuedTask.RetryCount++;
+                    _taskQueue.Enqueue(queuedTask);
+                }
+            }
+        }
+
+        Logger.LogInformation("Processed {ProcessedCount}/{TotalCount} queued tasks",
+            processedCount, sortedTasks.Count);
+
+        return processedCount;
+    }
+
+    /// <summary>
+    /// Checks if an agent's circuit breaker is open (agent is temporarily unavailable).
+    /// </summary>
+    private bool IsAgentCircuitOpen(string agentId)
+    {
+        if (_agentCircuitOpenUntil.TryGetValue(agentId, out var openUntil))
+        {
+            if (DateTime.UtcNow < openUntil)
+            {
+                return true; // Circuit still open
+            }
+            else
+            {
+                // Circuit timeout expired, close it
+                _agentCircuitOpenUntil.Remove(agentId);
+                _agentFailureCount[agentId] = 0;
+                Logger.LogInformation("Circuit breaker closed for agent '{AgentId}'", agentId);
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Records a failure for an agent and opens circuit breaker if threshold exceeded.
+    /// </summary>
+    private void RecordAgentFailure(string agentId, string agentName)
+    {
+        if (!_agentFailureCount.ContainsKey(agentId))
+        {
+            _agentFailureCount[agentId] = 0;
+        }
+
+        _agentFailureCount[agentId]++;
+        _routingStats.FailedAgents.TryGetValue(agentId, out var currentCount);
+        _routingStats.FailedAgents[agentId] = currentCount + 1;
+
+        Logger.LogWarning(
+            "Agent '{AgentName}' failure recorded (count: {FailureCount})",
+            agentName, _agentFailureCount[agentId]);
+
+        if (_agentFailureCount[agentId] >= CircuitBreakerThreshold)
+        {
+            // Open circuit breaker
+            _agentCircuitOpenUntil[agentId] = DateTime.UtcNow.Add(CircuitBreakerTimeout);
+
+            Logger.LogError(
+                "Circuit breaker OPENED for agent '{AgentName}' after {FailureCount} failures. " +
+                "Agent will be unavailable for {TimeoutMinutes} minutes",
+                agentName, _agentFailureCount[agentId], CircuitBreakerTimeout.TotalMinutes);
+        }
+    }
+
+    /// <summary>
+    /// Tracks agent utilization for monitoring and analytics.
+    /// </summary>
+    private void TrackAgentUtilization(string agentId)
+    {
+        if (!_routingStats.AgentUtilization.ContainsKey(agentId))
+        {
+            _routingStats.AgentUtilization[agentId] = 0;
+        }
+        _routingStats.AgentUtilization[agentId]++;
+    }
+
+    /// <summary>
+    /// Gets current routing statistics for monitoring and diagnostics.
+    /// </summary>
+    public RoutingStatistics GetRoutingStatistics() => _routingStats;
+
+    /// <summary>
+    /// Discovers agents by capability, with optional filters for subject and grade level.
+    /// </summary>
+    private async Task<List<AgentCard>> DiscoverAgentsByCapability(
+        string requiredSkill,
+        Subject? subjectFilter = null,
+        GradeLevel? gradeLevelFilter = null)
+    {
+        // Discover all agents with the required skill
+        var agentsWithSkill = await TaskService.DiscoverAgentsAsync(skill: requiredSkill);
+
+        // Apply subject filter if specified
+        if (subjectFilter.HasValue)
+        {
+            agentsWithSkill = agentsWithSkill
+                .Where(a => a.Subject.HasValue && a.Subject.Value == subjectFilter.Value)
+                .ToList();
+        }
+
+        // Apply grade level filter if specified
+        if (gradeLevelFilter.HasValue)
+        {
+            agentsWithSkill = agentsWithSkill
+                .Where(a => a.SupportedGradeLevels.Contains(gradeLevelFilter.Value))
+                .ToList();
+        }
+
+        return agentsWithSkill;
+    }
+
+    /// <summary>
+    /// Filters agents to only those currently available (health check passed).
+    /// In production, this would check heartbeat, connection status, etc.
+    /// </summary>
+    private List<AgentCard> FilterAvailableAgents(List<AgentCard> agents)
+    {
+        // TODO: Implement actual health checking
+        // For now, assume all agents are available
+        // In production, check:
+        // - Heartbeat timestamp (within last 30 seconds)
+        // - Connection status
+        // - Not in maintenance mode
+        // - CPU/memory usage within limits
+
+        return agents;
+    }
+
+    /// <summary>
+    /// Scores agents for task assignment based on multiple factors.
+    /// </summary>
+    private List<ScoredAgent> ScoreAgentsForTask(
+        List<AgentCard> agents,
+        AgentTask task,
+        int priority)
+    {
+        var scored = new List<ScoredAgent>();
+
+        foreach (var agent in agents)
+        {
+            double score = 0.0;
+
+            // Factor 1: Current workload (40 points max)
+            // Agents with less work get higher scores
+            int currentLoad = GetAgentWorkload(agent.AgentId);
+            double loadScore = Math.Max(0, 40.0 - (currentLoad * 5.0)); // -5 points per task
+            score += loadScore;
+
+            // Factor 2: Capability match quality (30 points max)
+            // Agents with more skills that match the task get higher scores
+            double capabilityScore = CalculateCapabilityMatchScore(agent, task);
+            score += capabilityScore;
+
+            // Factor 3: Agent version/freshness (20 points max)
+            // Newer agents (higher version) get preference for compatibility
+            double versionScore = ParseVersionScore(agent.Version);
+            score += versionScore;
+
+            // Factor 4: Historical performance (10 points max)
+            // Agents with better success rates get preference
+            // TODO: Track historical success rate per agent
+            double performanceScore = 10.0; // Default: assume good performance
+            score += performanceScore;
+
+            Logger.LogDebug(
+                "Agent '{AgentName}' score: {TotalScore:F2} (load: {LoadScore:F2}, " +
+                "capability: {CapScore:F2}, version: {VersionScore:F2}, perf: {PerfScore:F2})",
+                agent.Name, score, loadScore, capabilityScore, versionScore, performanceScore);
+
+            scored.Add(new ScoredAgent
+            {
+                Agent = agent,
+                Score = score,
+                LoadScore = loadScore,
+                CapabilityScore = capabilityScore,
+                VersionScore = versionScore,
+                PerformanceScore = performanceScore
+            });
+        }
+
+        return scored;
+    }
+
+    /// <summary>
+    /// Calculates how well an agent's capabilities match the task requirements.
+    /// </summary>
+    private double CalculateCapabilityMatchScore(AgentCard agent, AgentTask task)
+    {
+        double score = 0.0;
+
+        // Check if agent has the primary skill needed
+        // This is already guaranteed by discovery, so give base points
+        score += 15.0;
+
+        // Bonus points for additional relevant capabilities
+        if (agent.Capabilities != null)
+        {
+            // Check for specialized capabilities
+            if (agent.Capabilities.ContainsKey("assessment_types"))
+            {
+                score += 5.0; // Agent supports multiple assessment types
+            }
+
+            if (agent.Capabilities.ContainsKey("adaptive_difficulty"))
+            {
+                score += 5.0; // Agent supports adaptive difficulty
+            }
+
+            if (agent.Capabilities.ContainsKey("max_concurrent_students"))
+            {
+                score += 5.0; // Agent can handle concurrent work
+            }
+        }
+
+        return Math.Min(score, 30.0); // Cap at 30 points
+    }
+
+    /// <summary>
+    /// Parses agent version string and returns a score (higher version = higher score).
+    /// </summary>
+    private double ParseVersionScore(string version)
+    {
+        try
+        {
+            // Parse semantic version (e.g., "1.2.3")
+            var parts = version.Split('.');
+            if (parts.Length >= 2 &&
+                int.TryParse(parts[0], out int major) &&
+                int.TryParse(parts[1], out int minor))
+            {
+                // Score: major * 10 + minor, capped at 20
+                return Math.Min(major * 10.0 + minor, 20.0);
+            }
+        }
+        catch
+        {
+            // Ignore parse errors
+        }
+
+        // Default score for unparseable versions
+        return 10.0;
+    }
+
+    // Simple in-memory workload tracking
+    // In production, this would use Redis or a distributed cache
+    private readonly Dictionary<string, HashSet<string>> _agentWorkloads = new();
+    private readonly object _workloadLock = new();
+
+    /// <summary>
+    /// Gets the current workload (number of active tasks) for an agent.
+    /// </summary>
+    private int GetAgentWorkload(string agentId)
+    {
+        lock (_workloadLock)
+        {
+            return _agentWorkloads.TryGetValue(agentId, out var tasks) ? tasks.Count : 0;
+        }
+    }
+
+    /// <summary>
+    /// Tracks that an agent is now working on a task.
+    /// </summary>
+    private void TrackAgentWorkload(string agentId, string taskId)
+    {
+        lock (_workloadLock)
+        {
+            if (!_agentWorkloads.ContainsKey(agentId))
+            {
+                _agentWorkloads[agentId] = new HashSet<string>();
+            }
+            _agentWorkloads[agentId].Add(taskId);
+
+            Logger.LogDebug("Agent '{AgentId}' workload now: {Count} task(s)",
+                agentId, _agentWorkloads[agentId].Count);
+        }
+    }
+
+    /// <summary>
+    /// Removes a task from an agent's workload tracking (when task completes).
+    /// </summary>
+    private void UntrackAgentWorkload(string agentId, string taskId)
+    {
+        lock (_workloadLock)
+        {
+            if (_agentWorkloads.TryGetValue(agentId, out var tasks))
+            {
+                tasks.Remove(taskId);
+                Logger.LogDebug("Agent '{AgentId}' workload now: {Count} task(s)",
+                    agentId, tasks.Count);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adjusts difficulty for next assessment using Item Response Theory (IRT) principles.
+    /// </summary>
+    /// <param name="studentId">The student whose difficulty to adjust</param>
+    /// <param name="subject">The subject being assessed</param>
+    /// <param name="assessmentHistory">Recent assessment history for this subject</param>
+    /// <returns>Adjusted difficulty level (IRT theta estimate) and recommended next difficulty</returns>
+    private (double currentAbility, double recommendedDifficulty) AdjustDifficulty(
+        Guid studentId,
+        Subject subject,
+        List<StudentAssessment> assessmentHistory)
+    {
+        Logger.LogDebug("Adjusting difficulty for Student {StudentId}, Subject: {Subject}",
+            studentId, subject);
+
+        // Default starting ability (IRT theta) for new students
+        const double DefaultAbility = 0.0;
+        const double DifficultyStep = 0.2;
+        const double MinDifficulty = -3.0;
+        const double MaxDifficulty = 3.0;
+
+        // If no history, start at default
+        if (!assessmentHistory.Any())
+        {
+            Logger.LogDebug("No assessment history - starting at default ability {DefaultAbility}",
+                DefaultAbility);
+            return (DefaultAbility, DefaultAbility);
+        }
+
+        // Get most recent completed assessments (up to last 5 for trend analysis)
+        var recentAssessments = assessmentHistory
+            .Where(a => a.Status == AssessmentStatus.Completed && a.PercentageScore.HasValue)
+            .OrderByDescending(a => a.CompletedAt)
+            .Take(5)
+            .ToList();
+
+        if (!recentAssessments.Any())
+        {
+            Logger.LogDebug("No completed assessments - starting at default ability");
+            return (DefaultAbility, DefaultAbility);
+        }
+
+        // Calculate current ability estimate from most recent assessment
+        var latestAssessment = recentAssessments.First();
+        double currentAbility = latestAssessment.EstimatedAbility ?? DefaultAbility;
+
+        // Calculate average accuracy across recent assessments
+        double averageAccuracy = recentAssessments.Average(a => a.PercentageScore!.Value);
+
+        // Calculate accuracy of most recent assessment
+        double latestAccuracy = latestAssessment.PercentageScore!.Value;
+
+        Logger.LogDebug(
+            "Current ability: {CurrentAbility:F2}, Latest accuracy: {LatestAccuracy:F1}%, " +
+            "Average accuracy (last {Count}): {AverageAccuracy:F1}%",
+            currentAbility, latestAccuracy, recentAssessments.Count, averageAccuracy);
+
+        // IRT-based difficulty adjustment
+        double difficultyAdjustment = 0.0;
+
+        // Rule 1: High performance (>80%) - increase difficulty
+        if (latestAccuracy > 80.0)
+        {
+            difficultyAdjustment = DifficultyStep;
+            Logger.LogDebug("High performance ({Accuracy:F1}%) - increasing difficulty by {Step}",
+                latestAccuracy, DifficultyStep);
+        }
+        // Rule 2: Low performance (<50%) - decrease difficulty
+        else if (latestAccuracy < 50.0)
+        {
+            difficultyAdjustment = -DifficultyStep;
+            Logger.LogDebug("Low performance ({Accuracy:F1}%) - decreasing difficulty by {Step}",
+                latestAccuracy, DifficultyStep);
+        }
+        // Rule 3: Medium performance (50-80%) - fine-tune based on velocity
+        else
+        {
+            // Calculate velocity (change in performance over recent attempts)
+            if (recentAssessments.Count >= 3)
+            {
+                var oldest = recentAssessments.Last().PercentageScore!.Value;
+                var newest = recentAssessments.First().PercentageScore!.Value;
+                double velocity = newest - oldest;
+
+                // If improving rapidly, increase difficulty slightly
+                if (velocity > 10.0)
+                {
+                    difficultyAdjustment = DifficultyStep * 0.5;
+                    Logger.LogDebug(
+                        "Improving trend (velocity: +{Velocity:F1}%) - small difficulty increase",
+                        velocity);
+                }
+                // If declining, decrease difficulty slightly
+                else if (velocity < -10.0)
+                {
+                    difficultyAdjustment = -DifficultyStep * 0.5;
+                    Logger.LogDebug(
+                        "Declining trend (velocity: {Velocity:F1}%) - small difficulty decrease",
+                        velocity);
+                }
+                else
+                {
+                    Logger.LogDebug("Stable performance - maintaining current difficulty");
+                }
+            }
+        }
+
+        // Apply adjustment with bounds checking
+        double recommendedDifficulty = Math.Clamp(
+            currentAbility + difficultyAdjustment,
+            MinDifficulty,
+            MaxDifficulty);
+
+        Logger.LogInformation(
+            "Difficulty adjustment complete: Current={CurrentAbility:F2}, " +
+            "Recommended={RecommendedDifficulty:F2}, Change={Change:+F2}",
+            currentAbility, recommendedDifficulty, difficultyAdjustment);
+
+        return (currentAbility, recommendedDifficulty);
+    }
+
+    /// <summary>
+    /// Optimizes learning path by identifying knowledge gaps and sequencing topics.
+    /// </summary>
+    /// <param name="studentId">The student ID</param>
+    /// <param name="assessmentHistory">Complete assessment history across all subjects</param>
+    /// <returns>Optimized learning path with topic sequence and estimated time to mastery</returns>
+    private async Task<LearningPath> OptimizeLearningPathAsync(
+        Guid studentId,
+        IReadOnlyList<StudentAssessment> assessmentHistory)
+    {
+        Logger.LogDebug("Optimizing learning path for Student {StudentId}", studentId);
+
+        // Load assessment subjects for all assessments (to avoid N+1 queries)
+        var assessmentIds = assessmentHistory.Select(a => a.AssessmentId).ToList();
+        var subjectMap = await LoadAssessmentSubjectsAsync(assessmentIds);
+
+        // Group assessments by subject to identify weak areas
+        var subjectPerformance = assessmentHistory
+            .Where(a => a.Status == AssessmentStatus.Completed && a.PercentageScore.HasValue)
+            .GroupBy(a => GetAssessmentSubject(a.AssessmentId, subjectMap))
+            .Select(g => new
+            {
+                Subject = g.Key,
+                AverageScore = g.Average(a => a.PercentageScore!.Value),
+                AssessmentCount = g.Count(),
+                LastAssessment = g.OrderByDescending(a => a.CompletedAt).First(),
+                Trend = CalculateTrend(g.OrderByDescending(a => a.CompletedAt).Take(3).ToList())
+            })
+            .OrderBy(s => s.AverageScore) // Weakest subjects first
+            .ToList();
+
+        Logger.LogDebug("Analyzed {Count} subjects for learning path optimization",
+            subjectPerformance.Count);
+
+        // Identify knowledge gaps (subjects with <70% average)
+        var knowledgeGaps = subjectPerformance
+            .Where(s => s.AverageScore < 70.0)
+            .Select(s => new KnowledgeGap
+            {
+                Subject = s.Subject,
+                CurrentMastery = s.AverageScore,
+                TargetMastery = 80.0, // Target 80% mastery
+                EstimatedHours = EstimateTimeToMastery(s.AverageScore, 80.0, s.Trend),
+                Priority = CalculateGapPriority(s.AverageScore, s.Trend, (s.LastAssessment.CompletedAt ?? DateTimeOffset.UtcNow).DateTime)
+            })
+            .OrderByDescending(g => g.Priority)
+            .ToList();
+
+        // Identify subjects needing reinforcement (70-85% average)
+        var reinforcementTopics = subjectPerformance
+            .Where(s => s.AverageScore >= 70.0 && s.AverageScore < 85.0)
+            .Select(s => new ReinforcementTopic
+            {
+                Subject = s.Subject,
+                CurrentMastery = s.AverageScore,
+                EstimatedHours = 2.0, // Quick reinforcement
+                RecommendedFrequency = TimeSpan.FromDays(7) // Weekly review
+            })
+            .ToList();
+
+        // Sequence topics by prerequisite dependencies (simplified for now)
+        var sequencedTopics = SequenceTopicsByPrerequisites(knowledgeGaps, reinforcementTopics);
+
+        // Calculate total estimated time
+        double totalEstimatedHours = knowledgeGaps.Sum(g => g.EstimatedHours) +
+                                      reinforcementTopics.Sum(r => r.EstimatedHours);
+
+        Logger.LogInformation(
+            "Learning path optimized: {GapCount} knowledge gaps, {ReinforcementCount} reinforcement topics, " +
+            "estimated {TotalHours:F1} hours",
+            knowledgeGaps.Count, reinforcementTopics.Count, totalEstimatedHours);
+
+        return new LearningPath
+        {
+            StudentId = studentId,
+            GeneratedAt = DateTime.UtcNow,
+            KnowledgeGaps = knowledgeGaps,
+            ReinforcementTopics = reinforcementTopics,
+            SequencedTopics = sequencedTopics,
+            TotalEstimatedHours = totalEstimatedHours,
+            EstimatedCompletionDate = DateTime.UtcNow.AddHours(totalEstimatedHours * 2) // Assume 30 min/day study
+        };
+    }
+
+    /// <summary>
+    /// Calculates performance trend from recent assessments.
+    /// </summary>
+    /// <param name="recentAssessments">Recent assessments ordered by date (newest first)</param>
+    /// <returns>Trend value: positive for improving, negative for declining</returns>
+    private double CalculateTrend(List<StudentAssessment> recentAssessments)
+    {
+        if (recentAssessments.Count < 2)
+        {
+            return 0.0; // Not enough data for trend
+        }
+
+        // Calculate simple linear trend (newest - oldest)
+        var newest = recentAssessments.First().PercentageScore ?? 0.0;
+        var oldest = recentAssessments.Last().PercentageScore ?? 0.0;
+
+        return newest - oldest;
+    }
+
+    /// <summary>
+    /// Calculates priority for addressing a knowledge gap.
+    /// </summary>
+    private double CalculateGapPriority(double currentMastery, double trend, DateTime lastAssessment)
+    {
+        double priority = 0.0;
+
+        // Factor 1: Severity of gap (0-50 points)
+        priority += (70.0 - currentMastery) * 0.7; // Max 50 points for 0% mastery
+
+        // Factor 2: Declining trend (0-30 points)
+        if (trend < 0)
+        {
+            priority += Math.Abs(trend) * 0.3; // Up to 30 points for steep decline
+        }
+
+        // Factor 3: Recency (0-20 points)
+        var daysSinceLastAssessment = (DateTime.UtcNow - lastAssessment).TotalDays;
+        if (daysSinceLastAssessment > 30)
+        {
+            priority += 20.0; // High priority if not assessed recently
+        }
+        else if (daysSinceLastAssessment > 14)
+        {
+            priority += 10.0;
+        }
+
+        return priority;
+    }
+
+    /// <summary>
+    /// Estimates hours needed to reach target mastery level.
+    /// </summary>
+    private double EstimateTimeToMastery(double currentMastery, double targetMastery, double trend)
+    {
+        double gap = targetMastery - currentMastery;
+
+        // Base estimate: 1 hour per 5% improvement needed
+        double baseHours = gap / 5.0;
+
+        // Adjust based on trend
+        if (trend > 0)
+        {
+            // Already improving - reduce estimate by 20%
+            return baseHours * 0.8;
+        }
+        else if (trend < -5.0)
+        {
+            // Declining significantly - increase estimate by 50%
+            return baseHours * 1.5;
+        }
+
+        return Math.Max(1.0, baseHours); // Minimum 1 hour
+    }
+
+    /// <summary>
+    /// Sequences topics by prerequisite dependencies (simplified algorithm).
+    /// </summary>
+    private List<string> SequenceTopicsByPrerequisites(
+        List<KnowledgeGap> gaps,
+        List<ReinforcementTopic> reinforcements)
+    {
+        // Simplified sequencing: prioritize by priority score
+        // In a full implementation, this would use a dependency graph
+        var sequence = new List<string>();
+
+        // Add critical gaps first
+        sequence.AddRange(gaps
+            .OrderByDescending(g => g.Priority)
+            .Select(g => $"Master {g.Subject} (Current: {g.CurrentMastery:F0}%, Target: {g.TargetMastery:F0}%)"));
+
+        // Add reinforcement topics
+        sequence.AddRange(reinforcements
+            .Select(r => $"Reinforce {r.Subject} (Current: {r.CurrentMastery:F0}%)"));
+
+        return sequence;
+    }
+
+    #region Workflow Execution
+
+    /// <summary>
+    /// Executes a multi-step workflow across multiple agents.
+    /// Handles dependencies, parallel execution, and error recovery.
+    /// </summary>
+    public async Task<WorkflowExecution> ExecuteWorkflowAsync(
+        WorkflowDefinition workflow,
+        Dictionary<string, object>? initialContext = null)
+    {
+        var execution = new WorkflowExecution
+        {
+            WorkflowId = workflow.WorkflowId,
+            Status = WorkflowStatus.Running,
+            Context = initialContext ?? new Dictionary<string, object>()
+        };
+
+        Logger.LogInformation(
+            "Starting workflow execution: {WorkflowName} (ID: {WorkflowId}, Steps: {StepCount})",
+            workflow.Name, workflow.WorkflowId, workflow.Steps.Count);
+
+        try
+        {
+            // Initialize step executions
+            foreach (var step in workflow.Steps)
+            {
+                execution.StepExecutions[step.StepId] = new StepExecution
+                {
+                    StepId = step.StepId,
+                    Status = WorkflowStatus.Pending
+                };
+            }
+
+            // Execute steps in dependency order
+            var executedSteps = new HashSet<string>();
+            var startTime = DateTime.UtcNow;
+
+            while (executedSteps.Count < workflow.Steps.Count)
+            {
+                // Check for timeout
+                if (DateTime.UtcNow - startTime > workflow.Timeout)
+                {
+                    throw new TimeoutException(
+                        $"Workflow execution exceeded timeout of {workflow.Timeout.TotalMinutes} minutes");
+                }
+
+                // Find steps ready to execute (dependencies met, not yet executed)
+                var readySteps = workflow.Steps
+                    .Where(step => !executedSteps.Contains(step.StepId))
+                    .Where(step => step.DependsOn.All(dep => executedSteps.Contains(dep)))
+                    .ToList();
+
+                if (readySteps.Count == 0)
+                {
+                    // No progress possible - check for failures
+                    var hasFailedDependencies = workflow.Steps
+                        .Any(step => !executedSteps.Contains(step.StepId) &&
+                                   step.DependsOn.Any(dep =>
+                                       execution.StepExecutions[dep].Status == WorkflowStatus.Failed));
+
+                    if (hasFailedDependencies && !workflow.ContinueOnError)
+                    {
+                        throw new InvalidOperationException(
+                            "Workflow blocked due to failed dependencies and ContinueOnError=false");
+                    }
+
+                    // No steps ready and no failures - shouldn't happen
+                    break;
+                }
+
+                // Execute ready steps (supports parallel execution)
+                await ExecuteStepBatchAsync(workflow, execution, readySteps);
+
+                // Mark completed/failed steps as executed
+                foreach (var step in readySteps)
+                {
+                    var stepExec = execution.StepExecutions[step.StepId];
+                    if (stepExec.Status == WorkflowStatus.Completed ||
+                        stepExec.Status == WorkflowStatus.Failed ||
+                        (stepExec.Status == WorkflowStatus.Failed && step.Optional))
+                    {
+                        executedSteps.Add(step.StepId);
+                    }
+                }
+            }
+
+            // Check final status
+            var allCompleted = execution.StepExecutions.Values.All(s => s.Status == WorkflowStatus.Completed);
+            var anyFailed = execution.StepExecutions.Values.Any(s => s.Status == WorkflowStatus.Failed);
+
+            if (allCompleted)
+            {
+                execution.Status = WorkflowStatus.Completed;
+                Logger.LogInformation(
+                    "Workflow completed successfully: {WorkflowName} (Duration: {Duration}ms)",
+                    workflow.Name, (DateTime.UtcNow - startTime).TotalMilliseconds);
+            }
+            else if (anyFailed)
+            {
+                execution.Status = WorkflowStatus.Failed;
+                execution.ErrorMessage = "One or more workflow steps failed";
+                Logger.LogWarning(
+                    "Workflow completed with failures: {WorkflowName}",
+                    workflow.Name);
+            }
+        }
+        catch (Exception ex)
+        {
+            execution.Status = WorkflowStatus.Failed;
+            execution.ErrorMessage = ex.Message;
+            Logger.LogError(ex, "Workflow execution failed: {WorkflowName}", workflow.Name);
+        }
+        finally
+        {
+            execution.CompletedAt = DateTime.UtcNow;
+        }
+
+        return execution;
+    }
+
+    /// <summary>
+    /// Executes a batch of workflow steps in parallel.
+    /// </summary>
+    private async Task ExecuteStepBatchAsync(
+        WorkflowDefinition workflow,
+        WorkflowExecution execution,
+        List<WorkflowStep> steps)
+    {
+        // Execute steps in parallel
+        var stepTasks = steps.Select(step => ExecuteWorkflowStepAsync(workflow, execution, step));
+        await Task.WhenAll(stepTasks);
+    }
+
+    /// <summary>
+    /// Executes a single workflow step.
+    /// </summary>
+    private async Task ExecuteWorkflowStepAsync(
+        WorkflowDefinition workflow,
+        WorkflowExecution execution,
+        WorkflowStep step)
+    {
+        var stepExec = execution.StepExecutions[step.StepId];
+        stepExec.Status = WorkflowStatus.Running;
+        stepExec.StartedAt = DateTime.UtcNow;
+
+        Logger.LogInformation(
+            "Executing workflow step: {StepName} (StepId: {StepId}, Attempt: {Attempt})",
+            step.Name, step.StepId, stepExec.Attempts + 1);
+
+        try
+        {
+            // Resolve task data with outputs from previous steps
+            var resolvedData = ResolveStepData(step.TaskData, execution.StepOutputs, execution.Context);
+
+            // Create agent task
+            var task = new AgentTask
+            {
+                TaskId = Guid.NewGuid().ToString(),
+                Type = step.TaskType,
+                Data = resolvedData,
+                Status = AgentTaskStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            stepExec.Task = task;
+            stepExec.Attempts++;
+
+            // Route task to appropriate agent
+            // Use the capability as the required skill
+            var requiredSkill = step.RequiredCapability ?? step.TaskType;
+            var agent = await RouteTaskWithFallback(
+                requiredSkill,
+                task,
+                subjectFilter: null,
+                gradeLevelFilter: null,
+                priority: 5,
+                maxRetries: step.RetryCount + 1);
+
+            if (agent == null)
+            {
+                throw new InvalidOperationException(
+                    $"No agent available to handle task type '{step.TaskType}'");
+            }
+
+            stepExec.AssignedAgent = agent;
+
+            Logger.LogDebug(
+                "Routed step '{StepName}' to agent '{AgentName}'",
+                step.Name, agent.Name);
+
+            // Submit task to agent
+            var submittedTask = await TaskService.SendTaskAsync(agent.AgentId, task);
+            if (submittedTask == null || submittedTask.Status == AgentTaskStatus.Failed)
+            {
+                throw new InvalidOperationException($"Failed to submit task to agent {agent.Name}");
+            }
+
+            // Wait for task completion with timeout
+            var completed = await WaitForTaskCompletionAsync(task.TaskId, step.Timeout);
+            if (!completed)
+            {
+                throw new TimeoutException(
+                    $"Step '{step.Name}' exceeded timeout of {step.Timeout.TotalMinutes} minutes");
+            }
+
+            // Retrieve task result
+            var completedTask = await TaskService.GetTaskStatusAsync(task.TaskId);
+            if (completedTask?.Status == AgentTaskStatus.Completed)
+            {
+                stepExec.Status = WorkflowStatus.Completed;
+                execution.StepOutputs[step.StepId] = completedTask.Result ?? new { };
+
+                Logger.LogInformation(
+                    "Step completed successfully: {StepName} (Duration: {Duration}ms)",
+                    step.Name,
+                    (DateTime.UtcNow - stepExec.StartedAt!.Value).TotalMilliseconds);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Task completed with status: {completedTask?.Status}");
+            }
+        }
+        catch (Exception ex)
+        {
+            stepExec.ErrorMessage = ex.Message;
+
+            // Retry logic
+            if (stepExec.Attempts < step.RetryCount + 1)
+            {
+                Logger.LogWarning(
+                    "Step '{StepName}' failed, will retry (Attempt {Attempt}/{MaxAttempts}): {Error}",
+                    step.Name, stepExec.Attempts, step.RetryCount + 1, ex.Message);
+
+                // Exponential backoff before retry
+                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, stepExec.Attempts - 1)));
+
+                // Retry
+                await ExecuteWorkflowStepAsync(workflow, execution, step);
+            }
+            else
+            {
+                stepExec.Status = step.Optional ? WorkflowStatus.Completed : WorkflowStatus.Failed;
+
+                if (step.Optional)
+                {
+                    Logger.LogWarning(
+                        "Optional step '{StepName}' failed but workflow continues: {Error}",
+                        step.Name, ex.Message);
+                }
+                else
+                {
+                    Logger.LogError(
+                        "Step '{StepName}' failed permanently after {Attempts} attempts: {Error}",
+                        step.Name, stepExec.Attempts, ex.Message);
+                }
+            }
+        }
+        finally
+        {
+            stepExec.CompletedAt = DateTime.UtcNow;
+        }
+    }
+
+    /// <summary>
+    /// Resolves step data by replacing template variables with values from previous steps.
+    /// Supports ${stepId.fieldName} syntax for referencing outputs.
+    /// </summary>
+    private Dictionary<string, object> ResolveStepData(
+        Dictionary<string, object> templateData,
+        Dictionary<string, object> stepOutputs,
+        Dictionary<string, object> context)
+    {
+        var resolved = new Dictionary<string, object>();
+
+        foreach (var (key, value) in templateData)
+        {
+            if (value is string strValue && strValue.Contains("${"))
+            {
+                // Replace template variables
+                var resolvedValue = strValue;
+                foreach (var (stepId, output) in stepOutputs)
+                {
+                    // Simple replacement - in production, use proper template engine
+                    resolvedValue = resolvedValue.Replace($"${{{stepId}}}", output.ToString() ?? "");
+                }
+
+                // Replace context variables
+                foreach (var (ctxKey, ctxValue) in context)
+                {
+                    resolvedValue = resolvedValue.Replace($"${{context.{ctxKey}}}", ctxValue?.ToString() ?? "");
+                }
+
+                resolved[key] = resolvedValue;
+            }
+            else
+            {
+                resolved[key] = value;
+            }
+        }
+
+        return resolved;
+    }
+
+    /// <summary>
+    /// Waits for a task to complete within the specified timeout.
+    /// </summary>
+    private async Task<bool> WaitForTaskCompletionAsync(string taskId, TimeSpan timeout)
+    {
+        var startTime = DateTime.UtcNow;
+        var pollInterval = TimeSpan.FromSeconds(2);
+
+        while (DateTime.UtcNow - startTime < timeout)
+        {
+            var task = await TaskService.GetTaskStatusAsync(taskId);
+            if (task?.Status == AgentTaskStatus.Completed || task?.Status == AgentTaskStatus.Failed)
+            {
+                return task.Status == AgentTaskStatus.Completed;
+            }
+
+            await Task.Delay(pollInterval);
+        }
+
+        return false; // Timeout
+    }
+
+    #endregion
+}
+
+// Supporting records for learning path optimization
+
+public record LearningPath
+{
+    public required Guid StudentId { get; init; }
+    public required DateTime GeneratedAt { get; init; }
+    public required List<KnowledgeGap> KnowledgeGaps { get; init; }
+    public required List<ReinforcementTopic> ReinforcementTopics { get; init; }
+    public required List<string> SequencedTopics { get; init; }
+    public required double TotalEstimatedHours { get; init; }
+    public required DateTime EstimatedCompletionDate { get; init; }
+}
+
+public record KnowledgeGap
+{
+    public required Subject Subject { get; init; }
+    public required double CurrentMastery { get; init; }
+    public required double TargetMastery { get; init; }
+    public required double EstimatedHours { get; init; }
+    public required double Priority { get; init; }
+}
+
+public record ReinforcementTopic
+{
+    public required Subject Subject { get; init; }
+    public required double CurrentMastery { get; init; }
+    public required double EstimatedHours { get; init; }
+    public required TimeSpan RecommendedFrequency { get; init; }
+}
+
+/// <summary>
+/// Represents an agent with its calculated routing score.
+/// Used for intelligent task routing and load balancing.
+/// </summary>
+internal class ScoredAgent
+{
+    public required AgentCard Agent { get; init; }
+    public required double Score { get; init; }
+    public required double LoadScore { get; init; }
+    public required double CapabilityScore { get; init; }
+    public required double VersionScore { get; init; }
+    public required double PerformanceScore { get; init; }
+}
+
+/// <summary>
+/// Represents a queued task waiting to be routed to an agent.
+/// Supports priority-based task scheduling.
+/// </summary>
+internal class QueuedTask
+{
+    public required AgentTask Task { get; init; }
+    public required int Priority { get; init; }
+    public required DateTime QueuedAt { get; init; }
+    public required string RequiredSkill { get; init; }
+    public Subject? SubjectFilter { get; init; }
+    public GradeLevel? GradeLevelFilter { get; init; }
+    public int RetryCount { get; set; }
+    public DateTime? LastAttemptAt { get; set; }
+}
+
+/// <summary>
+/// Represents statistics for agent routing and fallback scenarios.
+/// Used for monitoring and optimization.
+/// </summary>
+public class RoutingStatistics
+{
+    public int TotalRoutingAttempts { get; set; }
+    public int SuccessfulRoutings { get; set; }
+    public int FallbackSelections { get; set; }
+    public int FailedRoutings { get; set; }
+    public Dictionary<string, int> AgentUtilization { get; } = new();
+    public Dictionary<string, int> FailedAgents { get; } = new();
+
+    public double SuccessRate =>
+        TotalRoutingAttempts > 0
+            ? (double)SuccessfulRoutings / TotalRoutingAttempts * 100.0
+            : 0.0;
+
+    public double FallbackRate =>
+        TotalRoutingAttempts > 0
+            ? (double)FallbackSelections / TotalRoutingAttempts * 100.0
+            : 0.0;
 }

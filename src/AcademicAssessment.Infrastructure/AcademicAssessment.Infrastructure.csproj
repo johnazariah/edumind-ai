@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AcademicAssessment.Core\AcademicAssessment.Core.csproj" />
+    <ProjectReference Include="..\AcademicAssessment.Orchestration\AcademicAssessment.Orchestration.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,7 +21,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

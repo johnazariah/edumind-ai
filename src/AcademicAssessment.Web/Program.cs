@@ -41,6 +41,11 @@ try
     var builder = WebApplication.CreateBuilder(args);
 
     // ============================================================
+    // ASPIRE SERVICE DEFAULTS - OpenTelemetry, Service Discovery, Health Checks
+    // ============================================================
+    builder.AddServiceDefaults();
+
+    // ============================================================
     // LOGGING - Use Serilog
     // ============================================================
     builder.Host.UseSerilog();
@@ -132,9 +137,25 @@ try
     }
     else
     {
-        // Development: No authentication required (using stub TenantContext)
-        builder.Services.AddAuthentication();
-        builder.Services.AddAuthorization();
+        // Development: Test JWT authentication with the same policies as production
+        builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer();
+
+        builder.Services.AddAuthorization(options =>
+        {
+            // Same policies as production for consistent testing
+            options.AddPolicy("StudentPolicy", policy => policy.RequireRole("Student"));
+            options.AddPolicy("TeacherPolicy", policy => policy.RequireRole("Teacher"));
+            options.AddPolicy("SchoolAdminPolicy", policy => policy.RequireRole("SchoolAdmin"));
+            options.AddPolicy("CourseAdminPolicy", policy => policy.RequireRole("CourseAdmin"));
+            options.AddPolicy("BusinessAdminPolicy", policy => policy.RequireRole("BusinessAdmin"));
+            options.AddPolicy("SystemAdminPolicy", policy => policy.RequireRole("SystemAdmin"));
+
+            // Combined policies
+            options.AddPolicy("AdminPolicy", policy => policy.RequireRole("SchoolAdmin", "BusinessAdmin", "SystemAdmin"));
+            options.AddPolicy("EducatorPolicy", policy => policy.RequireRole("Teacher", "SchoolAdmin", "CourseAdmin"));
+            options.AddPolicy("AllUsersPolicy", policy => policy.RequireAuthenticatedUser());
+        });
     }
 
     // HTTP Context Accessor for TenantContext
@@ -143,7 +164,14 @@ try
     // ============================================================
     // CONTROLLERS & SIGNALR
     // ============================================================
-    builder.Services.AddControllers();
+    builder.Services.AddControllers()
+        .AddNewtonsoftJson(options =>
+        {
+            // Use Newtonsoft.Json to workaround .NET 9 test compatibility issue with PipeWriter.UnflushedBytes
+            // See: https://github.com/dotnet/aspnetcore/issues/52187
+            options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+            options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+        });
     builder.Services.AddSignalR();
 
     // ============================================================
@@ -307,9 +335,13 @@ try
     // Changed from Singleton to Scoped because it depends on scoped repositories
     builder.Services.AddScoped<AcademicAssessment.Orchestration.StudentProgressOrchestrator>();
 
+    // Orchestration Metrics Service (Day 5 - Real-time Monitoring)
+    builder.Services.AddSingleton<AcademicAssessment.Web.Services.IOrchestrationMetricsService, AcademicAssessment.Web.Services.OrchestrationMetricsService>();
+
     // Mathematics Assessment Agent (Phase 3 & 4)
     // Now with LLM-enhanced semantic evaluation
-    builder.Services.AddSingleton<AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent>(sp =>
+    // Changed to Scoped because it depends on scoped repositories
+    builder.Services.AddScoped<AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent>(sp =>
     {
         var taskService = sp.GetRequiredService<AcademicAssessment.Agents.Shared.Interfaces.ITaskService>();
         var questionRepository = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.IQuestionRepository>();
@@ -329,7 +361,7 @@ try
 
     // Physics Assessment Agent (Phase 5)
     // OLLAMA-enhanced semantic evaluation for physics concepts
-    builder.Services.AddSingleton<AcademicAssessment.Agents.Physics.PhysicsAssessmentAgent>(sp =>
+    builder.Services.AddScoped<AcademicAssessment.Agents.Physics.PhysicsAssessmentAgent>(sp =>
     {
         var llmService = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.ILLMService>();
         return new AcademicAssessment.Agents.Physics.PhysicsAssessmentAgent(llmService);
@@ -337,7 +369,7 @@ try
 
     // Chemistry Assessment Agent (Phase 5)
     // OLLAMA-enhanced semantic evaluation for chemistry formulas and reactions
-    builder.Services.AddSingleton<AcademicAssessment.Agents.Chemistry.ChemistryAssessmentAgent>(sp =>
+    builder.Services.AddScoped<AcademicAssessment.Agents.Chemistry.ChemistryAssessmentAgent>(sp =>
     {
         var llmService = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.ILLMService>();
         return new AcademicAssessment.Agents.Chemistry.ChemistryAssessmentAgent(llmService);
@@ -345,7 +377,7 @@ try
 
     // Biology Assessment Agent (Phase 5)
     // OLLAMA-enhanced semantic evaluation for biology concepts
-    builder.Services.AddSingleton<AcademicAssessment.Agents.Biology.BiologyAssessmentAgent>(sp =>
+    builder.Services.AddScoped<AcademicAssessment.Agents.Biology.BiologyAssessmentAgent>(sp =>
     {
         var llmService = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.ILLMService>();
         return new AcademicAssessment.Agents.Biology.BiologyAssessmentAgent(llmService);
@@ -353,7 +385,7 @@ try
 
     // English Assessment Agent (Phase 5)
     // OLLAMA-enhanced semantic evaluation - especially powerful for essay evaluation
-    builder.Services.AddSingleton<AcademicAssessment.Agents.English.EnglishAssessmentAgent>(sp =>
+    builder.Services.AddScoped<AcademicAssessment.Agents.English.EnglishAssessmentAgent>(sp =>
     {
         var llmService = sp.GetRequiredService<AcademicAssessment.Core.Interfaces.ILLMService>();
         return new AcademicAssessment.Agents.English.EnglishAssessmentAgent(llmService);
@@ -413,14 +445,22 @@ try
     app.UseHttpsRedirection();
     app.UseRouting();
 
-    // Authentication & Authorization (to be configured later)
-    // app.UseAuthentication();
-    // app.UseAuthorization();
+    // Authentication & Authorization
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    // ============================================================
+    // STATIC FILES (for monitoring dashboard)
+    // ============================================================
+    app.UseStaticFiles();
 
     // ============================================================
     // HEALTH CHECK ENDPOINTS
+    // Note: Aspire's MapDefaultEndpoints() already maps health check endpoints
+    // Commenting out custom mappings to avoid ambiguous match errors
     // ============================================================
 
+    /*
     // Basic health check - returns 200 OK if the application is running
     app.MapHealthChecks("/health", new HealthCheckOptions
     {
@@ -494,6 +534,7 @@ try
           operation.Description = "Kubernetes liveness probe - checks if the application is running";
           return operation;
       });
+    */
 
     // ============================================================
     // CONTROLLERS & SIGNALR HUBS
@@ -502,6 +543,9 @@ try
 
     // A2A Agent Progress Hub - Real-time updates from agents
     app.MapHub<AcademicAssessment.Web.Hubs.AgentProgressHub>("/hubs/agent-progress");
+
+    // Orchestration Monitoring Hub - Real-time orchestration metrics (Day 5)
+    app.MapHub<AcademicAssessment.Web.Hubs.OrchestrationHub>("/hubs/orchestration");
 
     // app.MapHub<AssessmentHub>("/hubs/assessment");
     // app.MapHub<ProgressTrackingHub>("/hubs/progress");
@@ -551,15 +595,18 @@ try
         Log.Information("Student Progress Orchestrator initialized: {AgentId}", orchestrator.AgentCard.AgentId);
     }
 
-    // Initialize Mathematics Assessment Agent (Phase 3)
-    var mathAgent = app.Services.GetRequiredService<AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent>();
-    await mathAgent.InitializeAsync();
-
-    // Register math agent handler with TaskService
-    if (taskService is AcademicAssessment.Agents.Shared.Services.TaskService ts)
+    // Initialize Mathematics Assessment Agent (Phase 3) - using scope since agents are now Scoped
+    using (var scope = app.Services.CreateScope())
     {
-        ts.RegisterHandler(mathAgent.AgentCard.AgentId, mathAgent.ExecuteTaskAsync);
-        Log.Information("Mathematics Assessment Agent initialized and registered: {AgentId}", mathAgent.AgentCard.AgentId);
+        var mathAgent = scope.ServiceProvider.GetRequiredService<AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent>();
+        await mathAgent.InitializeAsync();
+
+        // Register math agent handler with TaskService
+        if (taskService is AcademicAssessment.Agents.Shared.Services.TaskService ts)
+        {
+            ts.RegisterHandler(mathAgent.AgentCard.AgentId, mathAgent.ExecuteTaskAsync);
+            Log.Information("Mathematics Assessment Agent initialized and registered: {AgentId}", mathAgent.AgentCard.AgentId);
+        }
     }
 
     // TODO: Initialize additional subject agents (Phase 5)
@@ -568,9 +615,20 @@ try
     // - BiologyAssessmentAgent
     // - EnglishAssessmentAgent
 
+    // ============================================================
+    // START ORCHESTRATION METRICS MONITORING (Day 5)
+    // ============================================================
+    Log.Information("Starting orchestration metrics monitoring...");
+    var metricsService = app.Services.GetRequiredService<AcademicAssessment.Web.Services.IOrchestrationMetricsService>();
+    metricsService.StartMonitoring(intervalSeconds: 5);
+    Log.Information("Orchestration metrics monitoring started (5s interval)");
+
     Log.Information("EduMind.AI Web API started successfully");
     Log.Information("Environment: {Environment}", app.Environment.EnvironmentName);
     Log.Information("Listening on: {Urls}", string.Join(", ", builder.Configuration.GetSection("Urls").Get<string[]>() ?? new[] { "https://localhost:5001" }));
+
+    // Map Aspire default endpoints (health checks, OpenTelemetry, etc.)
+    app.MapDefaultEndpoints();
 
     app.Run();
 }

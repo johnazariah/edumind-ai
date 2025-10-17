@@ -47,9 +47,9 @@ public class StudentAnalyticsControllerTests : IClassFixture<AuthenticatedWebApp
         var content = await response.Content.ReadAsStringAsync();
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        content.Should().Contain("overallAccuracy");
-        content.Should().Contain("totalAssessments");
-        content.Should().Contain("subjectPerformance");
+        content.Should().Contain("averageScore");
+        content.Should().Contain("totalAssessmentsTaken");
+        content.Should().Contain("subjectScores");
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class StudentAnalyticsControllerTests : IClassFixture<AuthenticatedWebApp
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         content.Should().Contain("subject");
         content.Should().Contain("accuracy");
-        content.Should().Contain("totalQuestions");
+        content.Should().Contain("questionsAnswered");
     }
 
     #endregion
@@ -247,11 +247,11 @@ public class StudentAnalyticsControllerTests : IClassFixture<AuthenticatedWebApp
     #region Error Handling Tests
 
     [Fact]
-    public async Task GetPerformanceSummary_WithInvalidGuid_ReturnsBadRequest()
+    public async Task GetPerformanceSummary_WithInvalidGuid_ReturnsNotFound()
     {
         var client = _factory.CreateAuthenticatedClient(_studentToken);
         var response = await client.GetAsync($"/api/v1/students/invalid-guid/analytics/performance-summary");
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

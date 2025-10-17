@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
@@ -25,6 +26,19 @@ public class AuthenticatedWebApplicationFactory<TProgram> : WebApplicationFactor
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Use Development environment so that the stub authentication is used
+        // This bypasses Azure AD B2C and uses simple JWT authentication
+        builder.UseEnvironment("Development");
+
+        // Set up test configuration
+        builder.ConfigureAppConfiguration((context, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Authentication:Enabled"] = "true"
+            }!);
+        });
+
         builder.ConfigureTestServices(services =>
         {
             // Remove the existing DbContext registration
@@ -42,7 +56,7 @@ public class AuthenticatedWebApplicationFactory<TProgram> : WebApplicationFactor
             });
 
             // Configure JWT authentication for testing
-            services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+            services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -57,10 +71,11 @@ public class AuthenticatedWebApplicationFactory<TProgram> : WebApplicationFactor
                 };
             });
 
-            // Ensure authentication is enabled for tests
-            services.Configure<Dictionary<string, object>>(options =>
+            // Workaround for .NET 9 PipeWriter.UnflushedBytes issue in test host
+            // Configure JSON serialization to use synchronous writes
+            services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
             {
-                options["Authentication:Enabled"] = true;
+                options.JsonSerializerOptions.DefaultBufferSize = 1; // Force synchronous serialization
             });
 
             // Build the service provider and seed the database
@@ -71,13 +86,9 @@ public class AuthenticatedWebApplicationFactory<TProgram> : WebApplicationFactor
 
             db.Database.EnsureCreated();
         });
-
-        builder.UseEnvironment("Testing");
-    }
-
-    /// <summary>
-    /// Seeds the database with test data
-    /// </summary>
+    }    /// <summary>
+         /// Seeds the database with test data
+         /// </summary>
     public async Task SeedDatabaseAsync(Action<AcademicContext> seedAction)
     {
         using var scope = Services.CreateScope();
