@@ -61,15 +61,18 @@ else if (results is not null)
                         <div class="mb-2">
                             <div class="d-flex justify-content-between mb-1">
                                 <span class="small">Time Used</span>
-                                <span class="small fw-semibold">@((results.TimeTakenSeconds / 60.0 / results.EstimatedDurationMinutes * 100).ToString("F0"))%</span>
+                                <span class="small fw-semibold">@((results.TimeTakenSeconds / 60.0 /
+                                                                    results.EstimatedDurationMinutes * 100).ToString("F0"))%</span>
                             </div>
                             <div class="progress" style="height: 8px;">
-                                <div class="progress-bar @GetTimeEfficiencyClass(results)" 
-                                     style="width: @((results.TimeTakenSeconds / 60.0 / results.EstimatedDurationMinutes * 100).ToString("F0"))%"></div>
+                                <div class="progress-bar @GetTimeEfficiencyClass(results)"
+                                    style="width: @((results.TimeTakenSeconds / 60.0 / results.EstimatedDurationMinutes * 100).ToString("F0"))%">
+                                </div>
                             </div>
                         </div>
                         <p class="small text-muted mb-0">
-                            Completed in @FormatTime(results.TimeTakenSeconds) of @results.EstimatedDurationMinutes min estimated
+                            Completed in @FormatTime(results.TimeTakenSeconds) of @results.EstimatedDurationMinutes min
+                            estimated
                         </p>
                     </div>
                 </div>
@@ -100,8 +103,8 @@ else if (results is not null)
                                     </div>
                                 </div>
                                 <div class="progress" style="height: 10px;">
-                                    <div class="progress-bar @GetPerformanceProgressClass(subject.PerformanceLevel)" 
-                                         style="width: @subject.ScorePercentage.ToString("F0")%"></div>
+                                    <div class="progress-bar @GetPerformanceProgressClass(subject.PerformanceLevel)"
+                                        style="width: @subject.ScorePercentage.ToString("F0")%"></div>
                                 </div>
                             </div>
                         }

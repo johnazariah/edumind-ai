@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AcademicAssessment.Core.Enums;
 using AcademicAssessment.Core.Models.Dtos;
+using AcademicAssessment.StudentApp.Components.AssessmentSession;
 using Microsoft.AspNetCore.Components;
 
 namespace AcademicAssessment.StudentApp.Components.Pages;
@@ -547,6 +548,65 @@ public partial class AssessmentSession : IDisposable
     private IReadOnlySet<int> GetAnsweredQuestions() => _answeredQuestions;
 
     private IReadOnlySet<int> GetReviewQuestions() => _reviewQuestions;
+
+    private TimeSpan GetTimeElapsed()
+    {
+        if (session is null)
+        {
+            return TimeSpan.Zero;
+        }
+
+        var totalDuration = TimeSpan.FromMinutes(session.DurationMinutes);
+        return totalDuration - timeRemaining;
+    }
+
+    private List<SubjectProgressInfo> GetSubjectBreakdown()
+    {
+        if (session is null || session.Questions.Count == 0)
+        {
+            return new List<SubjectProgressInfo>();
+        }
+
+        // Group questions by subject (using Tags if available, or default grouping)
+        // For now, create sample breakdown - in real implementation, questions would have subject tags
+        var subjectGroups = new Dictionary<string, (int Total, int Answered)>();
+
+        // Mock subject assignment based on question index for demonstration
+        for (var i = 0; i < session.Questions.Count; i++)
+        {
+            var question = session.Questions[i];
+            var questionNumber = i + 1;
+            
+            // Simple mock: assign subjects based on index ranges
+            string subject = (i % 3) switch
+            {
+                0 => "Linear Equations",
+                1 => "Quadratic Functions",
+                _ => "Inequalities"
+            };
+
+            if (!subjectGroups.ContainsKey(subject))
+            {
+                subjectGroups[subject] = (0, 0);
+            }
+
+            var (total, answered) = subjectGroups[subject];
+            subjectGroups[subject] = (
+                total + 1,
+                _answeredQuestions.Contains(questionNumber) ? answered + 1 : answered
+            );
+        }
+
+        return subjectGroups
+            .Select(kvp => new SubjectProgressInfo
+            {
+                Subject = kvp.Key,
+                TotalCount = kvp.Value.Total,
+                AnsweredCount = kvp.Value.Answered
+            })
+            .OrderBy(s => s.Subject)
+            .ToList();
+    }
 
     private string BuildAutoSaveStatus()
     {

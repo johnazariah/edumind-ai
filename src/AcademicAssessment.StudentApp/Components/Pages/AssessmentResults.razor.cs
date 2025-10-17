@@ -61,14 +61,14 @@ public partial class AssessmentResults
     {
         var minutes = seconds / 60;
         var remainingSeconds = seconds % 60;
-        
+
         if (minutes >= 60)
         {
             var hours = minutes / 60;
             var remainingMinutes = minutes % 60;
             return $"{hours}h {remainingMinutes}m";
         }
-        
+
         return $"{minutes}m {remainingSeconds}s";
     }
 
