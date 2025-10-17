@@ -1,0 +1,93 @@
+@using AcademicAssessment.Core.Models.Dtos
+@using Markdig
+@using Microsoft.JSInterop
+@inject IJSRuntime JsRuntime
+
+<div class="question-renderer" @ref="contentRef">
+    <header class="mb-3">
+        <h5 class="text-uppercase text-muted small">Question</h5>
+    </header>
+
+    <article class="question-body">
+        @((MarkupString)renderedPrompt)
+    </article>
+
+    @if (!string.IsNullOrWhiteSpace(Question.MathExpression))
+    {
+        <div class="question-math mt-3">
+            <span class="badge bg-light text-dark">Math Focus</span>
+            <div>$$@Question.MathExpression$$</div>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Question.CodeSnippet))
+    {
+        <div class="question-code mt-3">
+            <pre><code class="language-@Question.CodeLanguage?.ToLowerInvariant()">@Question.CodeSnippet</code></pre>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Question.ImageUrl))
+    {
+        <figure class="question-figure mt-3">
+            <img src="@Question.ImageUrl" alt="@Question.ImageAltText" class="img-fluid rounded shadow-sm" />
+            @if (!string.IsNullOrWhiteSpace(Question.ImageAltText))
+            {
+                <figcaption class="mt-1 text-muted small">@Question.ImageAltText</figcaption>
+            }
+        </figure>
+    }
+
+    @if (Question.Hints.Count > 0)
+    {
+        <div class="question-hints mt-4">
+            <button class="btn btn-link p-0" @onclick="ToggleHints">
+                @(showHints ? "Hide" : "Show") hints (@Question.Hints.Count)
+            </button>
+
+            @if (showHints)
+            {
+                <ul class="mt-2 text-muted">
+                    @foreach (var hint in Question.Hints)
+                    {
+                        <li>@hint</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public AssessmentQuestionDto Question { get; set; } = default!;
+
+    private ElementReference contentRef;
+    private string renderedPrompt = string.Empty;
+    private bool showHints;
+
+    protected override void OnParametersSet()
+    {
+        var pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
+        renderedPrompt = string.Equals(Question.PromptFormat, "markdown", StringComparison.OrdinalIgnoreCase)
+        ? Markdown.ToHtml(Question.Prompt, pipeline)
+        : Question.Prompt;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("assessmentUi.enhanceContent", contentRef);
+        }
+        catch (JSException)
+        {
+            // Enhancement scripts may not be ready during prerendering.
+        }
+    }
+
+    private void ToggleHints() => showHints = !showHints;
+}

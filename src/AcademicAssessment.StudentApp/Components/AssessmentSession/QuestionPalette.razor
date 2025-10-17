@@ -1,0 +1,66 @@
+<div class="question-palette card shadow-sm">
+    <div class="card-header bg-light">
+        <h6 class="mb-0">Questions</h6>
+    </div>
+    <div class="card-body">
+        <div class="d-grid gap-2 palette-grid">
+            @for (var i = 0; i < QuestionCount; i++)
+            {
+                var questionNumber = i + 1;
+                var statusClass = GetStatusClass(questionNumber);
+                <button class="btn btn-outline-primary @statusClass" type="button" disabled="@Disabled"
+                    @onclick="() => OnNavigate.InvokeAsync(questionNumber)">
+                    <span class="fw-semibold">@questionNumber</span>
+                    @if (IsMarkedForReview(questionNumber))
+                    {
+                        <small class="d-block text-warning">Review</small>
+                    }
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int QuestionCount { get; set; }
+
+    [Parameter]
+    public int CurrentQuestion { get; set; }
+
+    [Parameter]
+    public IReadOnlySet<int> AnsweredQuestions { get; set; } = new HashSet<int>();
+
+    [Parameter]
+    public IReadOnlySet<int> ReviewQuestions { get; set; } = new HashSet<int>();
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnNavigate { get; set; }
+
+    private string GetStatusClass(int questionNumber)
+    {
+        var classes = new List<string>();
+
+        if (questionNumber == CurrentQuestion)
+        {
+            classes.Add("active-question");
+        }
+
+        if (AnsweredQuestions.Contains(questionNumber))
+        {
+            classes.Add("answered-question");
+        }
+
+        if (ReviewQuestions.Contains(questionNumber))
+        {
+            classes.Add("review-question");
+        }
+
+        return string.Join(' ', classes);
+    }
+
+    private bool IsMarkedForReview(int questionNumber) => ReviewQuestions.Contains(questionNumber);
+}
