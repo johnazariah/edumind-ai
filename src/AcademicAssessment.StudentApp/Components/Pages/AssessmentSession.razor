@@ -1,0 +1,14 @@
+@page "/assessment/{AssessmentId:guid}/session"
+
+<h3>Assessment In Progress</h3>
+
+<p>
+    You opened assessment <strong>@AssessmentId</strong>. The question delivery interface will be built during Tasks
+    2.4-2.7.
+    For now, return to the <a href="/assessments">assessment dashboard</a> when you're ready.
+</p>
+
+@code {
+    [Parameter]
+    public Guid AssessmentId { get; set; }
+}
