@@ -42,6 +42,12 @@ This folder contains all documentation related to EduMind.AI deployment architec
 
 ### Operations
 
+- **[Troubleshooting Guide](./TROUBLESHOOTING.md)** ⭐ **NEW**
+  - Common deployment issues and solutions
+  - 6-hour timeout fix (RESOLVED)
+  - Debugging tips and incident response
+  - Performance metrics
+
 - **[Demo Environment](./DEMO.md)**
   - Demo environment setup
   - Test data and scenarios
