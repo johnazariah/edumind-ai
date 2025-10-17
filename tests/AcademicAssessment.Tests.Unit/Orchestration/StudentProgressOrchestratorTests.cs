@@ -84,7 +84,7 @@ public class StudentProgressOrchestratorTests
     }
 
     [Fact]
-    public async Task DetermineNextSubject_WithDeciningPerformance_ShouldPrioritizeThatSubject()
+    public async Task DetermineNextSubject_WithDecliningPerformance_ShouldPrioritizeThatSubject()
     {
         // Arrange
         var studentId = Guid.NewGuid();
