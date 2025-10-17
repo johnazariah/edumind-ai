@@ -510,16 +510,15 @@ public partial class AssessmentSession : IDisposable
                 var result = await response.Content.ReadFromJsonAsync<SubmitAssessmentSessionResponse>();
                 if (result?.Success == true)
                 {
-                    ShowToast("Assessment Submitted", 
-                        $"Successfully submitted {result.QuestionsAnswered} of {result.TotalQuestions} answers. Redirecting...", 
+                    ShowToast("Assessment Submitted",
+                        $"Successfully submitted {result.QuestionsAnswered} of {result.TotalQuestions} answers. Redirecting...",
                         ToastType.Success);
-                    
+
                     // Give user time to see the toast before navigating
                     await Task.Delay(2000);
-                    
-                    // Navigate to results page once it's implemented
-                    // For now, go back to detail page
-                    Navigation.NavigateTo($"/assessment/{AssessmentId}");
+
+                    // Navigate to results page
+                    Navigation.NavigateTo($"/assessment/results/{result.SessionId}");
                 }
                 else
                 {

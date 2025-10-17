@@ -416,4 +416,83 @@ for (var step = 0; step < steps; step++)
 
         return Ok(response);
     }
+
+    /// <summary>
+    /// Get assessment results for a completed session.
+    /// </summary>
+    /// <param name="sessionId">The session ID.</param>
+    /// <returns>Assessment results with scores, breakdown, and recommendations.</returns>
+    [HttpGet("results/{sessionId:guid}")]
+    [ProducesResponseType(typeof(AssessmentResultsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult GetResults(Guid sessionId)
+    {
+        // TODO: Retrieve actual results from database
+        // For now, return mock data based on the sample assessment
+
+        var results = new AssessmentResultsDto
+        {
+            SessionId = sessionId,
+            AssessmentId = Guid.Parse("6c8d46f0-9cf6-4ba6-8361-5a6dc7bb9e38"),
+            AssessmentTitle = "Introduction to Algebra",
+            ScorePercentage = 85.0,
+            PointsEarned = 17,
+            TotalPoints = 20,
+            CorrectAnswers = 8,
+            TotalQuestions = 10,
+            TimeTakenSeconds = 1800, // 30 minutes
+            EstimatedDurationMinutes = 45,
+            SubmittedAt = DateTimeOffset.UtcNow,
+            PerformanceLevel = "Good",
+            SubjectBreakdown =
+            [
+                new SubjectPerformanceDto
+                {
+                    Subject = "Linear Equations",
+                    QuestionCount = 4,
+                    CorrectCount = 4,
+                    ScorePercentage = 100.0,
+                    PerformanceLevel = "Excellent"
+                },
+                new SubjectPerformanceDto
+                {
+                    Subject = "Quadratic Functions",
+                    QuestionCount = 3,
+                    CorrectCount = 2,
+                    ScorePercentage = 66.7,
+                    PerformanceLevel = "Fair"
+                },
+                new SubjectPerformanceDto
+                {
+                    Subject = "Inequalities",
+                    QuestionCount = 3,
+                    CorrectCount = 2,
+                    ScorePercentage = 66.7,
+                    PerformanceLevel = "Fair"
+                }
+            ],
+            Strengths =
+            [
+                "Strong understanding of linear equations and single-variable problems",
+                "Excellent grasp of slope-intercept form and graphing basics",
+                "Consistent accuracy on fundamental concepts"
+            ],
+            AreasForImprovement =
+            [
+                "Quadratic functions - particularly factoring and completing the square",
+                "Compound inequalities and interval notation",
+                "Word problems requiring multi-step algebraic modeling"
+            ],
+            Recommendations =
+            [
+                "Review factoring techniques for quadratic expressions",
+                "Practice solving compound inequalities with number lines",
+                "Work through additional word problems involving systems of equations",
+                "Consider reviewing the Quadratic Formula and its applications"
+            ],
+            CanReviewAnswers = true
+        };
+
+        return Ok(results);
+    }
 }
