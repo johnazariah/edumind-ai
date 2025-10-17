@@ -1,194 +1,198 @@
 name: Deploy to Azure (Aspire with azd)
 
 on:
-    push:
-        branches: [main]
-    workflow_dispatch:
-        inputs:
-            environment:
-                description: "Environment to deploy to"
-                required: true
-                default: "dev"
-                type: choice
-                options:
-                    - dev
-                    - staging
-                    - prod
-            azure_location:
-                description: "Azure region"
-                required: false
-                default: "eastus"
-                type: string
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      azure_location:
+        description: "Azure region"
+        required: false
+        default: "eastus"
+        type: string
 
 env:
-    DOTNET_VERSION: "9.0.x"
-    AZURE_ENV_NAME: ${{ github.event.inputs.environment || 'dev' }}
-    AZURE_LOCATION: ${{ github.event.inputs.azure_location || 'eastus' }}
+  DOTNET_VERSION: "9.0.x"
+  AZURE_ENV_NAME: ${{ github.event.inputs.environment || 'dev' }}
+  AZURE_LOCATION: ${{ github.event.inputs.azure_location || 'eastus' }}
 
 jobs:
-    build-and-test:
-        runs-on: ubuntu-latest
+  build-and-test:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Setup .NET
-              uses: actions/setup-dotnet@v4
-              with:
-                  dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-            - name: Install .NET Aspire workload
-              run: dotnet workload install aspire
+      - name: Install .NET Aspire workload
+        run: dotnet workload install aspire
 
-            - name: Restore dependencies
-              run: dotnet restore EduMind.AI.sln
+      - name: Restore dependencies
+        run: dotnet restore EduMind.AI.sln
 
-            - name: Build solution
-              run: dotnet build EduMind.AI.sln --configuration Release --no-restore
+      - name: Build solution
+        run: dotnet build EduMind.AI.sln --configuration Release --no-restore
 
-            - name: Run unit tests
-              run: dotnet test tests/AcademicAssessment.Tests.Unit --configuration Release --no-build --verbosity normal
+      - name: Run unit tests
+        run: dotnet test tests/AcademicAssessment.Tests.Unit --configuration Release --no-build --verbosity normal
 
-            - name: Generate Aspire manifest
-              run: |
-                  echo "Generating Aspire manifest for validation..."
-                  dotnet publish src/EduMind.AppHost --configuration Release --no-build --output ./aspire-manifest
-                  echo "Manifest generated successfully"
-              timeout-minutes: 5
+      - name: Generate Aspire manifest
+        run: |
+          echo "Generating Aspire manifest for validation..."
+          dotnet publish src/EduMind.AppHost --configuration Release --no-build --output ./aspire-manifest
+          echo "Manifest generated successfully"
+        timeout-minutes: 5
 
-    deploy:
-        runs-on: ubuntu-latest
-        needs: build-and-test
-        if: github.event.inputs.environment != 'prod' || github.event_name == 'push'
-        environment:
-            name: ${{ github.event.inputs.environment || 'dev' }}
-        permissions:
-            id-token: write
-            contents: read
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event.inputs.environment != 'prod' || github.event_name == 'push'
+    environment:
+      name: ${{ github.event.inputs.environment || 'dev' }}
+    permissions:
+      id-token: write
+      contents: read
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Setup .NET
-              uses: actions/setup-dotnet@v4
-              with:
-                  dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-            - name: Install .NET Aspire workload
-              run: dotnet workload install aspire
+      - name: Install .NET Aspire workload
+        run: dotnet workload install aspire
 
-            - name: Install Azure Developer CLI
-              uses: Azure/setup-azd@v1.0.0
+      - name: Install Azure Developer CLI
+        run: |
+          curl -fsSL https://aka.ms/install-azd.sh | bash
+          echo "$HOME/.azd/bin" >> $GITHUB_PATH
 
-            - name: Azure Login
-              uses: azure/login@v2
-              with:
-                  client-id: ${{ secrets.AZURE_CLIENT_ID }}
-                  tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-                  subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-            - name: Configure azd environment
-              run: |
-                  azd env new ${{ env.AZURE_ENV_NAME }} --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --location ${{ env.AZURE_LOCATION }} || true
-                  azd env select ${{ env.AZURE_ENV_NAME }}
-                  azd env set AZURE_SUBSCRIPTION_ID ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-                  azd env set AZURE_LOCATION ${{ env.AZURE_LOCATION }}
+      - name: Configure azd environment
+        run: |
+          azd env new ${{ env.AZURE_ENV_NAME }} --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --location ${{ env.AZURE_LOCATION }} || true
+          azd env select ${{ env.AZURE_ENV_NAME }}
+          azd env set AZURE_SUBSCRIPTION_ID ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azd env set AZURE_LOCATION ${{ env.AZURE_LOCATION }}
 
-            - name: Deploy with Azure Developer CLI
-              run: azd up --no-prompt
-              env:
-                  AZURE_ENV_NAME: ${{ env.AZURE_ENV_NAME }}
-                  AZURE_LOCATION: ${{ env.AZURE_LOCATION }}
-                  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy with Azure Developer CLI
+        run: azd up --no-prompt
+        env:
+          AZURE_ENV_NAME: ${{ env.AZURE_ENV_NAME }}
+          AZURE_LOCATION: ${{ env.AZURE_LOCATION }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-            - name: Get deployment outputs
-              id: outputs
-              run: |
-                  WEB_API_URL=$(azd env get-values | grep WEBAPP_URL | cut -d'=' -f2 | tr -d '"')
-                  echo "web-api-url=$WEB_API_URL" >> $GITHUB_OUTPUT
-                  echo "Deployed to: $WEB_API_URL"
+      - name: Get deployment outputs
+        id: outputs
+        run: |
+          WEB_API_URL=$(azd env get-values | grep WEBAPP_URL | cut -d'=' -f2 | tr -d '"')
+          echo "web-api-url=$WEB_API_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $WEB_API_URL"
 
-            - name: Health check
-              run: |
-                  echo "Waiting for services to start..."
-                  sleep 30
-                  HEALTH_URL="${{ steps.outputs.outputs.web-api-url }}/health"
-                  echo "Checking health endpoint: $HEALTH_URL"
+      - name: Health check
+        run: |
+          echo "Waiting for services to start..."
+          sleep 30
+          HEALTH_URL="${{ steps.outputs.outputs.web-api-url }}/health"
+          echo "Checking health endpoint: $HEALTH_URL"
 
-                  # Retry health check up to 5 times
-                  for i in {1..5}; do
-                    if curl -f -s $HEALTH_URL; then
-                      echo "✅ Health check passed"
-                      exit 0
-                    fi
-                    echo "Attempt $i failed, waiting 10s..."
-                    sleep 10
-                  done
+          # Retry health check up to 5 times
+          for i in {1..5}; do
+            if curl -f -s $HEALTH_URL; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i failed, waiting 10s..."
+            sleep 10
+          done
 
-                  echo "❌ Health check failed after 5 attempts"
-                  exit 1
+          echo "❌ Health check failed after 5 attempts"
+          exit 1
 
-            - name: Azure logout
-              if: always()
-              run: az logout || true
+      - name: Azure logout
+        if: always()
+        run: az logout || true
 
-    integration-tests:
-        runs-on: ubuntu-latest
-        needs: deploy
-        # Only run integration tests on dev/staging, never on prod
-        if: |
-            (github.event.inputs.environment == 'dev' || 
-             github.event.inputs.environment == 'staging' || 
-             github.event.inputs.environment == '') &&
-            github.event_name != 'push'
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: deploy
+    # Only run integration tests on dev/staging, never on prod
+    if: |
+      (github.event.inputs.environment == 'dev' || 
+       github.event.inputs.environment == 'staging' || 
+       github.event.inputs.environment == '') &&
+      github.event_name != 'push'
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Setup .NET
-              uses: actions/setup-dotnet@v4
-              with:
-                  dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-            - name: Azure Login
-              uses: azure/login@v2
-              with:
-                  client-id: ${{ secrets.AZURE_CLIENT_ID }}
-                  tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-                  subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-            - name: Install Azure Developer CLI
-              uses: Azure/setup-azd@v1.0.0
+      - name: Install Azure Developer CLI
+        run: |
+          curl -fsSL https://aka.ms/install-azd.sh | bash
+          echo "$HOME/.azd/bin" >> $GITHUB_PATH
 
-            - name: Get API URL from azd
-              id: get-url
-              run: |
-                  azd env select ${{ env.AZURE_ENV_NAME }}
-                  API_URL=$(azd env get-values | grep WEBAPP_URL | cut -d'=' -f2 | tr -d '"')
-                  echo "api-url=$API_URL" >> $GITHUB_OUTPUT
-                  echo "Testing against: $API_URL"
+      - name: Get API URL from azd
+        id: get-url
+        run: |
+          azd env select ${{ env.AZURE_ENV_NAME }}
+          API_URL=$(azd env get-values | grep WEBAPP_URL | cut -d'=' -f2 | tr -d '"')
+          echo "api-url=$API_URL" >> $GITHUB_OUTPUT
+          echo "Testing against: $API_URL"
 
-            - name: Run integration tests against deployed environment
-              env:
-                  API_BASE_URL: ${{ steps.get-url.outputs.api-url }}
-                  ASPNETCORE_ENVIRONMENT: Testing
-              run: |
-                  dotnet test tests/AcademicAssessment.Tests.Integration \
-                    --configuration Release \
-                    --logger "trx;LogFileName=integration-test-results.trx" \
-                    --verbosity normal
+      - name: Run integration tests against deployed environment
+        env:
+          API_BASE_URL: ${{ steps.get-url.outputs.api-url }}
+          ASPNETCORE_ENVIRONMENT: Testing
+        run: |
+          dotnet test tests/AcademicAssessment.Tests.Integration \
+            --configuration Release \
+            --logger "trx;LogFileName=integration-test-results.trx" \
+            --verbosity normal
 
-            - name: Upload test results
-              if: always()
-              uses: actions/upload-artifact@v4
-              with:
-                  name: integration-test-results-${{ env.AZURE_ENV_NAME }}
-                  path: "**/integration-test-results.trx"
-                  retention-days: 30
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results-${{ env.AZURE_ENV_NAME }}
+          path: "**/integration-test-results.trx"
+          retention-days: 30
 
-            - name: Azure logout
-              if: always()
-              run: az logout || true
+      - name: Azure logout
+        if: always()
+        run: az logout || true
