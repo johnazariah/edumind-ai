@@ -1,14 +1,9 @@
 name: OLLAMA Integration Tests
 
-# Run on PRs to main, manually, or on schedule (nightly)
+# Run nightly and manually only (not on PRs to speed up feedback)
+# These tests validate real AI behavior with actual LLM responses
+# Main CI pipeline uses StubLLMService for fast, reliable testing
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "src/**"
-      - "tests/**"
-      - ".github/workflows/ollama-integration.yml"
   workflow_dispatch: # Manual trigger
     inputs:
       model:
