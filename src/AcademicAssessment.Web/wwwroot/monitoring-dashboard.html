@@ -310,8 +310,10 @@
 
     <script>
         // Configure SignalR connection
+        // Use the current origin for the SignalR hub URL to support multiple environments
+        const signalRHubUrl = `${window.location.origin}/hubs/orchestration`;
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl("http://localhost:5103/hubs/orchestration")
+            .withUrl(signalRHubUrl)
             .withAutomaticReconnect()
             .configureLogging(signalR.LogLevel.Information)
             .build();
