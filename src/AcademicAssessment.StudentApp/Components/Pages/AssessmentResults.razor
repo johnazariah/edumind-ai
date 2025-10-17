@@ -1,0 +1,201 @@
+@page "/assessment/results/{SessionId:guid}"
+@using AcademicAssessment.Core.Models.Dtos
+
+@if (isLoading)
+{
+    <div class="d-flex align-items-center gap-2 text-muted">
+        <div class="spinner-border" role="status"></div>
+        <span>Loading results...</span>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+    </div>
+}
+else if (results is not null)
+{
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col">
+                <h2>@results.AssessmentTitle</h2>
+                <p class="text-muted">Submitted @results.SubmittedAt.ToString("MMM d, yyyy 'at' h:mm tt")</p>
+            </div>
+        </div>
+
+        <!-- Overall Score Card -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0 bg-gradient-primary text-white">
+                    <div class="card-body p-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h3 class="mb-2">Overall Score</h3>
+                                <div class="display-1 fw-bold">@results.ScorePercentage.ToString("F1")%</div>
+                                <p class="mb-0 fs-5">@results.PerformanceLevel Performance</p>
+                            </div>
+                            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                                <div class="mb-2">
+                                    <span class="fs-5">@results.CorrectAnswers / @results.TotalQuestions</span>
+                                    <span class="opacity-75 ms-1">correct answers</span>
+                                </div>
+                                <div class="mb-2">
+                                    <span class="fs-5">@results.PointsEarned / @results.TotalPoints</span>
+                                    <span class="opacity-75 ms-1">points</span>
+                                </div>
+                                <div>
+                                    <span class="fs-5">@FormatTime(results.TimeTakenSeconds)</span>
+                                    <span class="opacity-75 ms-1">time taken</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted mb-3">Time Efficiency</h6>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small">Time Used</span>
+                                <span class="small fw-semibold">@((results.TimeTakenSeconds / 60.0 /
+                                                                    results.EstimatedDurationMinutes * 100).ToString("F0"))%</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar @GetTimeEfficiencyClass(results)"
+                                    style="width: @((results.TimeTakenSeconds / 60.0 / results.EstimatedDurationMinutes * 100).ToString("F0"))%">
+                                </div>
+                            </div>
+                        </div>
+                        <p class="small text-muted mb-0">
+                            Completed in @FormatTime(results.TimeTakenSeconds) of @results.EstimatedDurationMinutes min
+                            estimated
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subject Breakdown -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Performance by Subject</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var subject in results.SubjectBreakdown)
+                        {
+                            <div class="mb-3 pb-3 @(subject != results.SubjectBreakdown.Last() ? "border-bottom" : "")">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <h6 class="mb-1">@subject.Subject</h6>
+                                        <span class="badge @GetPerformanceBadgeClass(subject.PerformanceLevel)">
+                                            @subject.PerformanceLevel
+                                        </span>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fs-5 fw-semibold">@subject.ScorePercentage.ToString("F0")%</div>
+                                        <small class="text-muted">@subject.CorrectCount / @subject.QuestionCount correct</small>
+                                    </div>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar @GetPerformanceProgressClass(subject.PerformanceLevel)"
+                                        style="width: @subject.ScorePercentage.ToString("F0")%"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Strengths and Areas for Improvement -->
+        <div class="row mb-4">
+            <div class="col-lg-6 mb-3 mb-lg-0">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="bi bi-check-circle me-2"></i>Strengths</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var strength in results.Strengths)
+                            {
+                                <li class="mb-2">
+                                    <i class="bi bi-check-lg text-success me-2"></i>
+                                    @strength
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-warning">
+                        <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Areas for Improvement</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var area in results.AreasForImprovement)
+                            {
+                                <li class="mb-2">
+                                    <i class="bi bi-arrow-right text-warning me-2"></i>
+                                    @area
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Recommended Next Steps</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="mb-0">
+                            @foreach (var recommendation in results.Recommendations)
+                            {
+                                <li class="mb-2">@recommendation</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="row">
+            <div class="col">
+                <div class="d-flex flex-wrap gap-2">
+                    @if (results.CanReviewAnswers)
+                    {
+                        <button class="btn btn-outline-primary" type="button" @onclick="ReviewAnswers">
+                            <i class="bi bi-eye me-2"></i>Review Answers
+                        </button>
+                    }
+                    <a href="/assessments" class="btn btn-primary">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Assessments
+                    </a>
+                    <button class="btn btn-outline-secondary" type="button" @onclick="RetakeAssessment">
+                        <i class="bi bi-arrow-repeat me-2"></i>Retake Assessment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+</style>

@@ -1,0 +1,82 @@
+@using AcademicAssessment.Core.Enums
+@using AcademicAssessment.Core.Models.Dtos
+
+<div class="multiple-choice-answer">
+    <div class="list-group">
+        @foreach (var option in Question.Options)
+        {
+            var isChecked = SelectedOptions.Contains(option.Key);
+            <label class="list-group-item list-group-item-action d-flex align-items-start gap-3">
+                <input type="@(InputType)" class="form-check-input mt-1" value="@option.Key" checked="@isChecked"
+                    disabled="@Disabled" @onchange="eventArgs => ToggleOption(option.Key, eventArgs)" />
+                <div>
+                    <span class="fw-semibold">@option.Label</span>
+                    @if (!string.IsNullOrWhiteSpace(option.Description))
+                    {
+                        <div class="text-muted small">@option.Description</div>
+                    }
+                </div>
+            </label>
+        }
+    </div>
+
+    @if (Question.Options.Count == 0)
+    {
+        <p class="text-muted">No options available for this question.</p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public AssessmentQuestionDto Question { get; set; } = default!;
+
+    [Parameter]
+    public HashSet<string> SelectedOptions { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<HashSet<string>> SelectedOptionsChanged { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    private string InputType => Question.AllowMultipleSelection || Question.QuestionType == QuestionType.MultipleSelect
+    ? "checkbox"
+    : "radio";
+
+    private async Task ToggleOption(string optionKey, ChangeEventArgs args)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        var rawValue = args.Value?.ToString();
+        var isChecked = InputType == "checkbox"
+        ? args.Value is bool boolean && boolean || string.Equals(rawValue, "on", StringComparison.OrdinalIgnoreCase)
+        : string.Equals(rawValue, optionKey, StringComparison.OrdinalIgnoreCase);
+        var updated = new HashSet<string>(SelectedOptions, StringComparer.OrdinalIgnoreCase);
+
+        if (InputType == "radio")
+        {
+            updated.Clear();
+            if (isChecked)
+            {
+                updated.Add(optionKey);
+            }
+        }
+        else
+        {
+            if (isChecked)
+            {
+                updated.Add(optionKey);
+            }
+            else
+            {
+                updated.Remove(optionKey);
+            }
+        }
+
+        SelectedOptions = updated;
+        await SelectedOptionsChanged.InvokeAsync(updated);
+    }
+}

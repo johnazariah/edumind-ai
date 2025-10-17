@@ -1,0 +1,82 @@
+@page "/assessments"
+@using AcademicAssessment.Core.Models.Dtos
+
+<h3>Assessments</h3>
+
+<p>Select an assessment to begin.</p>
+
+@if (assessments == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <input @bind="searchTerm" @bind:event="oninput" class="form-control" placeholder="Search assessments..." />
+        </div>
+        <div class="col-md-3">
+            <select @bind="selectedSubject" class="form-select">
+                <option value="">All Subjects</option>
+                @foreach (var subject in allSubjects)
+                {
+                    <option value="@subject">@subject</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select @bind="selectedDifficulty" class="form-select">
+                <option value="">All Difficulties</option>
+                @foreach (var difficulty in allDifficulties)
+                {
+                    <option value="@difficulty">@difficulty</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="row">
+        @foreach (var assessment in FilteredAssessments)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title mb-1">@assessment.Title</h5>
+                                <span class="badge bg-secondary">@assessment.Difficulty</span>
+                            </div>
+                            <span class="badge bg-light text-dark">@assessment.Subject</span>
+                        </div>
+
+                        <p class="card-text mt-3 text-muted">Estimated @assessment.EstimatedDurationMinutes min ·
+                            @assessment.QuestionCount questions</p>
+
+                        @if (assessment.IsInProgress && assessment.ProgressPercentage is double progress)
+                        {
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between small text-muted">
+                                    <span>In Progress</span>
+                                    <span>@ToPercent(progress)%</span>
+                                </div>
+                                <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                                    aria-valuenow="@ToPercent(progress)">
+                                    <div class="progress-bar" style="width: @ToPercent(progress)%"></div>
+                                </div>
+                            </div>
+                        }
+                        else if (assessment.LastAttemptedAt is not null)
+                        {
+                            <p class="small text-muted">Last attempted @FormatLastAttempted(assessment.LastAttemptedAt)</p>
+                        }
+
+                        <div class="mt-auto d-flex gap-2">
+                            <a class="btn btn-outline-secondary flex-grow-1" href="/assessment/@assessment.Id">View Details</a>
+                            <a class="btn btn-primary flex-grow-1" href="/assessment/@assessment.Id">Start</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

@@ -1,0 +1,113 @@
+@if (IsVisible)
+{
+    <div class="toast-notification @TypeClass @(IsVisible ? "show" : "")" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <span class="toast-icon">@Icon</span>
+            <div class="flex-grow-1">
+                <strong>@Title</strong>
+                @if (!string.IsNullOrWhiteSpace(Message))
+                {
+                    <div class="small">@Message</div>
+                }
+            </div>
+            <button type="button" class="btn-close btn-close-white" @onclick="Hide" aria-label="Close"></button>
+        </div>
+    </div>
+}
+
+<style>
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        min-width: 300px;
+        max-width: 500px;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        z-index: 1050;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.3s ease-in-out;
+    }
+
+    .toast-notification.show {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .toast-notification.toast-success {
+        background-color: #198754;
+        color: white;
+    }
+
+    .toast-notification.toast-error {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .toast-notification.toast-info {
+        background-color: #0dcaf0;
+        color: #000;
+    }
+
+    .toast-notification.toast-warning {
+        background-color: #ffc107;
+        color: #000;
+    }
+
+    .toast-icon {
+        font-size: 1.5rem;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public ToastType Type { get; set; } = ToastType.Info;
+
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> IsVisibleChanged { get; set; }
+
+    [Parameter]
+    public int DurationMilliseconds { get; set; } = 3000;
+
+    private string TypeClass => Type switch
+    {
+        ToastType.Success => "toast-success",
+        ToastType.Error => "toast-error",
+        ToastType.Warning => "toast-warning",
+        _ => "toast-info"
+    };
+
+    private string Icon => Type switch
+    {
+        ToastType.Success => "✓",
+        ToastType.Error => "✕",
+        ToastType.Warning => "⚠",
+        _ => "ℹ"
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && DurationMilliseconds > 0)
+        {
+            await Task.Delay(DurationMilliseconds);
+            await Hide();
+        }
+    }
+
+    private async Task Hide()
+    {
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(false);
+    }
+}
