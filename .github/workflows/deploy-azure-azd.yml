@@ -50,10 +50,12 @@ jobs:
             - name: Run unit tests
               run: dotnet test tests/AcademicAssessment.Tests.Unit --configuration Release --no-build --verbosity normal
 
-            - name: Validate Aspire manifest
+            - name: Generate Aspire manifest
               run: |
-                  echo "Validating Aspire AppHost configuration..."
-                  dotnet run --project src/EduMind.AppHost --no-build --configuration Release -- --dry-run || true
+                  echo "Generating Aspire manifest for validation..."
+                  dotnet publish src/EduMind.AppHost --configuration Release --no-build --output ./aspire-manifest
+                  echo "Manifest generated successfully"
+              timeout-minutes: 5
 
     deploy:
         runs-on: ubuntu-latest
