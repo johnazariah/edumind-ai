@@ -335,4 +335,85 @@ for (var step = 0; step < steps; step++)
             Points = 1
         }
     ];
+
+    /// <summary>
+    /// Save assessment session progress (answers and review flags).
+    /// </summary>
+    /// <param name="assessmentId">The assessment ID.</param>
+    /// <param name="request">The save request containing answers and review flags.</param>
+    /// <returns>Save response with timestamp and status.</returns>
+    [HttpPost("{assessmentId:guid}/session/save")]
+    [ProducesResponseType(typeof(SaveAssessmentSessionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult SaveSession(Guid assessmentId, [FromBody] SaveAssessmentSessionRequest request)
+    {
+        // Validate assessment exists
+        if (!Assessments.Any(a => a.Id == assessmentId))
+        {
+            return NotFound(new { message = $"Assessment {assessmentId} not found." });
+        }
+
+        // Validate request
+        if (request.AssessmentId != assessmentId)
+        {
+            return BadRequest(new { message = "Assessment ID mismatch between route and request body." });
+        }
+
+        // TODO: Persist to database via IStudentProgressRepository
+        // For now, simulate a successful save
+        var response = new SaveAssessmentSessionResponse
+        {
+            Success = true,
+            SavedAt = DateTimeOffset.UtcNow,
+            AnswersSaved = request.Answers.Count
+        };
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Submit a completed assessment session.
+    /// </summary>
+    /// <param name="assessmentId">The assessment ID.</param>
+    /// <param name="request">The submit request containing final answers and timing.</param>
+    /// <returns>Submit response with session ID and status.</returns>
+    [HttpPost("{assessmentId:guid}/session/submit")]
+    [ProducesResponseType(typeof(SubmitAssessmentSessionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult SubmitSession(Guid assessmentId, [FromBody] SubmitAssessmentSessionRequest request)
+    {
+        // Validate assessment exists
+        if (!Assessments.Any(a => a.Id == assessmentId))
+        {
+            return NotFound(new { message = $"Assessment {assessmentId} not found." });
+        }
+
+        // Validate request
+        if (request.AssessmentId != assessmentId)
+        {
+            return BadRequest(new { message = "Assessment ID mismatch between route and request body." });
+        }
+
+        // TODO: Persist to database and trigger orchestrator for assessment analysis
+        // For now, simulate a successful submission
+        var sessionId = Guid.NewGuid();
+        var totalQuestions = GetSession(assessmentId) is OkObjectResult okResult
+            && okResult.Value is AssessmentSessionDto session
+            ? session.Questions.Count
+            : 0;
+
+        var response = new SubmitAssessmentSessionResponse
+        {
+            Success = true,
+            SessionId = sessionId,
+            SubmittedAt = request.SubmittedAt,
+            QuestionsAnswered = request.Answers.Count,
+            TotalQuestions = totalQuestions,
+            Message = "Assessment submitted successfully. Results are being processed."
+        };
+
+        return Ok(response);
+    }
 }

@@ -32,6 +32,12 @@ public partial class AssessmentSession : IDisposable
     private bool isAutoSaving;
     private string? autoSaveError;
 
+    // Toast notification state
+    private bool showToast;
+    private string toastTitle = string.Empty;
+    private string? toastMessage;
+    private ToastType toastType;
+
     private CancellationTokenSource? timerCts;
     private AssessmentQuestionDto? CurrentQuestion =>
         session is { Questions.Count: > 0 } && currentQuestionIndex >= 0 && currentQuestionIndex < session.Questions.Count
@@ -207,9 +213,35 @@ public partial class AssessmentSession : IDisposable
             isAutoSaving = true;
             autoSaveError = null;
 
-            // TODO: Wire up actual persistence API endpoint once available.
-            await Task.Delay(150);
-            lastSavedAt = DateTimeOffset.UtcNow;
+            // Build save request
+            var saveRequest = new SaveAssessmentSessionRequest
+            {
+                AssessmentId = AssessmentId,
+                Answers = _answers.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => new QuestionAnswerDto
+                    {
+                        QuestionId = kvp.Key,
+                        SelectedOptions = kvp.Value.SelectedOptions,
+                        FreeResponse = kvp.Value.FreeResponse
+                    }),
+                ReviewFlags = new HashSet<int>(_reviewQuestions)
+            };
+
+            // Call save API
+            var response = await Http.PostAsJsonAsync(
+                $"api/v1.0/Assessment/{AssessmentId}/session/save",
+                saveRequest);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<SaveAssessmentSessionResponse>();
+                lastSavedAt = result?.SavedAt ?? DateTimeOffset.UtcNow;
+            }
+            else
+            {
+                autoSaveError = "Save failed. Will retry shortly.";
+            }
         }
         catch (Exception ex)
         {
@@ -425,12 +457,92 @@ public partial class AssessmentSession : IDisposable
         Navigation.NavigateTo("/assessments");
     }
 
-    private Task SaveProgressAsync() => AutoSaveAsync(isBackground: false);
+    private async Task SaveProgressAsync()
+    {
+        await AutoSaveAsync(isBackground: false);
+        if (string.IsNullOrEmpty(autoSaveError))
+        {
+            ShowToast("Progress Saved", $"Your answers have been saved. ({AnsweredCount}/{TotalQuestions} answered)", ToastType.Success);
+        }
+        else
+        {
+            ShowToast("Save Failed", autoSaveError, ToastType.Error);
+        }
+    }
 
     private async Task SubmitAssessmentAsync()
     {
-        await AutoSaveAsync(isBackground: false);
-        Navigation.NavigateTo($"/assessment/{AssessmentId}");
+        if (session is null)
+        {
+            return;
+        }
+
+        try
+        {
+            isAutoSaving = true;
+            autoSaveError = null;
+
+            // Calculate time taken
+            var timeTakenSeconds = session.DurationMinutes * 60 - (int)timeRemaining.TotalSeconds;
+
+            // Build submit request
+            var submitRequest = new SubmitAssessmentSessionRequest
+            {
+                AssessmentId = AssessmentId,
+                Answers = _answers.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => new QuestionAnswerDto
+                    {
+                        QuestionId = kvp.Key,
+                        SelectedOptions = kvp.Value.SelectedOptions,
+                        FreeResponse = kvp.Value.FreeResponse
+                    }),
+                TimeTakenSeconds = timeTakenSeconds
+            };
+
+            // Call submit API
+            var response = await Http.PostAsJsonAsync(
+                $"api/v1.0/Assessment/{AssessmentId}/session/submit",
+                submitRequest);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<SubmitAssessmentSessionResponse>();
+                if (result?.Success == true)
+                {
+                    ShowToast("Assessment Submitted", 
+                        $"Successfully submitted {result.QuestionsAnswered} of {result.TotalQuestions} answers. Redirecting...", 
+                        ToastType.Success);
+                    
+                    // Give user time to see the toast before navigating
+                    await Task.Delay(2000);
+                    
+                    // Navigate to results page once it's implemented
+                    // For now, go back to detail page
+                    Navigation.NavigateTo($"/assessment/{AssessmentId}");
+                }
+                else
+                {
+                    autoSaveError = result?.ErrorMessage ?? "Submission failed. Please try again.";
+                    ShowToast("Submission Failed", autoSaveError, ToastType.Error);
+                }
+            }
+            else
+            {
+                autoSaveError = "Submission failed. Please try again.";
+                ShowToast("Submission Failed", autoSaveError, ToastType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            autoSaveError = $"Submission error: {ex.Message}";
+            Console.WriteLine($"Submit failed: {ex}");
+        }
+        finally
+        {
+            isAutoSaving = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private IReadOnlySet<int> GetAnsweredQuestions() => _answeredQuestions;
@@ -468,6 +580,21 @@ public partial class AssessmentSession : IDisposable
             var span when span.TotalDays < 2 => "yesterday",
             _ => timestamp.LocalDateTime.ToString("MMM d, h:mm tt")
         };
+    }
+
+    private void ShowToast(string title, string? message, ToastType type)
+    {
+        toastTitle = title;
+        toastMessage = message;
+        toastType = type;
+        showToast = true;
+        StateHasChanged();
+    }
+
+    private Task HandleToastVisibilityChanged(bool visible)
+    {
+        showToast = visible;
+        return Task.CompletedTask;
     }
 
     public void Dispose()
