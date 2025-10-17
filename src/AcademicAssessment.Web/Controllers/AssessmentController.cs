@@ -399,7 +399,7 @@ for (var step = 0; step < steps; step++)
         // TODO: Persist to database and trigger orchestrator for assessment analysis
         // For now, simulate a successful submission
         var sessionId = Guid.NewGuid();
-        var totalQuestions = GetSession(assessmentId) is OkObjectResult okResult
+        var totalQuestions = GetAssessmentSession(assessmentId) is OkObjectResult okResult
             && okResult.Value is AssessmentSessionDto session
             ? session.Questions.Count
             : 0;

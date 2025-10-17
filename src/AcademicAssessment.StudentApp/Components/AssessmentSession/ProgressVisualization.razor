@@ -12,12 +12,8 @@
                 <span class="small fw-semibold">@AnsweredCount / @TotalQuestions</span>
             </div>
             <div class="progress" style="height: 12px;">
-                <div class="progress-bar bg-primary" 
-                     role="progressbar" 
-                     style="width: @ProgressPercentage%"
-                     aria-valuenow="@ProgressPercentage" 
-                     aria-valuemin="0" 
-                     aria-valuemax="100">
+                <div class="progress-bar bg-primary" role="progressbar" style="width: @ProgressPercentage%"
+                    aria-valuenow="@ProgressPercentage" aria-valuemin="0" aria-valuemax="100">
                 </div>
             </div>
             <div class="text-center mt-1">
@@ -66,8 +62,8 @@
                             <span class="small">@subject.AnsweredCount / @subject.TotalCount</span>
                         </div>
                         <div class="progress" style="height: 6px;">
-                            <div class="progress-bar @GetSubjectProgressClass(subject)" 
-                                 style="width: @subject.ProgressPercentage%">
+                            <div class="progress-bar @GetSubjectProgressClass(subject)"
+                                style="width: @subject.ProgressPercentage%">
                             </div>
                         </div>
                     </div>
@@ -130,9 +126,9 @@
         {
             if (AnsweredCount == 0) return "N/A";
             var avgSeconds = TimeElapsed.TotalSeconds / AnsweredCount;
-            return avgSeconds < 60 
-                ? $"{avgSeconds:F0}s" 
-                : $"{avgSeconds / 60:F1}m";
+            return avgSeconds < 60
+            ? $"{avgSeconds:F0}s"
+            : $"{avgSeconds / 60:F1}m";
         }
     }
 
@@ -144,10 +140,10 @@
             var avgSecondsPerQuestion = TimeElapsed.TotalSeconds / AnsweredCount;
             var estimatedRemainingSeconds = avgSecondsPerQuestion * UnansweredCount;
             var estimatedTotal = TimeSpan.FromSeconds(estimatedRemainingSeconds);
-            
-            return estimatedTotal.TotalMinutes < 1 
-                ? $"{estimatedTotal.TotalSeconds:F0}s" 
-                : $"{estimatedTotal.TotalMinutes:F0}m";
+
+            return estimatedTotal.TotalMinutes < 1
+            ? $"{estimatedTotal.TotalSeconds:F0}s"
+            : $"{estimatedTotal.TotalMinutes:F0}m";
         }
     }
 
@@ -161,12 +157,4 @@
             _ => "bg-secondary"
         };
     }
-}
-
-public class SubjectProgressInfo
-{
-    public required string Subject { get; init; }
-    public required int TotalCount { get; init; }
-    public required int AnsweredCount { get; init; }
-    public int ProgressPercentage => TotalCount == 0 ? 0 : (AnsweredCount * 100) / TotalCount;
 }

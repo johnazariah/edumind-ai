@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using AcademicAssessment.Core.Enums;
 using AcademicAssessment.Core.Models.Dtos;
 using AcademicAssessment.StudentApp.Components.AssessmentSession;
+using AcademicAssessment.StudentApp.Components.Shared;
 using Microsoft.AspNetCore.Components;
 
 namespace AcademicAssessment.StudentApp.Components.Pages;
@@ -484,7 +485,7 @@ public partial class AssessmentSession : IDisposable
             autoSaveError = null;
 
             // Calculate time taken
-            var timeTakenSeconds = session.DurationMinutes * 60 - (int)timeRemaining.TotalSeconds;
+            var timeTakenSeconds = session.EstimatedDurationMinutes * 60 - (int)timeRemaining.TotalSeconds;
 
             // Build submit request
             var submitRequest = new SubmitAssessmentSessionRequest
@@ -556,7 +557,7 @@ public partial class AssessmentSession : IDisposable
             return TimeSpan.Zero;
         }
 
-        var totalDuration = TimeSpan.FromMinutes(session.DurationMinutes);
+        var totalDuration = TimeSpan.FromMinutes(session.EstimatedDurationMinutes);
         return totalDuration - timeRemaining;
     }
 
@@ -576,7 +577,7 @@ public partial class AssessmentSession : IDisposable
         {
             var question = session.Questions[i];
             var questionNumber = i + 1;
-            
+
             // Simple mock: assign subjects based on index ranges
             string subject = (i % 3) switch
             {
