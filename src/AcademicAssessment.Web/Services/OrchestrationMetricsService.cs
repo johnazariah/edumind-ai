@@ -121,8 +121,8 @@ public class OrchestrationMetricsService : IOrchestrationMetricsService, IDispos
             await _hubContext.Clients.Group("monitoring")
                 .SendAsync("MetricsUpdate", metrics);
 
-            _logger.LogDebug("Broadcasted metrics: {SuccessRate}% success rate, {Agents} agents, {Queue} queued",
-                metrics.SuccessRate.ToString("F1"),
+            _logger.LogDebug("Broadcasted metrics: {SuccessRate:F1}% success rate, {Agents} agents, {Queue} queued",
+                metrics.SuccessRate,
                 metrics.AgentUtilization.Count,
                 metrics.QueueDepth);
         }
