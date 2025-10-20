@@ -36,6 +36,11 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
+    // Force console output for debugging (Serilog may not be flushing properly in containers)
+    Console.WriteLine($"========================================");
+    Console.WriteLine($"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff} UTC] Starting EduMind.AI Web API");
+    Console.WriteLine($"========================================");
+    
     Log.Information("Starting EduMind.AI Web API");
 
     var builder = WebApplication.CreateBuilder(args);
@@ -184,6 +189,33 @@ try
     var redisConnection = builder.Configuration.GetConnectionString("cache")
         ?? builder.Configuration.GetConnectionString("Redis");
 
+    // DETAILED STARTUP LOGGING FOR DEBUGGING
+    Console.WriteLine($"========================================");
+    Console.WriteLine($"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff} UTC] CONNECTION STRING CONFIGURATION");
+    Console.WriteLine($"========================================");
+    Console.WriteLine($"PostgreSQL connection string present: {!string.IsNullOrEmpty(connectionString)}");
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        // Log host only (no password)
+        var hostMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"Host=([^;]+)");
+        if (hostMatch.Success)
+            Console.WriteLine($"PostgreSQL Host: {hostMatch.Groups[1].Value}");
+        var dbMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"Database=([^;]+)");
+        if (dbMatch.Success)
+            Console.WriteLine($"PostgreSQL Database: {dbMatch.Groups[1].Value}");
+        var sslMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"SslMode=([^;]+)");
+        if (sslMatch.Success)
+            Console.WriteLine($"PostgreSQL SSL Mode: {sslMatch.Groups[1].Value}");
+    }
+    Console.WriteLine($"Redis connection string present: {!string.IsNullOrEmpty(redisConnection)}");
+    if (!string.IsNullOrEmpty(redisConnection))
+    {
+        // Log host only (no password)
+        var redisHost = redisConnection.Split(':')[0].Split(',')[0];
+        Console.WriteLine($"Redis Host: {redisHost}");
+    }
+    Console.WriteLine($"========================================");
+
     // NOTE: PostgreSQL now uses Azure Database for PostgreSQL Flexible Server with proper FQDN
     // No hostname patching needed - connection string from Bicep contains full qualified domain name
 
@@ -196,6 +228,7 @@ try
     if (string.IsNullOrEmpty(azureContainerAppsDomain))
     {
         var containerAppHostname = Environment.GetEnvironmentVariable("CONTAINER_APP_HOSTNAME");
+        Console.WriteLine($"Detecting Azure Container Apps domain from CONTAINER_APP_HOSTNAME: {containerAppHostname ?? "(not set)"}");
         if (!string.IsNullOrEmpty(containerAppHostname) && containerAppHostname.Contains(".azurecontainerapps.io"))
         {
             // Extract domain from hostname: webapi.kindsea-xxxxx.eastus.azurecontainerapps.io -> kindsea-xxxxx.eastus.azurecontainerapps.io
@@ -203,9 +236,14 @@ try
             if (parts.Length >= 4)
             {
                 azureContainerAppsDomain = string.Join(".", parts.Skip(1));
+                Console.WriteLine($"✅ Detected Azure Container Apps domain: {azureContainerAppsDomain}");
                 Log.Information("Detected Azure Container Apps domain from hostname: {Domain}", azureContainerAppsDomain);
             }
         }
+    }
+    else
+    {
+        Console.WriteLine($"Azure Container Apps Domain (from config): {azureContainerAppsDomain}");
     }
 
     Log.Information("Azure Container Apps Domain: {Domain}", azureContainerAppsDomain ?? "(not set)");
