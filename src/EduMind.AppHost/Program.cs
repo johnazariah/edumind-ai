@@ -25,8 +25,7 @@ if (builder.Environment.EnvironmentName != "Testing")
 
 // Add the Web API (primary backend)
 var webApiBuilder = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
-    .WithHttpsEndpoint(port: 5001, targetPort: 8080, name: "webapi-https")
-    .WithHttpEndpoint(port: 5000, targetPort: 8080, name: "webapi-http")
+    .WithHttpEndpoint(port: 5000, name: "webapi-http")  // Primary HTTP endpoint
     .WithReference(edumindDb)
     .WithReference(redis)
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
