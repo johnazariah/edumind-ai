@@ -184,20 +184,33 @@ try
     var redisConnection = builder.Configuration.GetConnectionString("cache")
         ?? builder.Configuration.GetConnectionString("Redis");
 
-    // TODO: Re-enable health checks once connection strings are verified
-    // Issue: Aspire-generated connection strings for containerized PostgreSQL and Redis
-    // include authentication credentials that don't match the running containers
-    builder.Services.AddHealthChecks();
-    // .AddNpgSql(
-    //     connectionString ?? "Host=localhost;Database=edumind_dev;Username=edumind_user;Password=edumind_dev_password",
-    //     name: "postgresql",
-    //     tags: new[] { "db", "postgresql", "ready" })
-    // .AddRedis(
-    //     redisConnection ?? "localhost:6379",
-    //     name: "redis",
-    //     tags: new[] { "cache", "redis", "ready" });
+    // Debug logging for connection strings (without exposing passwords)
+    Log.Information("PostgreSQL connection string configured: {HasConnection}", !string.IsNullOrEmpty(connectionString));
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        // Log host portion only (no password)
+        var hostMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"Host=([^;]+)");
+        if (hostMatch.Success)
+            Log.Information("PostgreSQL Host: {Host}", hostMatch.Groups[1].Value);
+    }
+    Log.Information("Redis connection string configured: {HasConnection}", !string.IsNullOrEmpty(redisConnection));
+    if (!string.IsNullOrEmpty(redisConnection))
+    {
+        // Log host portion only (no password)
+        var hostMatch = System.Text.RegularExpressions.Regex.Match(redisConnection, @"^([^,]+)");
+        if (hostMatch.Success)
+            Log.Information("Redis Host: {Host}", hostMatch.Groups[1].Value);
+    }
 
-    // ============================================================
+    builder.Services.AddHealthChecks()
+        .AddNpgSql(
+            connectionString ?? "Host=localhost;Database=edumind_dev;Username=edumind_user;Password=edumind_dev_password",
+            name: "postgresql",
+            tags: new[] { "db", "postgresql", "ready" })
+        .AddRedis(
+            redisConnection ?? "localhost:6379",
+            name: "redis",
+            tags: new[] { "cache", "redis", "ready" });    // ============================================================
     // SWAGGER/OPENAPI CONFIGURATION
     // ============================================================
     builder.Services.AddEndpointsApiExplorer();
