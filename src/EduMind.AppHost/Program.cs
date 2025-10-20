@@ -5,18 +5,14 @@ Console.WriteLine($"AppHost Environment: {builder.Environment.EnvironmentName}")
 Console.WriteLine($"ASPNETCORE_ENVIRONMENT: {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}");
 Console.WriteLine($"DOTNET_ENVIRONMENT: {Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")}");
 
-// Add PostgreSQL database - using MCR to avoid Docker Hub 503 errors
+// Add PostgreSQL database
 var postgres = builder.AddPostgres("postgres")
-    .WithImageRegistry("mcr.microsoft.com")
-    .WithImage("oss/bitnami/postgresql", "latest")
     .WithDataVolume();
 
 var edumindDb = postgres.AddDatabase("edumind");
 
-// Add Redis cache - using MCR to avoid Docker Hub 503 errors  
+// Add Redis cache
 var redis = builder.AddRedis("cache")
-    .WithImageRegistry("mcr.microsoft.com")
-    .WithImage("oss/bitnami/redis", "latest")
     .WithDataVolume();
 
 // Add OLLAMA (conditional based on environment)
