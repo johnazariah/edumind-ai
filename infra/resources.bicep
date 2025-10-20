@@ -113,7 +113,7 @@ resource postgresEdumindapphostFc90bfaeb5PostgresDataFileShare 'Microsoft.Storag
 
 // PostgreSQL Flexible Server (replaces containerized postgres)
 resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-03-01-preview' = {
-  name: 'psql-${resourceToken}'
+  name: 'psql-${resourceToken}-ause' // Suffix to avoid name conflict with reserved name from failed deployment
   location: 'australiaeast' // Deploy to Australia East due to quota constraints in primary region
   sku: {
     name: 'Standard_B1ms'
