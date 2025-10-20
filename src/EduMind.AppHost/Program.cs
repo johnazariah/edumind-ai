@@ -30,7 +30,6 @@ if (builder.Environment.EnvironmentName != "Testing")
 
 // Add the Web API (primary backend)
 var webApiBuilder = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
-    .WithHttpEndpoint(port: 5000, name: "webapi-http")  // Primary HTTP endpoint
     .WithExternalHttpEndpoints()  // Make publicly accessible
     .WithReference(edumindDb)
     .WithReference(redis)
