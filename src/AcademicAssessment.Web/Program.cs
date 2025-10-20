@@ -179,7 +179,7 @@ try
     // ============================================================
     // Use Aspire-provided connection strings: "edumind" for PostgreSQL and "cache" for Redis
     // Fall back to DefaultConnection/Redis for local development
-    var connectionString = builder.Configuration.GetConnectionString("edumind") 
+    var connectionString = builder.Configuration.GetConnectionString("edumind")
         ?? builder.Configuration.GetConnectionString("DefaultConnection");
     var redisConnection = builder.Configuration.GetConnectionString("cache")
         ?? builder.Configuration.GetConnectionString("Redis");
