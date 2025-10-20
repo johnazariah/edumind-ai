@@ -83,6 +83,11 @@ jobs:
           curl -fsSL https://aka.ms/install-azd.sh | bash
           echo "$HOME/.azd/bin" >> $GITHUB_PATH
 
+      - name: Login to Azure CLI
+        uses: azure/login@v2
+        with:
+          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
       - name: Login to Azure Developer CLI
         run: |
           azd auth login \
