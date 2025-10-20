@@ -27,13 +27,48 @@ echo "✅ Verifying .NET SDK..."
 dotnet --version
 dotnet --list-sdks
 
+# Install GitHub CLI if not already installed
+if ! command -v gh &> /dev/null; then
+    echo "📦 Installing GitHub CLI..."
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+    sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+    sudo apt-get update
+    sudo apt-get install -y gh
+else
+    echo "✅ GitHub CLI already installed"
+fi
+
 # Verify GitHub CLI installation
 echo "✅ Verifying GitHub CLI..."
 gh --version
 
+# Install Azure CLI if not already installed
+if ! command -v az &> /dev/null; then
+    echo "📦 Installing Azure CLI..."
+    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+else
+    echo "✅ Azure CLI already installed"
+fi
+
 # Verify Azure CLI installation
 echo "✅ Verifying Azure CLI..."
-az --version
+az --version | head -5
+
+# Install Azure Developer CLI (azd) if not already installed
+if ! command -v azd &> /dev/null; then
+    echo "📦 Installing Azure Developer CLI (azd)..."
+    curl -fsSL https://aka.ms/install-azd.sh | bash
+    # Add azd to PATH
+    export PATH="$PATH:$HOME/.azd/bin"
+    echo 'export PATH="$PATH:$HOME/.azd/bin"' >> ~/.bashrc
+else
+    echo "✅ Azure Developer CLI (azd) already installed"
+fi
+
+# Verify Azure Developer CLI installation
+echo "✅ Verifying Azure Developer CLI (azd)..."
+azd version
 
 # Verify Python installation
 echo "✅ Verifying Python..."
@@ -99,6 +134,17 @@ alias gp='git push'
 alias gl='git log --oneline --graph --decorate'
 alias gd='git diff'
 
+alias lga= 'log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative'
+alias lg= 'lga -20'
+alias ca= 'commit -a'
+alias ci= 'commit'
+alias st= 'status'
+alias co= 'checkout'
+alias br= 'branch'
+alias fop= 'fetch origin --prune'
+alias cob= 'checkout -b'
+alias rom= 'rebase origin/main'
+
 # Docker compose shortcuts
 alias dc='docker-compose'
 alias dcu='docker-compose up -d'
@@ -132,6 +178,7 @@ echo "   ✅ Python 3.11 + pip"
 echo "   ✅ Jupyter + ipykernel"
 echo "   ✅ GitHub CLI (gh)"
 echo "   ✅ Azure CLI (az)"
+echo "   ✅ Azure Developer CLI (azd)"
 echo "   ✅ Docker"
 echo "   ✅ PostgreSQL Client"
 echo "   ✅ Redis Tools"
@@ -143,6 +190,7 @@ echo "   dotnet test               - Run tests"
 echo "   run-api                   - Start Web API"
 echo "   gh auth login             - Authenticate with GitHub"
 echo "   az login                  - Authenticate with Azure"
+echo "   azd auth login            - Authenticate with Azure Developer CLI"
 echo ""
 echo "📚 Documentation: ./docs/"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
