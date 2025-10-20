@@ -3,7 +3,6 @@ param location string = resourceGroup().location
 @description('Id of the user or app to assign application roles')
 param principalId string = ''
 
-
 @description('Tags that will be applied to all resources')
 param tags object = {}
 @description('PostgreSQL administrator password')
@@ -28,12 +27,19 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
 }
 
 resource caeMiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerRegistry.id, managedIdentity.id, subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d'))
+  name: guid(
+    containerRegistry.id,
+    managedIdentity.id,
+    subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+  )
   scope: containerRegistry
   properties: {
     principalId: managedIdentity.properties.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId:  subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+    )
   }
 }
 
@@ -65,11 +71,18 @@ resource storageVolumeFileService 'Microsoft.Storage/storageAccounts/fileService
   name: 'default'
 }
 resource volumesAccountRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageVolume.id, principalId, subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69566ab7-960f-475b-8e7c-b3118f30c6bd'))
+  name: guid(
+    storageVolume.id,
+    principalId,
+    subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69566ab7-960f-475b-8e7c-b3118f30c6bd')
+  )
   scope: storageVolume
   properties: {
     principalId: principalId
-    roleDefinitionId:  subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69566ab7-960f-475b-8e7c-b3118f30c6bd')
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '69566ab7-960f-475b-8e7c-b3118f30c6bd'
+    )
   }
 }
 
@@ -101,7 +114,7 @@ resource postgresEdumindapphostFc90bfaeb5PostgresDataFileShare 'Microsoft.Storag
 // PostgreSQL Flexible Server (replaces containerized postgres)
 resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-03-01-preview' = {
   name: 'psql-${resourceToken}'
-  location: location
+  location: 'australiaeast' // Deploy to Australia East due to quota constraints in primary region
   sku: {
     name: 'Standard_B1ms'
     tier: 'Burstable'
@@ -150,10 +163,12 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-p
   name: 'cae-${resourceToken}'
   location: location
   properties: {
-    workloadProfiles: [{
-      workloadProfileType: 'Consumption'
-      name: 'consumption'
-    }]
+    workloadProfiles: [
+      {
+        workloadProfileType: 'Consumption'
+        name: 'consumption'
+      }
+    ]
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
@@ -170,7 +185,6 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-p
       componentType: 'AspireDashboard'
     }
   }
-
 }
 
 resource cacheEdumindapphostFc90bfaeb5CacheDataStore 'Microsoft.App/managedEnvironments/storages@2023-05-01' = {

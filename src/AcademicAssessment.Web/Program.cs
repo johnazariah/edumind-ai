@@ -184,19 +184,18 @@ try
     var redisConnection = builder.Configuration.GetConnectionString("cache")
         ?? builder.Configuration.GetConnectionString("Redis");
 
-    // WORKAROUND: In Azure Container Apps, Aspire generates connection strings with short hostnames
-    // ("postgres", "cache") but Azure Container Apps requires full internal FQDNs for service-to-service communication.
-    // Detect if running in Azure and patch the connection strings with proper FQDNs.
+    // NOTE: PostgreSQL now uses Azure Database for PostgreSQL Flexible Server with proper FQDN
+    // No hostname patching needed - connection string from Bicep contains full qualified domain name
+
+    // WORKAROUND: Redis still uses containerized deployment in Azure Container Apps
+    // Aspire generates connection string with short hostname "cache" but Azure Container Apps 
+    // requires full internal FQDN for service-to-service communication.
     var azureContainerAppsDomain = builder.Configuration["AZURE_CONTAINER_APPS_ENVIRONMENT_DEFAULT_DOMAIN"];
 
-    // If environment variable is not set, try to detect from the connection strings themselves
-    // Azure Container Apps injects CONTAINER_APP_NAME and other metadata
+    // If environment variable is not set, try to detect from the container hostname
     if (string.IsNullOrEmpty(azureContainerAppsDomain))
     {
-        // Alternative: check if we're in Azure Container Apps and extract domain from known endpoints
-        var containerAppName = Environment.GetEnvironmentVariable("CONTAINER_APP_NAME");
         var containerAppHostname = Environment.GetEnvironmentVariable("CONTAINER_APP_HOSTNAME");
-
         if (!string.IsNullOrEmpty(containerAppHostname) && containerAppHostname.Contains(".azurecontainerapps.io"))
         {
             // Extract domain from hostname: webapi.kindsea-xxxxx.eastus.azurecontainerapps.io -> kindsea-xxxxx.eastus.azurecontainerapps.io
@@ -210,33 +209,13 @@ try
     }
 
     Log.Information("Azure Container Apps Domain: {Domain}", azureContainerAppsDomain ?? "(not set)");
-    Log.Information("Original PostgreSQL connection string present: {HasConnection}", !string.IsNullOrEmpty(connectionString));
-    Log.Information("Original Redis connection string present: {HasConnection}", !string.IsNullOrEmpty(redisConnection));
+    Log.Information("PostgreSQL connection string present: {HasConnection}", !string.IsNullOrEmpty(connectionString));
+    Log.Information("Redis connection string present: {HasConnection}", !string.IsNullOrEmpty(redisConnection));
 
-    if (!string.IsNullOrEmpty(azureContainerAppsDomain) && !string.IsNullOrEmpty(connectionString))
-    {
-        Log.Information("Checking PostgreSQL connection string for hostname patching...");
-        // PostgreSQL: Replace "Host=postgres" with "Host=postgres.internal.{domain}"
-        // Use regex to match "Host=postgres" followed by any delimiter (;, space, end of string, etc.)
-        if (System.Text.RegularExpressions.Regex.IsMatch(connectionString, @"Host=postgres(?=[;\s,]|$)", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-        {
-            var internalFqdn = $"postgres.internal.{azureContainerAppsDomain}";
-            connectionString = System.Text.RegularExpressions.Regex.Replace(
-                connectionString,
-                @"Host=postgres(?=[;\s,]|$)",
-                $"Host={internalFqdn}",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            Log.Information("✅ Patched PostgreSQL hostname to use Azure Container Apps internal FQDN: {Fqdn}", internalFqdn);
-        }
-        else
-        {
-            Log.Warning("❌ PostgreSQL connection string pattern did not match for patching");
-        }
-    }
+    // Patch Redis connection string if running in Azure Container Apps
     if (!string.IsNullOrEmpty(azureContainerAppsDomain) && !string.IsNullOrEmpty(redisConnection))
     {
         Log.Information("Checking Redis connection string for hostname patching...");
-        // Redis: Replace "cache:" or "cache" at start of connection string with "cache.internal.{domain}"
         var internalFqdn = $"cache.internal.{azureContainerAppsDomain}";
         if (redisConnection.StartsWith("cache:"))
         {
