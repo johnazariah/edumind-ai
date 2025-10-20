@@ -202,6 +202,16 @@ Resources:
 
 ### Azure PostgreSQL Flexible Server
 
+**Why Flexible Server over Containerized PostgreSQL?**
+
+- ✅ **Persistent storage** - Data survives deployments
+- ✅ **Automatic backups** - Point-in-time restore (PITR)
+- ✅ **High availability** - Zone-redundant deployment
+- ✅ **Managed service** - Automatic patching, monitoring
+- ✅ **Scaling** - Vertical and horizontal scaling
+- ✅ **Security** - Private endpoints, encryption at rest/transit
+- ✅ **Compliance** - SOC 2, HIPAA, FedRAMP ready
+
 **Architecture**: Multi-database isolation strategy
 
 ```
@@ -220,16 +230,202 @@ PostgreSQL Flexible Server (General Purpose, 2 vCores, 8 GB RAM)
     └── Schema: Physical isolation
 ```
 
-**Configuration**:
+**Environment-Specific Configuration**:
 
-- **Tier**: General Purpose (production) / Burstable (dev/test)
+| Environment | SKU | HA | Backup Retention | Geo-Redundant | Cost/Month |
+|-------------|-----|----|--------------------|---------------|------------|
+| **Dev** | B_Standard_B1ms (1 vCore) | No | 7 days | No | ~$15 |
+| **Staging** | GP_Standard_D2ds_v4 (2 vCore) | No | 14 days | No | ~$150 |
+| **Production** | GP_Standard_D4ds_v4 (4 vCore) | Zone-Redundant | 35 days | Yes | ~$600 |
+
+**Production Configuration**:
+
+- **Tier**: General Purpose
 - **Compute**: 2-4 vCores (auto-scale with Azure Monitor)
 - **Storage**: 128 GB (auto-grow enabled)
-- **Backup**: 7-day point-in-time restore
-- **High Availability**: Zone-redundant (production only)
+- **Backup**: 35-day point-in-time restore, geo-redundant
+- **High Availability**: Zone-redundant with standby replica
 - **Private Endpoint**: VNet integration
-- **SSL**: Required
+- **SSL**: TLS 1.2+ required
 - **Connection Pooling**: PgBouncer built-in
+- **Version**: PostgreSQL 15
+
+#### Database Migrations
+
+**Migration Workflow**:
+
+```mermaid
+graph LR
+    A[Developer] -->|1. Create Migration| B[Migration File]
+    B -->|2. Commit & Push| C[GitHub]
+    C -->|3. CI/CD Pipeline| D{Environment}
+    D -->|Dev| E[Auto Apply]
+    D -->|Staging| F[Auto Apply]
+    D -->|Production| G[Manual Approval]
+    G -->|Approved| H[Apply Migration]
+    E -->|Success| I[Run Tests]
+    F -->|Success| I
+    H -->|Success| J[Health Check]
+```
+
+**Creating Migrations**:
+
+```bash
+# On local development
+dotnet ef migrations add MigrationName \
+  --project src/AcademicAssessment.Infrastructure \
+  --startup-project src/AcademicAssessment.Web \
+  --output-dir Data/Migrations
+
+# Review generated migration files
+git diff src/AcademicAssessment.Infrastructure/Data/Migrations/
+
+# Commit and push
+git add .
+git commit -m "feat: Add MigrationName database migration"
+git push
+```
+
+**Applying Migrations**:
+
+- **Dev/Staging**: Automatic via GitHub Actions
+- **Production**: Manual approval required, pre-migration backup created
+
+**Rollback Procedures**:
+
+```bash
+# Option 1: Rollback to specific migration
+dotnet ef database update PreviousMigrationName \
+  --project src/AcademicAssessment.Infrastructure \
+  --connection "$PROD_DB_CONNECTION"
+
+# Option 2: Restore from point-in-time backup (see Backup Strategy below)
+```
+
+#### Backup and Restore Strategy
+
+**Automated Backups**:
+
+- **Frequency**: Continuous transaction log backups (every 5 minutes)
+- **Full Backup**: Daily at 2 AM UTC
+- **Retention**: Environment-specific (see table above)
+- **Storage**: Geo-redundant in production for disaster recovery
+
+**Point-in-Time Restore (PITR)**:
+
+```bash
+# Restore to specific point in time
+az postgres flexible-server restore \
+  --resource-group rg-prod \
+  --name edumind-postgres-prod-pitr \
+  --source-server edumind-postgres-prod \
+  --restore-time "2025-10-20T14:30:00Z" \
+  --location eastus
+```
+
+**Manual On-Demand Backup** (before major changes):
+
+```bash
+# Trigger backup before migrations
+az postgres flexible-server backup create \
+  --resource-group rg-prod \
+  --name edumind-postgres-prod \
+  --backup-name "pre-migration-$(date +%Y%m%d-%H%M)"
+```
+
+**Weekly Logical Exports** (disaster recovery):
+
+```bash
+# Export to .sql file
+pg_dump -h edumind-postgres-prod.postgres.database.azure.com \
+  -U edumindadmin \
+  -d edumind \
+  --format=custom \
+  --file="edumind-backup-$(date +%Y%m%d).dump"
+
+# Upload to Azure Blob Storage
+az storage blob upload \
+  --account-name edumindbackups \
+  --container-name database-exports \
+  --file "edumind-backup-$(date +%Y%m%d).dump"
+```
+
+**Restore from Logical Backup**:
+
+```bash
+# Download and restore
+az storage blob download \
+  --account-name edumindbackups \
+  --container-name database-exports \
+  --name edumind-backup-20251020.dump \
+  --file backup.dump
+
+pg_restore -h edumind-postgres-prod.postgres.database.azure.com \
+  -U edumindadmin \
+  -d edumind_restored \
+  --clean --if-exists \
+  backup.dump
+```
+
+#### Security and Access Control
+
+**Connection String Management**:
+
+```csharp
+// Production: Use Managed Identity with Azure AD authentication
+services.AddDbContext<AcademicContext>(options =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    
+    if (environment.IsProduction())
+    {
+        var credential = new DefaultAzureCredential();
+        var token = credential.GetToken(
+            new TokenRequestContext(new[] { 
+                "https://ossrdbms-aad.database.windows.net/.default" 
+            })
+        );
+        
+        options.UseNpgsql(connectionString, npgsqlOptions =>
+        {
+            npgsqlOptions.ProvidePasswordCallback = () => token.Token;
+        });
+    }
+    else
+    {
+        options.UseNpgsql(connectionString);
+    }
+});
+```
+
+**Access Control**:
+
+- Admin account stored in Azure Key Vault
+- App uses limited-privilege service account
+- Read-only replicas for analytics workloads
+- Encryption: TLS 1.2+ (transit), Azure-managed keys (at rest)
+
+#### Monitoring and Alerts
+
+**Key Metrics**:
+
+- Connection count (alert at >90% capacity)
+- Query duration (p50, p95, p99)
+- Storage utilization (alert at 80%)
+- Replica lag, deadlocks
+- Backup size and duration
+
+**Example Alert**:
+
+```bash
+# Storage alert (80% threshold)
+az monitor metrics alert create \
+  --name postgres-storage-alert \
+  --resource-group rg-prod \
+  --scopes /subscriptions/.../postgresServers/edumind-postgres-prod \
+  --condition "avg storage_percent > 80" \
+  --description "PostgreSQL storage usage above 80%"
+```
 
 ### Azure Redis Cache
 

@@ -18,6 +18,10 @@ sudo apt-get install -y \
     postgresql-client \
     redis-tools
 
+# Install .NET 9.0.100 SDK (required by global.json)
+echo "📦 Installing .NET 9.0.100 SDK..."
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --version 9.0.100 --install-dir /usr/share/dotnet
+
 # Verify .NET installation
 echo "✅ Verifying .NET SDK..."
 dotnet --version
@@ -30,6 +34,15 @@ gh --version
 # Verify Azure CLI installation
 echo "✅ Verifying Azure CLI..."
 az --version
+
+# Verify Python installation
+echo "✅ Verifying Python..."
+python3 --version
+pip3 --version
+
+# Install Python packages for Jupyter notebooks
+echo "📦 Installing Python packages for notebooks..."
+pip3 install --user ipykernel ipython jupyter nbformat nbclient || echo "Python packages already installed"
 
 # Install global .NET tools
 echo "📦 Installing .NET global tools..."
@@ -114,7 +127,9 @@ echo "🎓 EduMind.AI Development Container Ready!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "📦 Installed Tools:"
-echo "   ✅ .NET 8.0 SDK"
+echo "   ✅ .NET 8.0 SDK + .NET 9.0.100 SDK"
+echo "   ✅ Python 3.11 + pip"
+echo "   ✅ Jupyter + ipykernel"
 echo "   ✅ GitHub CLI (gh)"
 echo "   ✅ Azure CLI (az)"
 echo "   ✅ Docker"

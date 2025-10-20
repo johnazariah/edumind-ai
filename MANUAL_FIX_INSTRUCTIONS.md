@@ -16,6 +16,7 @@ Replace the `Azure/setup-azd@v1.0.0` action (appears **2 times**) with direct in
 ## Option 1: Use the Script (Recommended)
 
 Run the provided script:
+
 ```bash
 ./apply-deployment-fixes.sh
 ```
@@ -29,12 +30,14 @@ This will automatically apply both fixes and show you a diff.
 ### Location 1: Deploy Job (around line 82)
 
 **Find this:**
+
 ```yaml
       - name: Install Azure Developer CLI
         uses: Azure/setup-azd@v1.0.0
 ```
 
 **Replace with:**
+
 ```yaml
       - name: Install Azure Developer CLI
         run: |
@@ -45,12 +48,14 @@ This will automatically apply both fixes and show you a diff.
 ### Location 2: Integration Tests Job (around line 168)
 
 **Find this:**
+
 ```yaml
       - name: Install Azure Developer CLI
         uses: Azure/setup-azd@v1.0.0
 ```
 
 **Replace with:**
+
 ```yaml
       - name: Install Azure Developer CLI
         run: |
@@ -115,6 +120,7 @@ git push origin main
 ## Expected Results
 
 After this fix is deployed:
+
 - ✓ azd installation completes in ~30 seconds
 - ✓ No more "ENOTFOUND azdrelease.azureedge.net" errors
 - ✓ Deployment workflow can proceed to actual deployment
@@ -125,6 +131,7 @@ After this fix is deployed:
 ## Monitoring
 
 Watch the next deployment run:
+
 ```bash
 # After pushing, watch the workflow
 gh run list --workflow=deploy-azure-azd.yml --limit 1
@@ -132,6 +139,7 @@ gh run watch <run-id>
 ```
 
 Expected to see:
+
 - ✓ Build & test: ~5 minutes
 - ✓ Deploy: ~10 minutes  
 - ✓ Total: ~15 minutes

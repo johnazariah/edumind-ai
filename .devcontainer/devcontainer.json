@@ -1,7 +1,6 @@
 {
   "name": "EduMind.AI Development Container",
   "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0-bookworm",
-  
   "features": {
     "ghcr.io/devcontainers/features/azure-cli:1": {
       "version": "latest",
@@ -24,9 +23,13 @@
     },
     "ghcr.io/devcontainers/features/powershell:1": {
       "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11",
+      "installTools": true,
+      "optimize": true
     }
   },
-
   "customizations": {
     "vscode": {
       "settings": {
@@ -65,20 +68,21 @@
         "ms-azuretools.vscode-azureresourcegroups",
         "ms-kubernetes-tools.vscode-kubernetes-tools",
         "redhat.vscode-yaml",
-        "davidanson.vscode-markdownlint"
+        "davidanson.vscode-markdownlint",
+        "ms-toolsai.jupyter",
+        "ms-python.python",
+        "ms-python.vscode-pylance"
       ]
     }
   },
-
   "forwardPorts": [
-    5000,  // Web API HTTP
-    5001,  // Web API HTTPS
-    5002,  // Dashboard
-    5003,  // Student App
-    5432,  // PostgreSQL
-    6379   // Redis
+    5000, // Web API HTTP
+    5001, // Web API HTTPS
+    5002, // Dashboard
+    5003, // Student App
+    5432, // PostgreSQL
+    6379 // Redis
   ],
-
   "portsAttributes": {
     "5000": {
       "label": "Web API (HTTP)",
@@ -105,11 +109,8 @@
       "onAutoForward": "silent"
     }
   },
-
   "postCreateCommand": "bash .devcontainer/post-create.sh",
-
   "remoteUser": "vscode",
-
   "containerEnv": {
     "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
     "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "1",
