@@ -21,7 +21,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: mcr.microsoft.com/oss/bitnami/postgresql:latest
         env:
           POSTGRES_DB: edumind_test
           POSTGRES_USER: edumind_test_user
@@ -36,7 +36,9 @@ jobs:
           --health-retries 5
 
       redis:
-        image: redis:7-alpine
+        image: mcr.microsoft.com/oss/bitnami/redis:latest
+        env:
+          ALLOW_EMPTY_PASSWORD: "yes"
         ports:
           - 6379:6379
         options: >-
