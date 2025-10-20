@@ -6,6 +6,9 @@ param principalId string = ''
 
 @description('Tags that will be applied to all resources')
 param tags object = {}
+@description('PostgreSQL administrator password')
+@secure()
+param postgres_password string
 
 var resourceToken = uniqueString(resourceGroup().id)
 
@@ -95,6 +98,54 @@ resource postgresEdumindapphostFc90bfaeb5PostgresDataFileShare 'Microsoft.Storag
   }
 }
 
+// PostgreSQL Flexible Server (replaces containerized postgres)
+resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-03-01-preview' = {
+  name: 'psql-${resourceToken}'
+  location: location
+  sku: {
+    name: 'Standard_B1ms'
+    tier: 'Burstable'
+  }
+  properties: {
+    version: '16'
+    administratorLogin: 'edumind_admin'
+    administratorLoginPassword: postgres_password
+    storage: {
+      storageSizeGB: 32
+      autoGrow: 'Disabled'
+    }
+    backup: {
+      backupRetentionDays: 7
+      geoRedundantBackup: 'Disabled'
+    }
+    highAvailability: {
+      mode: 'Disabled'
+    }
+    availabilityZone: ''
+  }
+  tags: tags
+}
+
+// Allow Azure services to access the database
+resource postgresFirewallAllowAzure 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-03-01-preview' = {
+  parent: postgresServer
+  name: 'AllowAllAzureServicesAndResourcesWithinAzureIps'
+  properties: {
+    startIpAddress: '0.0.0.0'
+    endIpAddress: '0.0.0.0'
+  }
+}
+
+// Create the edumind database
+resource postgresDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-03-01-preview' = {
+  parent: postgresServer
+  name: 'edumind'
+  properties: {
+    charset: 'UTF8'
+    collation: 'en_US.utf8'
+  }
+}
+
 resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-preview' = {
   name: 'cae-${resourceToken}'
   location: location
@@ -177,3 +228,6 @@ output SERVICE_OLLAMA_VOLUME_BM0_NAME string = ollamaBm0Store.name
 output SERVICE_OLLAMA_FILE_SHARE_BM0_NAME string = ollamaBm0FileShare.name
 output SERVICE_POSTGRES_VOLUME_EDUMINDAPPHOSTFC90BFAEB5POSTGRESDATA_NAME string = postgresEdumindapphostFc90bfaeb5PostgresDataStore.name
 output AZURE_VOLUMES_STORAGE_ACCOUNT string = storageVolume.name
+output POSTGRES_HOST string = postgresServer.properties.fullyQualifiedDomainName
+output POSTGRES_DATABASE string = 'edumind'
+output POSTGRES_USERNAME string = 'edumind_admin'

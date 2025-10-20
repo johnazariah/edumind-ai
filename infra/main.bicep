@@ -12,16 +12,18 @@ param location string
 @description('Id of the user or app to assign application roles')
 param principalId string = ''
 
-@metadata({azd: {
-  type: 'generate'
-  config: {length:22,noSpecial:true}
+@metadata({
+  azd: {
+    type: 'generate'
+    config: { length: 22, noSpecial: true }
   }
 })
 @secure()
 param cache_password string
-@metadata({azd: {
-  type: 'generate'
-  config: {length:22}
+@metadata({
+  azd: {
+    type: 'generate'
+    config: { length: 22 }
   }
 })
 @secure()
@@ -36,6 +38,7 @@ resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   location: location
   tags: tags
 }
+
 module resources 'resources.bicep' = {
   scope: rg
   name: 'resources'
@@ -43,6 +46,7 @@ module resources 'resources.bicep' = {
     location: location
     tags: tags
     principalId: principalId
+    postgres_password: postgres_password
   }
 }
 
@@ -61,3 +65,6 @@ output SERVICE_OLLAMA_VOLUME_BM0_NAME string = resources.outputs.SERVICE_OLLAMA_
 output SERVICE_OLLAMA_FILE_SHARE_BM0_NAME string = resources.outputs.SERVICE_OLLAMA_FILE_SHARE_BM0_NAME
 output SERVICE_POSTGRES_VOLUME_EDUMINDAPPHOSTFC90BFAEB5POSTGRESDATA_NAME string = resources.outputs.SERVICE_POSTGRES_VOLUME_EDUMINDAPPHOSTFC90BFAEB5POSTGRESDATA_NAME
 output AZURE_VOLUMES_STORAGE_ACCOUNT string = resources.outputs.AZURE_VOLUMES_STORAGE_ACCOUNT
+output POSTGRES_HOST string = resources.outputs.POSTGRES_HOST
+output POSTGRES_DATABASE string = resources.outputs.POSTGRES_DATABASE
+output POSTGRES_USERNAME string = resources.outputs.POSTGRES_USERNAME

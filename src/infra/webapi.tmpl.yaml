@@ -23,7 +23,7 @@ properties:
       - name: connectionstrings--cache
         value: cache:6379,password={{ securedParameter "cache_password" }}
       - name: connectionstrings--edumind
-        value: Host=postgres;Port=5432;Username=postgres;Password={{ securedParameter "postgres_password" }};Database=edumind
+        value: Host={{ .Env.POSTGRES_HOST }};Port=5432;Username={{ .Env.POSTGRES_USERNAME }};Password={{ securedParameter "postgres_password" }};Database={{ .Env.POSTGRES_DATABASE }};SslMode=Require
   template:
     containers:
       - image: { { .Image } }
