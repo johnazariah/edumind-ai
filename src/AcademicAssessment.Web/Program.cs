@@ -188,25 +188,52 @@ try
     // ("postgres", "cache") but Azure Container Apps requires full internal FQDNs for service-to-service communication.
     // Detect if running in Azure and patch the connection strings with proper FQDNs.
     var azureContainerAppsDomain = builder.Configuration["AZURE_CONTAINER_APPS_ENVIRONMENT_DEFAULT_DOMAIN"];
+    Log.Information("Azure Container Apps Domain: {Domain}", azureContainerAppsDomain ?? "(not set)");
+    Log.Information("Original PostgreSQL connection string present: {HasConnection}", !string.IsNullOrEmpty(connectionString));
+    Log.Information("Original Redis connection string present: {HasConnection}", !string.IsNullOrEmpty(redisConnection));
+
     if (!string.IsNullOrEmpty(azureContainerAppsDomain) && !string.IsNullOrEmpty(connectionString))
     {
+        Log.Information("Checking PostgreSQL connection string for hostname patching...");
         // PostgreSQL: Replace "Host=postgres" with "Host=postgres.internal.{domain}"
-        if (connectionString.Contains("Host=postgres;") || connectionString.Contains("Host=postgres,"))
+        // Use regex to match "Host=postgres" followed by any delimiter (;, space, end of string, etc.)
+        if (System.Text.RegularExpressions.Regex.IsMatch(connectionString, @"Host=postgres(?=[;\s,]|$)", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
         {
             var internalFqdn = $"postgres.internal.{azureContainerAppsDomain}";
-            connectionString = connectionString.Replace("Host=postgres;", $"Host={internalFqdn};")
-                                               .Replace("Host=postgres,", $"Host={internalFqdn},");
-            Log.Information("Patched PostgreSQL hostname to use Azure Container Apps internal FQDN");
+            connectionString = System.Text.RegularExpressions.Regex.Replace(
+                connectionString,
+                @"Host=postgres(?=[;\s,]|$)",
+                $"Host={internalFqdn}",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            Log.Information("✅ Patched PostgreSQL hostname to use Azure Container Apps internal FQDN: {Fqdn}", internalFqdn);
+        }
+        else
+        {
+            Log.Warning("❌ PostgreSQL connection string pattern did not match for patching");
         }
     }
     if (!string.IsNullOrEmpty(azureContainerAppsDomain) && !string.IsNullOrEmpty(redisConnection))
     {
-        // Redis: Replace "cache:" with "cache.internal.{domain}:"
+        Log.Information("Checking Redis connection string for hostname patching...");
+        // Redis: Replace "cache:" or "cache" at start of connection string with "cache.internal.{domain}"
+        var internalFqdn = $"cache.internal.{azureContainerAppsDomain}";
         if (redisConnection.StartsWith("cache:"))
         {
-            var internalFqdn = $"cache.internal.{azureContainerAppsDomain}";
             redisConnection = redisConnection.Replace("cache:", $"{internalFqdn}:");
-            Log.Information("Patched Redis hostname to use Azure Container Apps internal FQDN");
+            Log.Information("✅ Patched Redis hostname to use Azure Container Apps internal FQDN: {Fqdn}", internalFqdn);
+        }
+        else if (redisConnection.StartsWith("cache,") || redisConnection == "cache")
+        {
+            redisConnection = System.Text.RegularExpressions.Regex.Replace(
+                redisConnection,
+                @"^cache(?=[,]|$)",
+                internalFqdn,
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            Log.Information("✅ Patched Redis hostname to use Azure Container Apps internal FQDN: {Fqdn}", internalFqdn);
+        }
+        else
+        {
+            Log.Warning("❌ Redis connection string pattern did not match for patching: '{RedisStart}'", redisConnection.Substring(0, Math.Min(20, redisConnection.Length)));
         }
     }
 
