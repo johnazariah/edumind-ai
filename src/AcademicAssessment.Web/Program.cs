@@ -184,6 +184,32 @@ try
     var redisConnection = builder.Configuration.GetConnectionString("cache")
         ?? builder.Configuration.GetConnectionString("Redis");
 
+    // WORKAROUND: In Azure Container Apps, Aspire generates connection strings with short hostnames
+    // ("postgres", "cache") but Azure Container Apps requires full internal FQDNs for service-to-service communication.
+    // Detect if running in Azure and patch the connection strings with proper FQDNs.
+    var azureContainerAppsDomain = builder.Configuration["AZURE_CONTAINER_APPS_ENVIRONMENT_DEFAULT_DOMAIN"];
+    if (!string.IsNullOrEmpty(azureContainerAppsDomain) && !string.IsNullOrEmpty(connectionString))
+    {
+        // PostgreSQL: Replace "Host=postgres" with "Host=postgres.internal.{domain}"
+        if (connectionString.Contains("Host=postgres;") || connectionString.Contains("Host=postgres,"))
+        {
+            var internalFqdn = $"postgres.internal.{azureContainerAppsDomain}";
+            connectionString = connectionString.Replace("Host=postgres;", $"Host={internalFqdn};")
+                                               .Replace("Host=postgres,", $"Host={internalFqdn},");
+            Log.Information("Patched PostgreSQL hostname to use Azure Container Apps internal FQDN");
+        }
+    }
+    if (!string.IsNullOrEmpty(azureContainerAppsDomain) && !string.IsNullOrEmpty(redisConnection))
+    {
+        // Redis: Replace "cache:" with "cache.internal.{domain}:"
+        if (redisConnection.StartsWith("cache:"))
+        {
+            var internalFqdn = $"cache.internal.{azureContainerAppsDomain}";
+            redisConnection = redisConnection.Replace("cache:", $"{internalFqdn}:");
+            Log.Information("Patched Redis hostname to use Azure Container Apps internal FQDN");
+        }
+    }
+
     // Debug logging for connection strings (without exposing passwords)
     Log.Information("PostgreSQL connection string configured: {HasConnection}", !string.IsNullOrEmpty(connectionString));
     if (!string.IsNullOrEmpty(connectionString))
