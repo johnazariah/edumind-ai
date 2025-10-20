@@ -8,15 +8,15 @@ Console.WriteLine($"DOTNET_ENVIRONMENT: {Environment.GetEnvironmentVariable("DOT
 // Add PostgreSQL database - using MCR to avoid Docker Hub 503 errors
 var postgres = builder.AddPostgres("postgres")
     .WithImageRegistry("mcr.microsoft.com")
-    .WithImage("oss/bitnami/postgresql", "16")
+    .WithImage("oss/bitnami/postgresql", "latest")
     .WithDataVolume();
 
 var edumindDb = postgres.AddDatabase("edumind");
 
-// Add Redis cache - using MCR to avoid Docker Hub 503 errors
+// Add Redis cache - using MCR to avoid Docker Hub 503 errors  
 var redis = builder.AddRedis("cache")
     .WithImageRegistry("mcr.microsoft.com")
-    .WithImage("oss/bitnami/redis", "7.4")
+    .WithImage("oss/bitnami/redis", "latest")
     .WithDataVolume();
 
 // Add OLLAMA (conditional based on environment)
