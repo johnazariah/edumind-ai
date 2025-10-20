@@ -44,6 +44,8 @@ properties:
             value: "true"
           - name: OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY
             value: in_memory
+          - name: AZURE_CONTAINER_APPS_ENVIRONMENT_DEFAULT_DOMAIN
+            value: {{ .Env.AZURE_CONTAINER_APPS_ENVIRONMENT_DEFAULT_DOMAIN }}
           - name: Ollama__BaseUrl
             value: http://ollama.internal.{{ .Env.AZURE_CONTAINER_APPS_ENVIRONMENT_DEFAULT_DOMAIN }}
           - name: ConnectionStrings__cache
