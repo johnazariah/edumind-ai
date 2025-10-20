@@ -188,6 +188,27 @@ try
     // ("postgres", "cache") but Azure Container Apps requires full internal FQDNs for service-to-service communication.
     // Detect if running in Azure and patch the connection strings with proper FQDNs.
     var azureContainerAppsDomain = builder.Configuration["AZURE_CONTAINER_APPS_ENVIRONMENT_DEFAULT_DOMAIN"];
+
+    // If environment variable is not set, try to detect from the connection strings themselves
+    // Azure Container Apps injects CONTAINER_APP_NAME and other metadata
+    if (string.IsNullOrEmpty(azureContainerAppsDomain))
+    {
+        // Alternative: check if we're in Azure Container Apps and extract domain from known endpoints
+        var containerAppName = Environment.GetEnvironmentVariable("CONTAINER_APP_NAME");
+        var containerAppHostname = Environment.GetEnvironmentVariable("CONTAINER_APP_HOSTNAME");
+
+        if (!string.IsNullOrEmpty(containerAppHostname) && containerAppHostname.Contains(".azurecontainerapps.io"))
+        {
+            // Extract domain from hostname: webapi.kindsea-xxxxx.eastus.azurecontainerapps.io -> kindsea-xxxxx.eastus.azurecontainerapps.io
+            var parts = containerAppHostname.Split('.');
+            if (parts.Length >= 4)
+            {
+                azureContainerAppsDomain = string.Join(".", parts.Skip(1));
+                Log.Information("Detected Azure Container Apps domain from hostname: {Domain}", azureContainerAppsDomain);
+            }
+        }
+    }
+
     Log.Information("Azure Container Apps Domain: {Domain}", azureContainerAppsDomain ?? "(not set)");
     Log.Information("Original PostgreSQL connection string present: {HasConnection}", !string.IsNullOrEmpty(connectionString));
     Log.Information("Original Redis connection string present: {HasConnection}", !string.IsNullOrEmpty(redisConnection));
