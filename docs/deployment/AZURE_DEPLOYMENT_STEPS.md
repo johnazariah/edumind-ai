@@ -49,7 +49,17 @@ az role assignment create \
   --role "Contributor" \
   --assignee "$CLIENT_ID" \
   --scope "/subscriptions/$SUBSCRIPTION_ID"
+
+# IMPORTANT: Also assign User Access Administrator role
+# This allows the service principal to create role assignments for managed identities
+# (required by .NET Aspire for Container Registry and Storage access)
+az role assignment create \
+  --role "User Access Administrator" \
+  --assignee "$CLIENT_ID" \
+  --scope "/subscriptions/$SUBSCRIPTION_ID"
 ```
+
+**Key Learning:** .NET Aspire deployments need to create role assignments for managed identities to access Container Registry and Storage. Without User Access Administrator role, deployment will fail with "Authorization failed for template resource" errors.
 
 ### Step 3: Configure Federated Identity Credentials for OIDC
 
@@ -110,7 +120,6 @@ AZURE_SUBSCRIPTION_ID
 AZURE_TENANT_ID
 ```
 
-
 ### Step 6: Create azure.yaml Configuration
 
 The `azure.yaml` file tells Azure Developer CLI how to deploy your .NET Aspire application:
@@ -158,7 +167,6 @@ The workflow will:
 3. **Deploy** - Use `azd up` to provision and deploy resources
 4. **Health check** - Verify the deployment is healthy
 5. **Integration tests** - Run integration tests against deployed environment
-
 
 ### Step 9: Verify Deployment
 
@@ -227,7 +235,6 @@ gh run view --log | grep "Deployed to:"
 # NOT: 16b3c013-d300-468d-ac64-7eda0820b6d3,
 ```
 
-
 ### Issue 2: "No configured federated identity credentials"
 
 **Symptom:** `AADSTS70025: The client has no configured federated identity credentials`
@@ -260,6 +267,33 @@ gh run view --log | grep "Deployed to:"
 
 **Solution:** Workflow now includes `azd auth login` step with client secret
 
+### Issue 6: "Authorization failed for template resource" - Role Assignments
+
+**Symptom:**
+
+```text
+### Issue 6: "Authorization failed for template resource" - Role Assignments
+
+**Symptom:**
+
+```text
+Authorization failed for template resource 'xxx' of type 'Microsoft.Authorization/roleAssignments'. 
+The client does not have permission to perform action 'Microsoft.Authorization/roleAssignments/write'
+```
+
+**Cause:** Service principal lacks permission to create role assignments for managed identities
+
+**Solution:** Assign User Access Administrator role (Step 2):
+
+```bash
+az role assignment create \
+  --role "User Access Administrator" \
+  --assignee "$CLIENT_ID" \
+  --scope "/subscriptions/$SUBSCRIPTION_ID"
+```
+
+**Why This Happens:** .NET Aspire needs to assign roles to managed identities so they can access Container Registry and Storage accounts. This requires the deploying principal to have User Access Administrator permissions.
+
 ## 📝 Key Learnings
 
 1. **Federated Credentials vs Secrets:**
@@ -276,15 +310,23 @@ gh run view --log | grep "Deployed to:"
    - Defines Aspire project structure for azd
    - Points to AppHost project
 
-
 4. **Role Assignments:**
-   - Service principal needs "Contributor" role on subscription
+   - Service principal needs **both** "Contributor" and "User Access Administrator" roles
+   - Contributor: Deploy and manage Azure resources
+   - User Access Administrator: Create role assignments for managed identities
    - Assignment must be at subscription scope, not resource group
+   - **Critical:** Without User Access Administrator, .NET Aspire deployments fail when assigning roles to managed identities
 
 5. **Environment Variables:**
    - `AZURE_ENV_NAME` - deployment environment (dev/staging/prod)
    - `AZURE_LOCATION` - Azure region (eastus, westus2, etc.)
    - `AZURE_SUBSCRIPTION_ID` - target subscription
+
+6. **Managed Identity Role Assignments:**
+   - .NET Aspire automatically creates managed identities for Container Apps
+   - These identities need access to Container Registry (AcrPull role)
+   - These identities need access to Storage (Storage Blob Data Contributor)
+   - The deploying service principal must have permission to create these assignments
 
 ## 🔄 Workflow Architecture
 
@@ -312,4 +354,3 @@ graph TD
 **Status:** ✅ Deployment pipeline configured and tested  
 **Last Updated:** October 20, 2025  
 **Next:** Monitor deployment in [GitHub Actions](https://github.com/johnazariah/edumind-ai/actions)
-
