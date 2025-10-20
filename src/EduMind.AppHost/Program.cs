@@ -1,5 +1,10 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
+// Debug: Log environment information
+Console.WriteLine($"AppHost Environment: {builder.Environment.EnvironmentName}");
+Console.WriteLine($"ASPNETCORE_ENVIRONMENT: {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}");
+Console.WriteLine($"DOTNET_ENVIRONMENT: {Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")}");
+
 // Add PostgreSQL database
 var postgres = builder.AddPostgres("postgres")
     .WithDataVolume();

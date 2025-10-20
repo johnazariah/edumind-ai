@@ -39,6 +39,13 @@ jobs:
           curl -fsSL https://ollama.com/install.sh | sh
           echo "OLLAMA installed successfully"
 
+      - name: Start OLLAMA service
+        run: |
+          echo "Starting Ollama service in background..."
+          ollama serve > /tmp/ollama.log 2>&1 &
+          sleep 5
+          echo "OLLAMA service started"
+
       - name: Pull OLLAMA model (before starting services)
         run: |
           echo "Pulling model: ${{ env.OLLAMA_MODEL }}"
@@ -47,11 +54,13 @@ jobs:
           echo "Model pulled successfully"
         timeout-minutes: 15
 
-      - name: Verify OLLAMA installation
+      - name: Verify OLLAMA is running
         run: |
           ollama --version
           ollama list
-          echo "OLLAMA model ${{ env.OLLAMA_MODEL }} is ready"
+          # Verify Ollama API is responding
+          curl -sf http://localhost:11434/api/tags || (echo "Ollama not responding" && cat /tmp/ollama.log && exit 1)
+          echo "✅ OLLAMA model ${{ env.OLLAMA_MODEL }} is ready and responding"
 
       - name: Setup test infrastructure with Aspire
         run: |
@@ -70,10 +79,13 @@ jobs:
           Ollama__BaseUrl: "http://localhost:11434"
           Ollama__ModelName: ${{ env.OLLAMA_MODEL }}
           ASPNETCORE_ENVIRONMENT: Testing
+          DOTNET_ENVIRONMENT: Testing
         run: |
-          echo "Starting Aspire AppHost (orchestrates all services including Ollama)..."
+          echo "Starting Aspire AppHost with ASPNETCORE_ENVIRONMENT=Testing..."
+          echo "This should skip Ollama container and use system-installed Ollama"
           cd src/EduMind.AppHost
-          dotnet run --no-build --configuration Release &
+          # Pass environment explicitly through command line as well
+          ASPNETCORE_ENVIRONMENT=Testing DOTNET_ENVIRONMENT=Testing dotnet run --no-build --configuration Release &
           APPHOST_PID=$!
           echo "APPHOST_PID=$APPHOST_PID" >> $GITHUB_ENV
 
