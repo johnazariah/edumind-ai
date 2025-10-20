@@ -116,8 +116,9 @@ jobs:
           azd env get-values
           WEB_API_URL=$(azd env get-values | grep -i "webapi.*url\|service.*webapi" | cut -d'=' -f2- | tr -d '"' | head -1)
           if [ -z "$WEB_API_URL" ]; then
-            # Fallback: get from Azure Container Apps
-            WEB_API_URL="https://$(az containerapp show --name webapi --resource-group rg-dev --query 'properties.configuration.ingress.fqdn' -o tsv)"
+            # Fallback: get from Azure Container Apps (use environment-specific resource group)
+            RESOURCE_GROUP="rg-${{ env.AZURE_ENV_NAME }}"
+            WEB_API_URL="https://$(az containerapp show --name webapi --resource-group $RESOURCE_GROUP --query 'properties.configuration.ingress.fqdn' -o tsv)"
           fi
           echo "web-api-url=$WEB_API_URL" >> $GITHUB_OUTPUT
           echo "Deployed to: $WEB_API_URL"
