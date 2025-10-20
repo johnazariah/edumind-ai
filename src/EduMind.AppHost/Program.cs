@@ -31,6 +31,7 @@ if (builder.Environment.EnvironmentName != "Testing")
 // Add the Web API (primary backend)
 var webApiBuilder = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
     .WithHttpEndpoint(port: 5000, name: "webapi-http")  // Primary HTTP endpoint
+    .WithExternalHttpEndpoints()  // Make publicly accessible
     .WithReference(edumindDb)
     .WithReference(redis)
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
@@ -52,6 +53,7 @@ var webApi = webApiBuilder;
 
 // Add the Dashboard (Admin interface)
 builder.AddProject<Projects.AcademicAssessment_Dashboard>("dashboard")
+    .WithExternalHttpEndpoints()  // Make publicly accessible
     .WithReference(webApi)
     .WithReference(edumindDb)
     .WithReference(redis)
@@ -59,6 +61,7 @@ builder.AddProject<Projects.AcademicAssessment_Dashboard>("dashboard")
 
 // Add the Student App (Student interface)
 builder.AddProject<Projects.AcademicAssessment_StudentApp>("studentapp")
+    .WithExternalHttpEndpoints()  // Make publicly accessible
     .WithReference(webApi)
     .WithReference(edumindDb)
     .WithReference(redis)
