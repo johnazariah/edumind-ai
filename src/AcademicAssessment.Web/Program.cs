@@ -177,8 +177,12 @@ try
     // ============================================================
     // HEALTH CHECKS
     // ============================================================
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    var redisConnection = builder.Configuration.GetConnectionString("Redis");
+    // Use Aspire-provided connection strings: "edumind" for PostgreSQL and "cache" for Redis
+    // Fall back to DefaultConnection/Redis for local development
+    var connectionString = builder.Configuration.GetConnectionString("edumind") 
+        ?? builder.Configuration.GetConnectionString("DefaultConnection");
+    var redisConnection = builder.Configuration.GetConnectionString("cache")
+        ?? builder.Configuration.GetConnectionString("Redis");
 
     builder.Services.AddHealthChecks()
         .AddNpgSql(
@@ -261,7 +265,9 @@ try
     // ============================================================
     builder.Services.AddDbContext<AcademicAssessment.Infrastructure.Data.AcademicContext>(options =>
     {
-        var connectionString = builder.Configuration.GetConnectionString("AcademicDatabase")
+        // Use Aspire-provided connection string "edumind", fall back to AcademicDatabase or default
+        var connectionString = builder.Configuration.GetConnectionString("edumind")
+            ?? builder.Configuration.GetConnectionString("AcademicDatabase")
             ?? "Host=localhost;Database=edumind_dev;Username=edumind_user;Password=edumind_dev_password";
         options.UseNpgsql(connectionString);
     });
