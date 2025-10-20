@@ -42,6 +42,8 @@ properties:
             value: postgres
           - name: POSTGRES_PASSWORD
             secretRef: postgres-password
+          - name: PGDATA
+            value: /var/lib/postgresql/data/pgdata
         volumeMounts:
           - volumeName: postgres-edumindapphostfc90bfaeb5postgresdata
             mountPath: /var/lib/postgresql/data
