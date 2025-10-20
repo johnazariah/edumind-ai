@@ -20,7 +20,7 @@ env:
 jobs:
   ollama-integration-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # OLLAMA tests can be slow
+    timeout-minutes: 45 # Increased timeout for Ollama model download and inference
 
     steps:
       - name: Checkout code
@@ -39,22 +39,19 @@ jobs:
           curl -fsSL https://ollama.com/install.sh | sh
           echo "OLLAMA installed successfully"
 
-      - name: Start OLLAMA service
-        run: |
-          ollama serve &
-          sleep 5
-          echo "OLLAMA service started"
-
-      - name: Pull OLLAMA model
+      - name: Pull OLLAMA model (before starting services)
         run: |
           echo "Pulling model: ${{ env.OLLAMA_MODEL }}"
+          # Pull the model before Aspire starts (avoids timeout during AppHost startup)
           ollama pull ${{ env.OLLAMA_MODEL }}
           echo "Model pulled successfully"
+        timeout-minutes: 15
 
-      - name: Verify OLLAMA is running
+      - name: Verify OLLAMA installation
         run: |
-          curl -s http://localhost:11434/api/tags || (echo "OLLAMA not responding" && exit 1)
-          echo "OLLAMA is responding"
+          ollama --version
+          ollama list
+          echo "OLLAMA model ${{ env.OLLAMA_MODEL }} is ready"
 
       - name: Setup test infrastructure with Aspire
         run: |
@@ -74,22 +71,42 @@ jobs:
           Ollama__ModelName: ${{ env.OLLAMA_MODEL }}
           ASPNETCORE_ENVIRONMENT: Testing
         run: |
-          echo "Starting Aspire AppHost (orchestrates all services)..."
+          echo "Starting Aspire AppHost (orchestrates all services including Ollama)..."
           cd src/EduMind.AppHost
           dotnet run --no-build --configuration Release &
           APPHOST_PID=$!
           echo "APPHOST_PID=$APPHOST_PID" >> $GITHUB_ENV
 
-          # Wait for AppHost to start services (check health endpoint)
-          echo "Waiting for services to be ready..."
-          for i in {1..60}; do
-            if curl -s http://localhost:5103/health | grep -q "Healthy"; then
+          # Wait for AppHost to start services (Ollama will be started by Aspire)
+          echo "Waiting for services to be ready (including Ollama startup)..."
+          MAX_WAIT=120  # 4 minutes for all services including Ollama
+          for i in $(seq 1 $MAX_WAIT); do
+            # Check if Web API health endpoint is responding
+            if curl -sf http://localhost:5103/health > /dev/null 2>&1; then
               echo "✅ Services ready!"
-              break
+              # Verify Ollama is accessible
+              if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
+                echo "✅ Ollama is responding!"
+                break
+              else
+                echo "⚠️ Web API ready but Ollama not responding yet..."
+              fi
             fi
-            echo "Waiting for services... ($i/60)"
-            sleep 2
+            if [ $((i % 10)) -eq 0 ]; then
+              echo "Waiting for services... ($i/$MAX_WAIT seconds)"
+            fi
+            sleep 1
           done
+
+          # Final health check
+          if ! curl -sf http://localhost:5103/health > /dev/null 2>&1; then
+            echo "❌ Services failed to start within timeout"
+            # Show recent logs for debugging
+            docker logs $(docker ps -q) 2>&1 | tail -50 || true
+            exit 1
+          fi
+
+          echo "✅ All services are running and healthy"
 
       - name: Run integration tests with OLLAMA
         env:
