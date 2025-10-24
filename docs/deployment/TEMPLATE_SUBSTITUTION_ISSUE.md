@@ -11,12 +11,14 @@ The webapi container is connecting to PostgreSQL using the short hostname `postg
 ## Evidence
 
 From webapi logs:
+
 ```
 PostgreSQL Host: postgres
 PostgreSQL Database: edumind
 ```
 
 Expected:
+
 ```
 PostgreSQL Host: psql-c6fvx6uzvxmv6.postgres.database.azure.com
 PostgreSQL Database: edumind
@@ -37,6 +39,7 @@ However, the template variables `{{ .Env.POSTGRES_HOST }}`, `{{ .Env.POSTGRES_US
 ## Verification
 
 Bicep outputs ARE correct:
+
 ```bash
 POSTGRES_HOST="psql-c6fvx6uzvxmv6.postgres.database.azure.com"
 POSTGRES_DATABASE="edumind"
@@ -54,6 +57,7 @@ But the webapi secret contains `Host=postgres` (unsubstituted).
 ## Similar Issue with Redis
 
 Redis patching works because we do it at **runtime** in Program.cs, not via template substitution:
+
 ```
 Redis Host: cache.internal.kindplant-6461f562.australiaeast.azurecontainerapps.io:6379
 ```
@@ -69,6 +73,7 @@ Redis Host: cache.internal.kindplant-6461f562.australiaeast.azurecontainerapps.i
 5. THEN attempt automated deployment
 
 This will confirm whether:
+
 - The issue is azd template processing (deployment problem)
 - OR the architecture/configuration itself (fundamental problem)
 

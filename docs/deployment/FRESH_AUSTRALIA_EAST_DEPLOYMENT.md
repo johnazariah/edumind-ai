@@ -5,6 +5,7 @@
 **Run ID:** 18654916236  
 **Environment:** staging (using `rg-staging` to avoid conflict with still-deleting `rg-dev`)  
 **Previous Attempts:**
+
 - 18654670570: Failed (rg-dev still being deleted)
 - 18654845505: Skipped deploy job (prod environment has safety check for manual triggers)
 
@@ -73,13 +74,13 @@ All resources will be deployed in **Australia East**:
 ## Monitoring
 
 Watch the deployment at:
-https://github.com/johnazariah/edumind-ai/actions/runs/18654916236
+<https://github.com/johnazariah/edumind-ai/actions/runs/18654916236>
 
 Expected completion: ~10-15 minutes
 
 **Resource Group:** `rg-staging` (in Australia East)
 
-**Note:** The workflow has a safety check that prevents manual deployment to `prod` environment. 
+**Note:** The workflow has a safety check that prevents manual deployment to `prod` environment.
 Use `staging` or `dev` for manual workflow_dispatch triggers.
 
 ## Next Steps

@@ -40,7 +40,7 @@ try
     Console.WriteLine($"========================================");
     Console.WriteLine($"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff} UTC] Starting EduMind.AI Web API");
     Console.WriteLine($"========================================");
-    
+
     Log.Information("Starting EduMind.AI Web API");
 
     var builder = WebApplication.CreateBuilder(args);
@@ -297,11 +297,13 @@ try
         .AddNpgSql(
             connectionString ?? "Host=localhost;Database=edumind_dev;Username=edumind_user;Password=edumind_dev_password",
             name: "postgresql",
+            failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
             tags: new[] { "db", "postgresql", "ready" })
         .AddRedis(
             redisConnection ?? "localhost:6379",
             name: "redis",
-            tags: new[] { "cache", "redis", "ready" });    // ============================================================
+            failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded,  // Redis failure = Degraded, not Unhealthy
+            tags: new[] { "cache", "redis" });    // ============================================================
     // SWAGGER/OPENAPI CONFIGURATION
     // ============================================================
     builder.Services.AddEndpointsApiExplorer();

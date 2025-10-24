@@ -4,7 +4,7 @@
 
 **Environment:** `rg-staging` in Australia East  
 **Status:** ⚠️ Infrastructure deployed but application unhealthy  
-**Health Endpoint:** https://webapi.kindplant-6461f562.australiaeast.azurecontainerapps.io/health  
+**Health Endpoint:** <https://webapi.kindplant-6461f562.australiaeast.azurecontainerapps.io/health>  
 **Result:** Returns "Unhealthy"
 
 ## What's Working ✅
@@ -46,6 +46,7 @@
 **CRITICAL ISSUE:** The `src/infra/webapi.tmpl.yaml` template variables are NOT being substituted during `azd deploy`.
 
 **Template contains:**
+
 ```yaml
 secrets:
   - name: connectionstrings--edumind
@@ -53,16 +54,19 @@ secrets:
 ```
 
 **Expected after substitution:**
+
 ```
 Host=psql-c6fvx6uzvxmv6.postgres.database.azure.com;Port=5432;...
 ```
 
 **Actual value in container:**
+
 ```
 Host=postgres;Port=5432;...
 ```
 
 **Evidence from logs:**
+
 ```
 PostgreSQL Host: postgres
 PostgreSQL Database: edumind
@@ -71,12 +75,14 @@ PostgreSQL Database: edumind
 ### Health Check Failures
 
 Both PostgreSQL and Redis health checks fail:
+
 - PostgreSQL: Timeout trying to connect to `postgres` (short hostname)
 - Redis: Connection failures (despite correct hostname patching)
 
 ## Timeline of Attempts
 
 ### Attempt 1: East US Deployment (Failed)
+
 - Deployed Container Apps to East US
 - PostgreSQL to Australia East (quota issues in East US)
 - Cross-region networking issues
@@ -84,12 +90,14 @@ Both PostgreSQL and Redis health checks fail:
 - **Result:** Unhealthy, cross-region latency/connectivity issues
 
 ### Attempt 2: Template Variable Injection (Failed)
+
 - Attempted to inject `AZURE_CONTAINER_APPS_ENVIRONMENT_DEFAULT_DOMAIN` via template
 - Template syntax issues (`{{ }}` spacing)
 - azd not updating container apps with template changes
 - **Result:** Environment variable never set
 
 ### Attempt 3: Runtime Domain Detection (Partial Success)
+
 - Implemented detection from `CONTAINER_APP_HOSTNAME`
 - Added connection string patching in Program.cs
 - Redis patching works
@@ -97,12 +105,14 @@ Both PostgreSQL and Redis health checks fail:
 - **Result:** Works for Redis, but doesn't help with Azure Database
 
 ### Attempt 4: Migrate to Azure Database for PostgreSQL (Infrastructure Success, Template Failure)
+
 - Added PostgreSQL Flexible Server to Bicep
 - Updated webapi template to use `{{ .Env.POSTGRES_HOST }}`
 - Bicep outputs correct
 - **Result:** Infrastructure deployed, template variables not substituted
 
 ### Attempt 5: Fresh Deployment in Australia East (Current State)
+
 - Deleted old resource group
 - Deployed everything to Australia East (single region)
 - Enhanced logging added
@@ -113,12 +123,14 @@ Both PostgreSQL and Redis health checks fail:
 ### Template Substitution Failure
 
 The issue is NOT with:
+
 - ❌ Infrastructure configuration (PostgreSQL is working)
 - ❌ Network connectivity (all in same region)
 - ❌ Bicep outputs (verified correct)
 - ❌ Runtime code (patching logic works for Redis)
 
 The issue IS with:
+
 - ✅ **azd template processing** - Variables like `{{ .Env.POSTGRES_HOST }}` are not being substituted
 - ✅ **Deployment timing** - Container apps may be deployed before PostgreSQL outputs are available
 - ✅ **Variable scope** - `.Env.*` variables may not be in scope during template processing
@@ -126,11 +138,13 @@ The issue IS with:
 ### Comparison: What Works vs What Doesn't
 
 **Redis (WORKS):**
+
 - Short hostname `cache` in template
 - Runtime patching in Program.cs converts to FQDN
 - Logs show: `cache.internal.kindplant-6461f562.australiaeast.azurecontainerapps.io:6379`
 
 **PostgreSQL (DOESN'T WORK):**
+
 - Template tries to use `{{ .Env.POSTGRES_HOST }}`
 - Variable not substituted
 - Connection string has `postgres` instead of Azure Database FQDN
@@ -199,6 +213,7 @@ The issue IS with:
 6. ❓ Confirm all components can communicate
 
 **Why:** This proves whether the issue is:
+
 - **Deployment tooling (azd)** - we can work around this
 - **Fundamental architecture** - we need to rethink approach
 
@@ -237,6 +252,7 @@ if (!string.IsNullOrEmpty(pgHost))
 ```
 
 This approach:
+
 - ✅ Bypasses template substitution entirely
 - ✅ Uses environment variables (which DO work)
 - ✅ More transparent and debuggable
@@ -244,6 +260,7 @@ This approach:
 ### 4. Consider Aspire Alternatives
 
 If azd template processing continues to be unreliable:
+
 - Pulumi (TypeScript/Python infrastructure as code)
 - Terraform with Azure Provider
 - Plain Azure CLI scripts
@@ -252,19 +269,23 @@ If azd template processing continues to be unreliable:
 ## Files Changed
 
 ### Infrastructure
+
 - `infra/main.bicep` - Added PostgreSQL outputs
 - `infra/resources.bicep` - Added PostgreSQL Flexible Server
 - `src/infra/webapi.tmpl.yaml` - Updated connection string template (not working)
 
 ### Code
+
 - `src/AcademicAssessment.Web/Program.cs` - Enhanced logging, runtime domain detection
 
 ### Documentation
+
 - `docs/deployment/FRESH_AUSTRALIA_EAST_DEPLOYMENT.md`
 - `docs/deployment/TEMPLATE_SUBSTITUTION_ISSUE.md`
 - `docs/deployment/DEPLOYMENT_STATUS_2025-10-20.md` (this file)
 
 ### Workflow
+
 - `.github/workflows/deploy-azure-azd.yml` - Fixed hardcoded `rg-dev` reference
 
 ## Resources Deployed
@@ -284,6 +305,7 @@ If azd template processing continues to be unreliable:
 | Managed Identity | mi-c6fvx6uzvxmv6 | ✅ Running | Authentication |
 
 **Total Monthly Cost Estimate:** ~$30-50
+
 - PostgreSQL B1ms: ~$12-15
 - Container Apps: ~$10-20
 - Redis: ~$5-10
@@ -292,12 +314,14 @@ If azd template processing continues to be unreliable:
 ## Conclusion
 
 We have successfully:
+
 1. ✅ Migrated from containerized PostgreSQL to Azure Database for PostgreSQL
 2. ✅ Deployed all infrastructure to a single region (Australia East)
 3. ✅ Added comprehensive logging
 4. ✅ Identified the root cause (template variable substitution)
 
 We need to:
+
 1. ❓ Test local connectivity to validate fundamentals
 2. ❓ Implement workaround for template substitution issue
 3. ❓ Get health checks passing
