@@ -2,12 +2,27 @@ using AcademicAssessment.StudentApp.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add Aspire ServiceDefaults (OpenTelemetry, Service Discovery, Health Checks)
-builder.AddServiceDefaults();
+// For local development, use minimal ServiceDefaults without service discovery
+// Comment this line out for Aspire orchestration
+// builder.AddServiceDefaults();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Configure HTTP client for API calls
+builder.Services.AddHttpClient("ApiClient", client =>
+{
+    // For local development, use localhost. In production/Aspire, this will be overridden by service discovery
+    client.BaseAddress = new Uri("http://localhost:5103/");
+});
+
+// Register a default HttpClient using the configured ApiClient
+builder.Services.AddScoped<HttpClient>(serviceProvider =>
+{
+    var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+    return httpClientFactory.CreateClient("ApiClient");
+});
 
 var app = builder.Build();
 
@@ -28,6 +43,7 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 // Map Aspire default endpoints (health checks, etc.)
-app.MapDefaultEndpoints();
+// Comment this line out for local development
+// app.MapDefaultEndpoints();
 
 app.Run();

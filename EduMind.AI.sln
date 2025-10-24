@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EduMind.AppHost", "src\EduM
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EduMind.ServiceDefaults", "src\EduMind.ServiceDefaults\EduMind.ServiceDefaults.csproj", "{93A1AA10-A74D-4FE8-8E82-F183072769C7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AcademicAssessment.Tests.UI", "tests\AcademicAssessment.Tests.UI\AcademicAssessment.Tests.UI.csproj", "{FE9D3B0A-BAD7-4C52-8761-99188F587E02}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -199,6 +201,18 @@ Global
 		{93A1AA10-A74D-4FE8-8E82-F183072769C7}.Release|x64.Build.0 = Release|Any CPU
 		{93A1AA10-A74D-4FE8-8E82-F183072769C7}.Release|x86.ActiveCfg = Release|Any CPU
 		{93A1AA10-A74D-4FE8-8E82-F183072769C7}.Release|x86.Build.0 = Release|Any CPU
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02}.Debug|x64.Build.0 = Debug|Any CPU
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02}.Debug|x86.Build.0 = Debug|Any CPU
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02}.Release|x64.ActiveCfg = Release|Any CPU
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02}.Release|x64.Build.0 = Release|Any CPU
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02}.Release|x86.ActiveCfg = Release|Any CPU
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -217,5 +231,6 @@ Global
 		{D6FE4A75-FD24-44C9-9AAE-A9CDEECC11EC} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{6141A869-AEC4-4380-95A4-F14988489E6C} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{93A1AA10-A74D-4FE8-8E82-F183072769C7} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{FE9D3B0A-BAD7-4C52-8761-99188F587E02} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

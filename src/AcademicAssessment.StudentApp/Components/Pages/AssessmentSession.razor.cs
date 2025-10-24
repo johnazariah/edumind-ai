@@ -85,7 +85,7 @@ public partial class AssessmentSession : IDisposable
 
         try
         {
-            session = await Http.GetFromJsonAsync<AssessmentSessionDto>($"http://academicassessment-web/api/v1/assessment/{AssessmentId}/session");
+            session = await Http.GetFromJsonAsync<AssessmentSessionDto>($"api/v1/assessment/{AssessmentId}/session");
             if (session is null)
             {
                 errorMessage = "We could not start this assessment session.";

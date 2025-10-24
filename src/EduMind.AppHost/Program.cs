@@ -5,56 +5,29 @@ Console.WriteLine($"AppHost Environment: {builder.Environment.EnvironmentName}")
 Console.WriteLine($"ASPNETCORE_ENVIRONMENT: {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}");
 Console.WriteLine($"DOTNET_ENVIRONMENT: {Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")}");
 
-// Add PostgreSQL database
-var postgres = builder.AddPostgres("postgres")
-    .WithDataVolume();
+// For local development, use existing external services
+// Add PostgreSQL database reference (pointing to existing container)
+var postgres = builder.AddConnectionString("postgres", "Host=localhost;Port=5432;Database=edumind_dev;Username=edumind_user;Password=password123");
 
-var edumindDb = postgres.AddDatabase("edumind");
+// Add Redis cache reference (pointing to existing container)  
+var redis = builder.AddConnectionString("cache", "localhost:6379");
 
-// Add Redis cache
-var redis = builder.AddRedis("cache")
-    .WithDataVolume();
-
-// Add OLLAMA (conditional based on environment)
-// In Testing/CI, Ollama is pre-installed on the system and we'll use http://localhost:11434 directly
-// In Development, use containerized Ollama for isolation
-IResourceBuilder<ContainerResource>? ollamaContainer = null;
-
-if (builder.Environment.EnvironmentName != "Testing")
-{
-    // Use containerized Ollama (for local development)
-    ollamaContainer = builder.AddContainer("ollama", "ollama/ollama")
-        .WithBindMount("./ollama-data", "/root/.ollama")
-        .WithHttpEndpoint(port: 11434, targetPort: 11434, name: "ollama");
-}
+// Add OLLAMA reference (pointing to existing service)
+var ollama = builder.AddConnectionString("ollama", "http://localhost:11434");
 
 // Add the Web API (primary backend)
-var webApiBuilder = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
+var webApi = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
     .WithExternalHttpEndpoints()  // Make publicly accessible
-    .WithReference(edumindDb)
+    .WithReference(postgres)
     .WithReference(redis)
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
-
-// Configure Ollama connection based on environment
-if (ollamaContainer != null)
-{
-    // In Development mode, wait for containerized Ollama and use its endpoint
-    webApiBuilder.WaitFor(ollamaContainer)
-        .WithEnvironment("Ollama__BaseUrl", ollamaContainer.GetEndpoint("ollama"));
-}
-else
-{
-    // In Testing mode, use system-installed Ollama
-    webApiBuilder.WithEnvironment("Ollama__BaseUrl", "http://localhost:11434");
-}
-
-var webApi = webApiBuilder;
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
+    .WithEnvironment("Ollama__BaseUrl", "http://localhost:11434");
 
 // Add the Dashboard (Admin interface)
 builder.AddProject<Projects.AcademicAssessment_Dashboard>("dashboard")
     .WithExternalHttpEndpoints()  // Make publicly accessible
     .WithReference(webApi)
-    .WithReference(edumindDb)
+    .WithReference(postgres)
     .WithReference(redis)
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
 
@@ -62,7 +35,7 @@ builder.AddProject<Projects.AcademicAssessment_Dashboard>("dashboard")
 builder.AddProject<Projects.AcademicAssessment_StudentApp>("studentapp")
     .WithExternalHttpEndpoints()  // Make publicly accessible
     .WithReference(webApi)
-    .WithReference(edumindDb)
+    .WithReference(postgres)
     .WithReference(redis)
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
 

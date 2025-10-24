@@ -27,7 +27,7 @@ public partial class AssessmentDetail
 
         try
         {
-            assessment = await Http.GetFromJsonAsync<AssessmentSummary>($"http://academicassessment-web/api/v1/assessment/{AssessmentId}");
+            assessment = await Http.GetFromJsonAsync<AssessmentSummary>($"api/v1/assessment/{AssessmentId}");
         }
         catch (Exception ex)
         {

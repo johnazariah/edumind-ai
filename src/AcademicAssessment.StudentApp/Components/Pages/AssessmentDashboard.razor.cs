@@ -36,8 +36,8 @@ public partial class AssessmentDashboard
     {
         try
         {
-            // The service name 'academicassessment-web' is automatically resolved by Aspire's service discovery.
-            assessments = await Http.GetFromJsonAsync<List<AssessmentSummary>>("http://academicassessment-web/api/v1/assessment");
+            // Use relative path since base address is configured in Program.cs
+            assessments = await Http.GetFromJsonAsync<List<AssessmentSummary>>("api/v1/assessment");
         }
         catch (Exception ex)
         {
