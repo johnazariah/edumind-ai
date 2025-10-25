@@ -47,10 +47,11 @@
 
 ### Phase 3: Azure Infrastructure (9 hours)
 
-- [ ] **Task 6:** Update Bicep Templates for Aspire Azure Deployment (6 hours)
+- [x] **Task 6:** Update Bicep Templates for Aspire Azure Deployment (6 hours)
   - Azure PostgreSQL Flexible Server
   - Service bindings for Container Apps
   - Managed identity configuration
+  - **Completed:** 2025-10-25 (used azd infra generate from updated AppHost)
 
 - [ ] **Task 7:** Update Azure Deployment Workflow (3 hours)
   - Update azure.yaml for Aspire
@@ -85,16 +86,53 @@
 ## Progress Tracking
 
 **Total Tasks:** 12  
-**Completed:** 5  
-**In Progress:** 1 (Task 6)  
+**Completed:** 6  
+**In Progress:** 1 (Task 11 - Local Testing)  
 **Blocked:** 0  
 
 **Estimated Total Effort:** 39 hours (~2 weeks)  
-**Actual Time Spent:** ~8 hours
+**Actual Time Spent:** ~15 hours
 
 ---
 
 ## Notes
+
+### 2025-10-25: Task 6 Complete - Azure Bicep Generation
+
+**Approach:**
+Instead of manually updating Bicep templates, used `azd infra generate` to auto-generate Aspire-compatible infrastructure from AppHost configuration.
+
+**Key Changes:**
+
+1. Added Azure hosting packages to AppHost:
+   - `Aspire.Hosting.Azure.PostgreSQL` 9.5.1
+   - `Aspire.Hosting.Azure.Redis` 9.5.1
+
+2. Updated AppHost with publish mode detection:
+
+   ```csharp
+   if (builder.ExecutionContext.IsPublishMode) {
+       // Azure: AddAzurePostgresFlexibleServer, AddAzureRedis
+   } else {
+       // Local: AddPostgres, AddRedis (containers)
+   }
+   ```
+
+3. Generated modular Bicep files:
+   - `infra/postgres/postgres.module.bicep` - Azure PostgreSQL Flexible Server with Entra ID auth
+   - `infra/cache/cache.module.bicep` - Azure Cache for Redis with Entra ID auth
+   - `infra/postgres-roles/` - RBAC assignments
+   - `infra/cache-roles/` - RBAC assignments
+
+**Benefits:**
+
+- No manual Bicep authoring - generated from code
+- Service bindings automatically configured
+- Entra ID authentication (passwordless)
+- Modern API versions (2024-11-01 Redis, 2024-08-01 Postgres)
+- `aspire-resource-name` tags for service discovery
+
+**Next:** Test local deployment (Task 11), then Azure deployment (Task 12)
 
 ### 2025-10-25: Tasks 1-5 Complete
 
