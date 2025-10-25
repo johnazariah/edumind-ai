@@ -5,15 +5,25 @@ Console.WriteLine($"AppHost Environment: {builder.Environment.EnvironmentName}")
 Console.WriteLine($"ASPNETCORE_ENVIRONMENT: {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}");
 Console.WriteLine($"DOTNET_ENVIRONMENT: {Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")}");
 
-// For local development, use existing external services
-// Add PostgreSQL database reference (pointing to existing container)
-var postgres = builder.AddConnectionString("postgres", "Host=localhost;Port=5432;Database=edumind_dev;Username=edumind_user;Password=password123");
+// PostgreSQL with Aspire service discovery
+// Aspire manages the container lifecycle and connection strings automatically
+var postgres = builder.AddPostgres("postgres", port: 5432)
+    .WithLifetime(ContainerLifetime.Persistent)  // Keep data between runs
+    .WithEnvironment("POSTGRES_DB", "edumind_dev")
+    .WithEnvironment("POSTGRES_USER", "edumind_user")
+    .WithEnvironment("POSTGRES_PASSWORD", "password123")
+    .AddDatabase("edumind");
 
-// Add Redis cache reference (pointing to existing container)  
-var redis = builder.AddConnectionString("cache", "localhost:6379");
+// Redis cache with Aspire service discovery
+var redis = builder.AddRedis("cache", port: 6379)
+    .WithLifetime(ContainerLifetime.Persistent);  // Keep data between runs
 
-// Add OLLAMA reference (pointing to existing service)
-var ollama = builder.AddConnectionString("ollama", "http://localhost:11434");
+// Ollama (local development only - won't deploy to Azure)
+// Using AddContainer for services not yet supported by Aspire hosting packages
+var ollama = builder.AddContainer("ollama", "ollama/ollama", "latest")
+    .WithHttpEndpoint(port: 11434, targetPort: 11434, name: "ollama-http")
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithBindMount(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ollama"), "/root/.ollama");
 
 // Add the Web API (primary backend)
 var webApi = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
@@ -21,13 +31,12 @@ var webApi = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
     .WithReference(postgres)
     .WithReference(redis)
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
-    .WithEnvironment("Ollama__BaseUrl", "http://localhost:11434");
+    .WithEnvironment("Ollama__BaseUrl", ollama.GetEndpoint("ollama-http"));
 
 // Add the Dashboard (Admin interface)
 builder.AddProject<Projects.AcademicAssessment_Dashboard>("dashboard")
     .WithExternalHttpEndpoints()  // Make publicly accessible
     .WithReference(webApi)
-    .WithReference(postgres)
     .WithReference(redis)
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
 
@@ -35,7 +44,6 @@ builder.AddProject<Projects.AcademicAssessment_Dashboard>("dashboard")
 builder.AddProject<Projects.AcademicAssessment_StudentApp>("studentapp")
     .WithExternalHttpEndpoints()  // Make publicly accessible
     .WithReference(webApi)
-    .WithReference(postgres)
     .WithReference(redis)
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
 

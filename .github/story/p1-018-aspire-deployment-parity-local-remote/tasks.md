@@ -92,6 +92,7 @@
 ## Notes
 
 ### 2025-10-25: Story Created
+
 - Comprehensive specification written
 - 12 tasks defined with clear acceptance criteria
 - Ready to begin implementation
@@ -105,5 +106,6 @@
 **Blockers:** None
 
 **Questions:**
+
 - Should we keep Ollama for local dev or switch to Azure OpenAI everywhere?
 - PgAdmin for local development - include or skip?

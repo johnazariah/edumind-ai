@@ -13,18 +13,21 @@
 The application currently has **divergent code paths** for local and remote deployment:
 
 **Local Development:**
+
 - Uses hardcoded `AddConnectionString()` with localhost URLs
 - Services reference external containers via `localhost:5432`, `localhost:6379`
 - No service discovery - manual configuration
 - Aspire orchestration but not leveraging Aspire's service discovery features
 
 **Azure Remote:**
+
 - Bicep templates create Azure Container Apps
 - Manual connection string management
 - Different environment variable patterns
 - Services need to know exact hostnames/ports
 
 **The Problem:**
+
 - "Works on my machine" syndrome
 - Deployment configuration drift
 - Different service discovery mechanisms locally vs remotely
@@ -84,6 +87,7 @@ var webApi = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
 ```
 
 **Problem:** This doesn't work in Azure because:
+
 - `localhost` doesn't resolve to external Azure services
 - Services need to know exact Azure hostnames
 - No automatic service discovery
@@ -110,6 +114,7 @@ var webApi = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
 ```
 
 **Benefits:**
+
 - **Local:** Aspire starts PostgreSQL/Redis containers with discovery
 - **Azure:** Aspire generates Azure Container Apps with service bindings
 - **Services:** Use `IConfiguration` or Aspire service discovery client - same code both environments
@@ -168,15 +173,18 @@ var webApi = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
 ## Task Decomposition
 
 ### Task 1: Update AppHost to Use Aspire Resource APIs
+
 **Estimated Time:** 4 hours
 
 **Description:**
 Convert `EduMind.AppHost/Program.cs` from `AddConnectionString` to Aspire's native resource APIs.
 
 **Files to Modify:**
+
 - `src/EduMind.AppHost/Program.cs`
 
 **Implementation:**
+
 ```csharp
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -220,6 +228,7 @@ builder.Build().Run();
 ```
 
 **Acceptance:**
+
 - [ ] Aspire starts PostgreSQL container automatically
 - [ ] Aspire starts Redis container automatically
 - [ ] Services receive connection strings via environment variables
@@ -228,15 +237,18 @@ builder.Build().Run();
 ---
 
 ### Task 2: Add Aspire NuGet Packages to AppHost
+
 **Estimated Time:** 1 hour
 
 **Description:**
 Install required Aspire hosting packages for PostgreSQL, Redis, and container support.
 
 **Files to Modify:**
+
 - `src/EduMind.AppHost/EduMind.AppHost.csproj`
 
 **Implementation:**
+
 ```xml
 <ItemGroup>
   <!-- Aspire Hosting Packages -->
@@ -250,6 +262,7 @@ Install required Aspire hosting packages for PostgreSQL, Redis, and container su
 ```
 
 **Acceptance:**
+
 - [ ] Packages restore successfully
 - [ ] No version conflicts
 - [ ] Build succeeds
@@ -257,12 +270,14 @@ Install required Aspire hosting packages for PostgreSQL, Redis, and container su
 ---
 
 ### Task 3: Update Web API to Use Aspire Service Discovery
+
 **Estimated Time:** 3 hours
 
 **Description:**
 Remove hardcoded connection strings from Web API and use Aspire's injected configuration.
 
 **Files to Modify:**
+
 - `src/AcademicAssessment.Web/Program.cs`
 - `src/AcademicAssessment.Web/appsettings.json`
 - `src/AcademicAssessment.Web/AcademicAssessment.Web.csproj`
@@ -270,6 +285,7 @@ Remove hardcoded connection strings from Web API and use Aspire's injected confi
 **Implementation:**
 
 **AcademicAssessment.Web.csproj:**
+
 ```xml
 <ItemGroup>
   <!-- Aspire Service Discovery Client -->
@@ -279,6 +295,7 @@ Remove hardcoded connection strings from Web API and use Aspire's injected confi
 ```
 
 **Program.cs:**
+
 ```csharp
 // Before:
 // builder.Configuration.GetConnectionString("PostgreSQL")
@@ -294,6 +311,7 @@ builder.AddRedisClient("cache");
 ```
 
 **appsettings.json (remove hardcoded connections):**
+
 ```json
 {
   // Remove these - Aspire injects them:
@@ -304,6 +322,7 @@ builder.AddRedisClient("cache");
 ```
 
 **Acceptance:**
+
 - [ ] Web API starts without hardcoded connection strings
 - [ ] Database context connects successfully
 - [ ] Redis cache operations work
@@ -312,18 +331,21 @@ builder.AddRedisClient("cache");
 ---
 
 ### Task 4: Update Dashboard to Use Service Discovery for Web API
+
 **Estimated Time:** 2 hours
 
 **Description:**
 Replace hardcoded Web API URLs with Aspire service discovery.
 
 **Files to Modify:**
+
 - `src/AcademicAssessment.Dashboard/Program.cs`
 - `src/AcademicAssessment.Dashboard/AcademicAssessment.Dashboard.csproj`
 
 **Implementation:**
 
 **AcademicAssessment.Dashboard.csproj:**
+
 ```xml
 <ItemGroup>
   <!-- Aspire Service Discovery -->
@@ -333,6 +355,7 @@ Replace hardcoded Web API URLs with Aspire service discovery.
 ```
 
 **Program.cs:**
+
 ```csharp
 // Before:
 // builder.Services.AddHttpClient("WebApi", client => 
@@ -354,6 +377,7 @@ builder.AddRedisClient("cache");
 ```
 
 **Acceptance:**
+
 - [ ] Dashboard discovers Web API URL automatically
 - [ ] HTTP calls to Web API succeed
 - [ ] SignalR connections work (via Redis backplane)
@@ -362,18 +386,21 @@ builder.AddRedisClient("cache");
 ---
 
 ### Task 5: Update Student App to Use Service Discovery
+
 **Estimated Time:** 2 hours
 
 **Description:**
 Same as Task 4 but for Student App.
 
 **Files to Modify:**
+
 - `src/AcademicAssessment.StudentApp/Program.cs`
 - `src/AcademicAssessment.StudentApp/AcademicAssessment.StudentApp.csproj`
 
 **Implementation:** (Same pattern as Task 4)
 
 **Acceptance:**
+
 - [ ] Student App discovers Web API URL automatically
 - [ ] HTTP calls to Web API succeed
 - [ ] SignalR connections work
@@ -382,12 +409,14 @@ Same as Task 4 but for Student App.
 ---
 
 ### Task 6: Update Bicep Templates for Aspire Azure Deployment
+
 **Estimated Time:** 6 hours
 
 **Description:**
 Modify Bicep templates to generate Aspire-compatible Azure Container Apps with service bindings.
 
 **Files to Modify:**
+
 - `infra/main.bicep`
 - `infra/resources.bicep`
 - `azure.yaml` (azd configuration)
@@ -395,12 +424,14 @@ Modify Bicep templates to generate Aspire-compatible Azure Container Apps with s
 **Implementation:**
 
 **Key Changes:**
+
 1. **Use Azure Database for PostgreSQL Flexible Server** (not container)
 2. **Add Service Bindings** in Container Apps for automatic connection injection
 3. **Configure Internal Ingress** for service-to-service communication
 4. **Add Managed Identity** for secure connections
 
 **resources.bicep example:**
+
 ```bicep
 // PostgreSQL Flexible Server
 resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-03-01-preview' = {
@@ -473,6 +504,7 @@ resource webApi 'Microsoft.App/containerApps@2024-03-01' = {
 ```
 
 **Acceptance:**
+
 - [ ] Bicep templates deploy successfully
 - [ ] Azure services have service bindings configured
 - [ ] Connection strings automatically injected
@@ -481,18 +513,21 @@ resource webApi 'Microsoft.App/containerApps@2024-03-01' = {
 ---
 
 ### Task 7: Update Azure Deployment Workflow
+
 **Estimated Time:** 3 hours
 
 **Description:**
 Update CI/CD pipeline to deploy using Aspire manifest and azd.
 
 **Files to Modify:**
+
 - `.github/workflows/azure-deploy.yml`
 - `azure.yaml`
 
 **Implementation:**
 
 **azure.yaml:**
+
 ```yaml
 name: edumind-ai
 metadata:
@@ -520,6 +555,7 @@ aspire:
 ```
 
 **Acceptance:**
+
 - [ ] `azd deploy` succeeds
 - [ ] Services deploy to Azure Container Apps
 - [ ] Service discovery works in Azure
@@ -528,15 +564,18 @@ aspire:
 ---
 
 ### Task 8: Add Environment Detection Logic
+
 **Estimated Time:** 2 hours
 
 **Description:**
 Add logic to handle environment-specific differences (e.g., Ollama local only, Azure OpenAI in production).
 
 **Files to Modify:**
+
 - `src/EduMind.AppHost/Program.cs`
 
 **Implementation:**
+
 ```csharp
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -568,6 +607,7 @@ if (aiService != null)
 ```
 
 **Acceptance:**
+
 - [ ] Local development uses Ollama
 - [ ] Azure deployment skips Ollama, uses Azure OpenAI
 - [ ] Services handle AI service differences gracefully
@@ -575,18 +615,21 @@ if (aiService != null)
 ---
 
 ### Task 9: Update Integration Tests for Service Discovery
+
 **Estimated Time:** 4 hours
 
 **Description:**
 Update integration tests to use Aspire test host instead of hardcoded URLs.
 
 **Files to Modify:**
+
 - `tests/AcademicAssessment.Tests.Integration/WebApplicationFactoryFixture.cs`
 - `tests/AcademicAssessment.Tests.Integration/AcademicAssessment.Tests.Integration.csproj`
 
 **Implementation:**
 
 **AcademicAssessment.Tests.Integration.csproj:**
+
 ```xml
 <ItemGroup>
   <PackageReference Include="Aspire.Hosting.Testing" Version="9.5.1" />
@@ -594,6 +637,7 @@ Update integration tests to use Aspire test host instead of hardcoded URLs.
 ```
 
 **WebApplicationFactoryFixture.cs:**
+
 ```csharp
 public class AspireIntegrationTestFixture : IAsyncLifetime
 {
@@ -622,6 +666,7 @@ public class AspireIntegrationTestFixture : IAsyncLifetime
 ```
 
 **Acceptance:**
+
 - [ ] Integration tests start Aspire test host
 - [ ] Services discover each other in tests
 - [ ] No hardcoded URLs in tests
@@ -630,12 +675,14 @@ public class AspireIntegrationTestFixture : IAsyncLifetime
 ---
 
 ### Task 10: Update Documentation
+
 **Estimated Time:** 3 hours
 
 **Description:**
 Update all deployment documentation to reflect unified Aspire approach.
 
 **Files to Modify:**
+
 - `.github/deployment/playbook/01-first-time-local-setup.md`
 - `.github/deployment/playbook/02-daily-development-workflow.md`
 - `.github/deployment/playbook/03-first-time-azure-deployment.md`
@@ -643,12 +690,14 @@ Update all deployment documentation to reflect unified Aspire approach.
 - `README.md`
 
 **Key Updates:**
+
 - Remove references to manual Docker container setup
 - Document Aspire's automatic container management
 - Update connection string configuration instructions
 - Add service discovery troubleshooting
 
 **Acceptance:**
+
 - [ ] Documentation accurately reflects new Aspire approach
 - [ ] Step-by-step instructions updated
 - [ ] Architecture diagrams show service discovery
@@ -657,14 +706,16 @@ Update all deployment documentation to reflect unified Aspire approach.
 ---
 
 ### Task 11: Local Testing & Validation
+
 **Estimated Time:** 4 hours
 
 **Description:**
 Comprehensive testing of local Aspire deployment.
 
 **Test Checklist:**
+
 - [ ] `dotnet run --project src/EduMind.AppHost` starts successfully
-- [ ] Aspire Dashboard accessible (usually https://localhost:15000)
+- [ ] Aspire Dashboard accessible (usually <https://localhost:15000>)
 - [ ] PostgreSQL container starts and is healthy
 - [ ] Redis container starts and is healthy
 - [ ] Ollama container starts and is healthy (if used)
@@ -677,6 +728,7 @@ Comprehensive testing of local Aspire deployment.
 - [ ] Blazor apps render correctly and communicate with API
 
 **Acceptance:**
+
 - [ ] All local tests pass
 - [ ] No hardcoded connection strings remain
 - [ ] Services discover each other automatically
@@ -685,12 +737,14 @@ Comprehensive testing of local Aspire deployment.
 ---
 
 ### Task 12: Azure Deployment & Validation
+
 **Estimated Time:** 6 hours
 
 **Description:**
 Deploy to Azure and validate service discovery works remotely.
 
 **Deployment Steps:**
+
 ```bash
 # Login to Azure
 azd auth login
@@ -703,6 +757,7 @@ azd deploy
 ```
 
 **Validation Checklist:**
+
 - [ ] `azd deploy` completes without errors
 - [ ] All Container Apps deploy successfully
 - [ ] PostgreSQL Flexible Server provisioned
@@ -717,6 +772,7 @@ azd deploy
 - [ ] No "connection refused" or DNS errors
 
 **Acceptance:**
+
 - [ ] Azure deployment fully functional
 - [ ] Same code works locally and remotely
 - [ ] No deployment-specific code changes needed
@@ -753,13 +809,16 @@ azd deploy
 ## Dependencies
 
 **Blocked By:**
+
 - None (can start immediately)
 
 **Blocks:**
+
 - Story 007 (Multi-tenant Physical Isolation) - Needs unified connection management
 - Story 011 (Monitoring & Alerting) - Should use Aspire's built-in telemetry
 
 **Related:**
+
 - Story 005 (Optimize Ollama) - Local AI service configuration
 - Story 012 (Rate Limiting) - Service-to-service communication patterns
 
@@ -796,6 +855,7 @@ azd deploy
 ### Rollback Plan
 
 If deployment parity fails:
+
 1. Revert AppHost changes (keep `AddConnectionString`)
 2. Use environment-specific configuration branches
 3. Document limitations and plan future retry
