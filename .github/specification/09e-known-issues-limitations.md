@@ -37,7 +37,7 @@ This document tracks known issues, bugs, limitations, and technical debt across 
 **Status:** 🔴 **BLOCKED - Awaiting Framework Fix**  
 **Severity:** HIGH - Blocks all integration tests  
 **Affected Version:** .NET 9.0.10  
-**GitHub Issue:** https://github.com/dotnet/aspnetcore/issues/52187
+**GitHub Issue:** <https://github.com/dotnet/aspnetcore/issues/52187>
 
 #### Summary
 
@@ -659,7 +659,7 @@ This bypasses OLLAMA entirely for faster testing.
 
 ### How to Report Issues
 
-1. **Create GitHub Issue:** https://github.com/johnazariah/edumind-ai/issues
+1. **Create GitHub Issue:** <https://github.com/johnazariah/edumind-ai/issues>
 2. **Include:**
    - Clear title
    - Steps to reproduce

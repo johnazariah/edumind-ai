@@ -92,6 +92,7 @@ Student/teacher/admin authentication and role management.
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Last modified |
 
 **Indexes:**
+
 - `email` (UNIQUE)
 - `external_id` (UNIQUE)
 - `school_id`
@@ -116,10 +117,12 @@ Educational institutions with dedicated databases.
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Last modified |
 
 **Computed Properties (not stored):**
+
 - `connection_string_key` = `"School-{Id}-ConnectionString"`
 - `database_name` = `"edumind_school_{code}_{id}"`
 
 **Indexes:**
+
 - `code` (UNIQUE)
 - `is_active`
 
@@ -145,6 +148,7 @@ Student groups with teacher assignments.
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Last modified |
 
 **Indexes:**
+
 - `school_id`
 - `(school_id, code)` (UNIQUE)
 - `grade_level`
@@ -176,6 +180,7 @@ Learners with gamification features.
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Last modified |
 
 **Indexes:**
+
 - `user_id` (UNIQUE)
 - `school_id`
 - `grade_level`
@@ -206,6 +211,7 @@ Curriculum definitions (global, not school-specific).
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Last modified |
 
 **Indexes:**
+
 - `code` (UNIQUE)
 - `subject`
 - `grade_level`
@@ -238,6 +244,7 @@ Collections of questions.
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Last modified |
 
 **Indexes:**
+
 - `course_id`
 - `school_id`
 - `assessment_type`
@@ -280,6 +287,7 @@ Individual assessment questions with IRT parameters.
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Last modified |
 
 **Indexes:**
+
 - `course_id`
 - `subject`
 - `grade_level`
@@ -321,6 +329,7 @@ Assessment attempts by students.
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Last modified |
 
 **Indexes:**
+
 - `student_id`
 - `assessment_id`
 - `(student_id, assessment_id)`
@@ -355,6 +364,7 @@ Individual question answers.
 | `created_at` | TIMESTAMPTZ | NOT NULL | Record creation |
 
 **Indexes:**
+
 - `student_assessment_id`
 - `student_id`
 - `question_id`
@@ -455,6 +465,7 @@ PostgreSQL Server (Flexible Server)
 ```
 
 **Benefits:**
+
 - **Impossible to leak data** across schools (physical isolation)
 - **Independent scaling** per school
 - **Dedicated backups** per school
@@ -472,6 +483,7 @@ modelBuilder.Entity<Student>()
 ```
 
 **Filter Rules:**
+
 - **System/Business Admins:** Bypass all filters
 - **School Users:** See only their school's data (`SchoolId` match)
 - **Self-Service Students:** See only own data (`UserId` match)
@@ -489,6 +501,7 @@ services.AddDbContext<AcademicContext>(options =>
 ```
 
 **Connection Strings Stored In:**
+
 - **Development:** `appsettings.Development.json`
 - **Production:** Azure Key Vault (retrieved at runtime)
 
@@ -541,6 +554,7 @@ services.AddDbContext<AcademicContext>(options =>
 ### 4.3 Cache Invalidation Strategies
 
 **Write-Through Cache:**
+
 ```csharp
 // Update both database and cache
 await _repository.UpdateStudentAsync(student);
@@ -548,6 +562,7 @@ await _cache.SetAsync($"student:{student.Id}", student, TimeSpan.FromMinutes(5))
 ```
 
 **Cache-Aside (Lazy Loading):**
+
 ```csharp
 // Check cache first, load from DB if miss
 var cached = await _cache.GetAsync<Student>($"student:{studentId}");
@@ -560,6 +575,7 @@ return cached;
 ```
 
 **Explicit Invalidation:**
+
 ```csharp
 // Clear cache on data change
 await _repository.UpdateClassRosterAsync(classId, newStudents);
@@ -569,6 +585,7 @@ await _cache.RemoveAsync($"class:{classId}:roster");
 ### 4.4 Redis Configuration
 
 **Development (Docker):**
+
 ```yaml
 redis:
   image: redis:7-alpine
@@ -579,6 +596,7 @@ redis:
 ```
 
 **Production (Azure Cache for Redis):**
+
 - **Tier:** Standard C1 (1 GB)
 - **Persistence:** RDB snapshots every 15 minutes
 - **High Availability:** Zone-redundant (replicas)
@@ -592,10 +610,12 @@ redis:
 ### 5.1 Entity Framework Core Migrations
 
 **Migration Files:**
+
 - `20251015005710_InitialCreate.cs` - Initial schema
 - `20251015212949_AddContentMetadataFields.cs` - Added BoardName, ModuleName, Metadata
 
 **Creating Migrations:**
+
 ```bash
 dotnet ef migrations add MigrationName \
   --project src/AcademicAssessment.Infrastructure \
@@ -604,6 +624,7 @@ dotnet ef migrations add MigrationName \
 ```
 
 **Applying Migrations:**
+
 ```bash
 # Development
 dotnet ef database update \
@@ -631,6 +652,7 @@ done
 ### 5.3 Data Seeding
 
 **Seed Data Scripts:**
+
 - `scripts/seed-demo-data-final.sql` - Demo courses, questions, assessments
 - Applied via `AcademicContext.OnModelCreating()` or manual execution
 
@@ -641,12 +663,14 @@ done
 ### 6.1 PostgreSQL Backup Strategy
 
 **Automated Backups:**
+
 - **Continuous Transaction Logs:** Every 5 minutes
 - **Full Backup:** Daily at 2 AM UTC
 - **Retention:** 7 days (dev), 35 days (production)
 - **Storage:** Geo-redundant in production
 
 **Point-in-Time Restore (PITR):**
+
 ```bash
 az postgres flexible-server restore \
   --resource-group rg-prod \
@@ -656,6 +680,7 @@ az postgres flexible-server restore \
 ```
 
 **Manual Backup Before Migrations:**
+
 ```bash
 # Create backup
 pg_dump -h edumind-postgres.postgres.database.azure.com \
@@ -672,6 +697,7 @@ az storage blob upload \
 ```
 
 **Restore from Backup:**
+
 ```bash
 pg_restore -h edumind-postgres.postgres.database.azure.com \
   -U edumindadmin \
@@ -683,11 +709,13 @@ pg_restore -h edumind-postgres.postgres.database.azure.com \
 ### 6.2 Redis Persistence
 
 **RDB Snapshots:**
+
 - **Frequency:** Every 15 minutes (if data changed)
 - **Location:** `/data/dump.rdb` (Docker volume)
 - **Production:** Azure Cache RDB snapshots + geo-replication
 
 **AOF (Append-Only File) - Disabled:**
+
 - Not enabled for performance (ephemeral cache data)
 - Session state can be rebuilt from database
 

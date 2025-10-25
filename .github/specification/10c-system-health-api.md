@@ -25,6 +25,7 @@
 The System Health API provides health monitoring endpoints for application liveness and readiness checks. These endpoints are used by Kubernetes/container orchestrators for automated health monitoring and traffic management.
 
 **Key Features:**
+
 - **Liveness probes**: Verifies application process is running and responsive
 - **Readiness probes**: Checks all dependencies (database, cache) are operational
 - **Detailed health reports**: Includes status, duration, and error information for each check
@@ -40,6 +41,7 @@ The System Health API provides health monitoring endpoints for application liven
 **No authentication required** for health check endpoints.
 
 Health endpoints are intentionally unauthenticated to allow:
+
 - Kubernetes liveness/readiness probes to function without secrets
 - Load balancers to perform health checks
 - Monitoring systems to verify application availability
@@ -95,6 +97,7 @@ Health endpoints are intentionally unauthenticated to allow:
 ```
 
 **Response Fields:**
+
 - `status` (string) - Overall health status: "Healthy", "Degraded", or "Unhealthy"
 - `timestamp` (DateTimeOffset) - ISO 8601 timestamp when check was performed
 - `duration` (TimeSpan) - Total duration for all health checks
@@ -107,6 +110,7 @@ Health endpoints are intentionally unauthenticated to allow:
   - `data` (object) - Additional check-specific metadata
 
 **Health Check Logic:**
+
 - Returns **200 OK** if overall status is "Healthy"
 - Returns **503 Service Unavailable** if overall status is "Degraded" or "Unhealthy"
 - Overall status determined by worst individual check status:
@@ -115,6 +119,7 @@ Health endpoints are intentionally unauthenticated to allow:
   - Any Unhealthy → Overall Unhealthy
 
 **Registered Health Checks:**
+
 1. **self**: Application liveness (always healthy if process is running)
 2. **postgresql**: Database connectivity check
    - Tests connection to PostgreSQL database
@@ -126,6 +131,7 @@ Health endpoints are intentionally unauthenticated to allow:
    - Tags: `cache`, `redis`
 
 **Use Cases:**
+
 - Kubernetes readiness probe (wait for all dependencies before accepting traffic)
 - Monitoring dashboard health status
 - Deployment validation (verify all services are operational)
@@ -151,22 +157,26 @@ Health endpoints are intentionally unauthenticated to allow:
 ```
 
 **Response Fields:**
+
 - `status` (string) - Always "Healthy" if application responds
 - `timestamp` (DateTimeOffset) - ISO 8601 timestamp when check was performed
 
 **Health Check Logic:**
+
 - Only checks tagged with `"live"` are evaluated (currently only "self" check)
 - **Always returns 200 OK** if application process is running
 - Does **not** check database, cache, or other external dependencies
 - Extremely fast (<1ms) since no I/O operations performed
 
 **Use Cases:**
+
 - Kubernetes liveness probe (restart pod if unresponsive)
 - Basic uptime monitoring
 - Verify application process hasn't crashed or deadlocked
 - High-frequency health checks (every 5-10 seconds) without external dependency overhead
 
 **Liveness vs Readiness:**
+
 - **Liveness** (`/alive`): "Is the app running?" → If no, restart it
 - **Readiness** (`/health`): "Is the app ready to serve traffic?" → If no, stop sending traffic but don't restart
 
@@ -181,6 +191,7 @@ Health endpoints are intentionally unauthenticated to allow:
 **Description:** Verifies application process is responsive
 
 **Implementation:**
+
 ```csharp
 .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"])
 ```
@@ -198,6 +209,7 @@ Health endpoints are intentionally unauthenticated to allow:
 **Description:** Tests PostgreSQL database connectivity
 
 **Implementation:**
+
 ```csharp
 .AddNpgSql(
     connectionString,
@@ -207,18 +219,21 @@ Health endpoints are intentionally unauthenticated to allow:
 ```
 
 **Connection String:** Configured via environment variable or appsettings.json
+
 - Development: `Host=localhost;Database=edumind_dev;Username=edumind_user;Password=edumind_dev_password`
 - Production: Retrieved from Azure Key Vault or environment variables
 
 **Failure Status:** `Unhealthy` (critical dependency)
 
 **Checks:**
+
 - Database server reachable
 - Credentials valid
 - Database exists and accessible
 - Connection pool not exhausted
 
 **Common Failures:**
+
 - Network connectivity issues
 - Invalid credentials
 - Database server down
@@ -234,6 +249,7 @@ Health endpoints are intentionally unauthenticated to allow:
 **Description:** Tests Redis cache connectivity
 
 **Implementation:**
+
 ```csharp
 .AddRedis(
     redisConnection,
@@ -243,23 +259,27 @@ Health endpoints are intentionally unauthenticated to allow:
 ```
 
 **Connection String:** Configured via environment variable or appsettings.json
+
 - Development: `localhost:6379`
 - Production: Azure Cache for Redis connection string
 
 **Failure Status:** `Degraded` (non-critical dependency)
 
 **Design Decision:** Redis failures mark system as "Degraded" rather than "Unhealthy" because:
+
 - Application can function without cache (performance impact only)
 - Assessment sessions are persisted in database (Redis is secondary cache)
 - Graceful degradation preferred over complete failure
 
 **Checks:**
+
 - Redis server reachable
 - Authentication successful (if configured)
 - PING command responds
 - Connection not stale
 
 **Common Failures:**
+
 - Network connectivity issues
 - Redis server restart
 - Memory full (Redis OOM)
@@ -277,6 +297,7 @@ Health endpoints are intentionally unauthenticated to allow:
 **Action:** None required
 
 **Conditions:**
+
 - Application process running
 - PostgreSQL database accessible
 - Redis cache accessible (or not configured)
@@ -291,11 +312,13 @@ Health endpoints are intentionally unauthenticated to allow:
 **Action:** Investigate non-critical dependency failures
 
 **Conditions:**
+
 - Application process running
 - PostgreSQL database accessible
 - Redis cache **not accessible** (performance impact, but functional)
 
 **Impact:**
+
 - Assessment sessions function normally (database-backed)
 - Analytics queries slower (no caching)
 - Agent orchestration performance reduced
@@ -310,11 +333,13 @@ Health endpoints are intentionally unauthenticated to allow:
 **Action:** Immediate investigation required
 
 **Conditions:**
+
 - PostgreSQL database **not accessible** (critical failure)
 - Application unable to process requests
 - Data persistence unavailable
 
 **Impact:**
+
 - Cannot save assessment sessions
 - Cannot retrieve student data
 - Cannot authenticate users (RBAC stored in database)
@@ -466,6 +491,7 @@ spec:
 ```
 
 **Behavior:**
+
 - Checks `/alive` every 10 seconds
 - Restarts container if 3 consecutive failures
 - Fast check (~1ms) suitable for frequent polling
@@ -494,6 +520,7 @@ spec:
 ```
 
 **Behavior:**
+
 - Checks `/health` every 30 seconds (includes DB/Redis checks)
 - Removes pod from service if 2 consecutive failures
 - Longer timeout (5s) to allow for DB connection time
@@ -503,6 +530,7 @@ spec:
 ### Example 3: Load Balancer Health Check
 
 **Request:**
+
 ```http
 GET /health HTTP/1.1
 Host: edumind-web.azurecontainerapps.io
@@ -510,6 +538,7 @@ Accept: application/json
 ```
 
 **Response:** `200 OK`
+
 ```json
 {
   "status": "Healthy",
@@ -549,6 +578,7 @@ Accept: application/json
 ### Example 4: Monitoring Dashboard Query
 
 **Request:**
+
 ```bash
 curl -X GET "http://localhost:8080/health" \
   -H "Accept: application/json" \
@@ -556,6 +586,7 @@ curl -X GET "http://localhost:8080/health" \
 ```
 
 **Response:** (Only unhealthy/degraded checks)
+
 ```json
 {
   "name": "redis",
@@ -572,11 +603,13 @@ curl -X GET "http://localhost:8080/health" \
 ### Example 5: Quick Liveness Check
 
 **Request:**
+
 ```bash
 curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/alive
 ```
 
 **Response:**
+
 ```
 200
 ```
@@ -617,34 +650,40 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/alive
 ### 🚧 Commented Out (Security)
 
 **Custom Health Check Mappings in Program.cs (lines 573-650):**
+
 - Detailed health check endpoints with custom response writers
 - `/health/ready` - Readiness probe with "ready" tag filter
 - `/health/live` - Liveness probe with no checks (always healthy)
 - Rich JSON response formatting with check details
 
 **Reason for Disabling:**
+
 - Aspire's `MapDefaultEndpoints()` already provides `/health` and `/alive` endpoints
 - Custom mappings caused "ambiguous match" routing errors
 - Aspire approach preferred for consistency across microservices
 
 **Future Re-enablement:**
+
 - Uncomment and adjust routes if custom response format needed
 - Consider production security implications (information disclosure)
 
 ### ⚠️ Security Considerations
 
 **Development-Only Exposure:**
+
 - Health endpoints **only available in development environment**
 - Production deployment requires explicit configuration
 - See [Aspire Health Check Security](https://aka.ms/dotnet/aspire/healthchecks) for production strategies
 
 **Production Options:**
+
 1. Enable health endpoints behind internal network/VNet
 2. Use Azure Container Apps built-in health probes
 3. Implement authenticated health endpoints for monitoring
 4. Use Azure Application Insights for health monitoring
 
 **Information Disclosure Risks:**
+
 - Health responses reveal infrastructure details (PostgreSQL, Redis)
 - Exception messages may contain sensitive connection details
 - Timing information could be used for reconnaissance

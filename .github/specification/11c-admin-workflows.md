@@ -26,12 +26,14 @@
 Administrators use EduMind.AI to manage schools, users, system configuration, and monitor platform health. Different admin roles have different capabilities:
 
 **Admin Roles:**
+
 - **School Admin**: Manages single school (students, teachers, classes, school-level settings)
 - **System Admin**: Manages entire platform (all schools, system configuration, infrastructure)
 - **Business Admin**: Analytics and reporting across all schools (no configuration changes)
 - **Course Admin**: Manages curriculum and assessments across schools
 
 **Key Admin Capabilities:**
+
 - Create and manage schools/organizations
 - Manage user accounts and permissions (RBAC)
 - Configure system settings and feature flags
@@ -183,6 +185,7 @@ sequenceDiagram
 ### Database Updates
 
 **Schools Table:**
+
 ```sql
 INSERT INTO schools (
     school_id,
@@ -224,6 +227,7 @@ INSERT INTO schools (
 ```
 
 **School_Settings Table:**
+
 ```sql
 INSERT INTO school_settings (
     school_id,
@@ -412,6 +416,7 @@ sequenceDiagram
 ### Database Updates
 
 **Users Table:**
+
 ```sql
 INSERT INTO users (
     user_id,
@@ -435,6 +440,7 @@ INSERT INTO users (
 ```
 
 **User_Roles Table (RBAC):**
+
 ```sql
 INSERT INTO user_roles (
     user_id,
@@ -467,7 +473,7 @@ INSERT INTO user_roles (
      - Time zone (default)
      - Language (default)
      - Date/time format
-   
+
 2. **Feature Flags**
    - Enable/disable features globally or per school:
      - ✅ Adaptive assessments (IRT-based)
@@ -497,7 +503,7 @@ INSERT INTO user_roles (
 4. **LLM Configuration**
    - **OLLAMA Settings:**
      - Model name: llama3.2:3b
-     - API endpoint: http://ollama:11434
+     - API endpoint: <http://ollama:11434>
      - Timeout: 60 seconds
      - Max retries: 3
      - Temperature: 0.7 (creativity/randomness)
@@ -515,7 +521,7 @@ INSERT INTO user_roles (
      - Tenant name: edumindai.onmicrosoft.com
      - Client ID: Application ID from Azure portal
      - Client secret: Encrypted secret
-     - Authority: https://edumindai.b2clogin.com/edumindai.onmicrosoft.com
+     - Authority: <https://edumindai.b2clogin.com/edumindai.onmicrosoft.com>
      - User flow: B2C_1_signin_signup
    - **Claims Mapping:**
      - Email claim: emails[0]
@@ -556,9 +562,9 @@ INSERT INTO user_roles (
    - **SMTP Settings:**
      - Provider: SendGrid, AWS SES, Azure Communication Services
      - API key: (encrypted)
-     - From address: noreply@edumind.ai
+     - From address: <noreply@edumind.ai>
      - From name: EduMind.AI
-     - Reply-to address: support@edumind.ai
+     - Reply-to address: <support@edumind.ai>
    - **Email Templates:**
      - Welcome email
      - Password reset
@@ -666,13 +672,13 @@ sequenceDiagram
      - Total assessments completed: 3,275 (this month)
      - Average assessments per student: 2.7
      - Total time spent: 18,500 hours
-   
+
    - **Performance Metrics:**
      - Average student score: 74.5%
      - Overall mastery level: 0.68
      - Completion rate: 87% (assigned vs. submitted)
      - Average assessment duration: 38 minutes
-   
+
    - **System Health:**
      - API uptime: 99.97%
      - Average API response time: 245ms
@@ -683,7 +689,7 @@ sequenceDiagram
    - **Assessment Activity Over Time:**
      - Line chart: Assessments per day/week/month
      - Compare to previous period
-   
+
    - **Score Distribution:**
      - Histogram: Number of students by score ranges
      - 0-59%: 150 students (failing)
@@ -691,7 +697,7 @@ sequenceDiagram
      - 70-79%: 580 students (proficient)
      - 80-89%: 420 students (advanced)
      - 90-100%: 130 students (excellent)
-   
+
    - **Subject Performance:**
      - Bar chart: Average scores by subject
      - Mathematics: 78.2%
@@ -699,7 +705,7 @@ sequenceDiagram
      - Chemistry: 75.8%
      - Biology: 71.3%
      - English: 76.9%
-   
+
    - **Engagement Metrics:**
      - Daily active users (DAU)
      - Weekly active users (WAU)
@@ -773,12 +779,14 @@ sequenceDiagram
 ### API Calls
 
 **Get Executive Dashboard:**
+
 ```http
 GET /api/v1/admin/analytics/dashboard?schoolIds=school1,school2&dateRange=2025-01-01,2025-01-31
 Authorization: Bearer {jwt-token}
 ```
 
 **Get School Comparison:**
+
 ```http
 GET /api/v1/admin/analytics/schools/compare?schoolIds=school1,school2,school3&metrics=averageScore,completionRate,growthRate
 Authorization: Bearer {jwt-token}
@@ -829,7 +837,7 @@ Authorization: Bearer {jwt-token}
      - Use templates as-is
      - Duplicate and customize
      - Mix questions from multiple templates
-   
+
 2. **Template Categories**
    - Diagnostic assessments (baseline ability)
    - Practice assessments (formative)
@@ -926,28 +934,28 @@ sequenceDiagram
      - Current requests/sec: 245
      - Average response time: 125ms
      - Error rate: 0.03%
-   
+
    - **Database (PostgreSQL):**
      - Status: ✅ Healthy
      - Current connections: 45 / 100
      - Average query time: 85ms
      - Slow queries (>1s): 2 in last hour
      - Database size: 45 GB / 100 GB
-   
+
    - **Cache (Redis):**
      - Status: ⚠️ Degraded (high latency)
      - Hit rate: 87%
      - Memory used: 3.2 GB / 4 GB
      - Evictions: 125 in last hour
      - Average latency: 15ms
-   
+
    - **LLM Service (OLLAMA):**
      - Status: ✅ Healthy
      - Concurrent requests: 8 / 20
      - Average evaluation time: 22 seconds
      - Queue depth: 12
      - Success rate: 98.5%
-   
+
    - **Agent Orchestrator:**
      - Status: ✅ Healthy
      - Active workflows: 15
@@ -961,14 +969,14 @@ sequenceDiagram
      - Memory usage: 3.2 GB / 8 GB
      - Replica count: 3 / 10 (auto-scale)
      - HTTP requests: 245 req/sec
-   
+
    - **Azure Database for PostgreSQL:**
      - CPU: 35%
      - Memory: 62%
      - Storage: 45 GB / 100 GB
      - IOPS: 1,250 / 3,200
      - Backup status: ✅ Last backup 2 hours ago
-   
+
    - **Azure Cache for Redis:**
      - CPU: 55%
      - Memory: 80% (approaching limit)
@@ -1047,12 +1055,14 @@ sequenceDiagram
 ### API Calls
 
 **Get System Health:**
+
 ```http
 GET /api/v1/admin/health/system
 Authorization: Bearer {jwt-token}
 ```
 
 **Get Application Logs:**
+
 ```http
 GET /api/v1/admin/logs?level=Error&startDate=2025-01-20&endDate=2025-01-21&service=WebAPI
 Authorization: Bearer {jwt-token}
@@ -1288,6 +1298,7 @@ sequenceDiagram
 (Screenshots would be inserted here showing actual UI components)
 
 **Key Screens:**
+
 1. Admin dashboard with system overview
 2. School management table
 3. User management with RBAC matrix
@@ -1307,6 +1318,7 @@ sequenceDiagram
 **Problem:** School tries to add 51st teacher (license limit: 50)
 
 **System Behavior:**
+
 1. Display error: "License capacity exceeded. Current limit: 50 teachers"
 2. Options:
    - Contact sales to upgrade license
@@ -1322,6 +1334,7 @@ sequenceDiagram
 **Problem:** High traffic causes connection pool saturation
 
 **System Monitoring:**
+
 1. Alert triggered: "Database connection pool 95% utilized"
 2. Admin notified via email/SMS
 3. Dashboard shows: 95 / 100 connections in use
@@ -1339,6 +1352,7 @@ sequenceDiagram
 **Problem:** Parent requests child's data be deleted
 
 **Admin Workflow:**
+
 1. Navigate to "Compliance" → "GDPR Requests"
 2. Create deletion request for student
 3. System marks student for deletion (30-day grace period)
@@ -1357,6 +1371,7 @@ sequenceDiagram
 **Problem:** School upgrades from Standard to Premium tier
 
 **Admin Actions:**
+
 1. Navigate to school details page
 2. Click "Change Subscription Tier"
 3. Select "Premium" tier
@@ -1380,6 +1395,7 @@ sequenceDiagram
 **Cause:** Insufficient permissions or IP restriction
 
 **Solution:**
+
 1. Verify user has admin role (SchoolAdmin, SystemAdmin, or BusinessAdmin)
 2. Check IP whitelist (if configured)
 3. Verify Azure AD B2C authentication successful
@@ -1393,6 +1409,7 @@ sequenceDiagram
 **Cause:** CSV format error or validation failure
 
 **Solution:**
+
 1. Download error report
 2. Common issues:
    - Wrong CSV format (use UTF-8 encoding)
@@ -1410,6 +1427,7 @@ sequenceDiagram
 **Cause:** Large dataset or inefficient query
 
 **Solution:**
+
 1. Check database query performance (slow query log)
 2. Reduce date range (query less data)
 3. Enable query caching (Redis)
@@ -1424,6 +1442,7 @@ sequenceDiagram
 **Cause:** Cache size too small for workload
 
 **Solution:**
+
 1. Increase Redis cache tier (more memory)
 2. Reduce cache TTLs (expire data faster)
 3. Implement cache key eviction policy (LRU)

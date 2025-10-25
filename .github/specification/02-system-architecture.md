@@ -124,27 +124,32 @@
 ### Architecture Layers
 
 #### Presentation Layer
+
 - **Blazor Server Apps:** Interactive web UIs with SignalR
 - **Client-side state management:** Component-level state
 - **Real-time updates:** SignalR hubs for live data
 
 #### API Layer
+
 - **ASP.NET Core Web API:** RESTful endpoints
 - **API versioning:** URL-based (v1.0)
 - **Middleware pipeline:** Auth, CORS, tenant context, error handling
 - **SignalR hubs:** Real-time bidirectional communication
 
 #### Business Logic Layer
+
 - **Domain services:** Orchestration, agents, analytics
 - **Multi-agent system:** Subject-specific AI agents
 - **Functional patterns:** Railway-oriented programming with `Result<T>`
 
 #### Data Access Layer
+
 - **Repository pattern:** Abstraction over data access
 - **Entity Framework Core:** ORM with query filters
 - **Tenant isolation:** Automatic filtering by SchoolId/ClassId
 
 #### Data Storage Layer
+
 - **PostgreSQL:** Primary relational database
 - **Redis:** Session cache and real-time state
 - **Azure Blob:** Document storage (planned)
@@ -179,6 +184,7 @@ EduMind.AI.sln (11 projects)
 ### Component Responsibilities
 
 #### 1. **Core Library** (`AcademicAssessment.Core`)
+
 - Domain entity definitions (records)
 - Business rule interfaces
 - Shared enumerations
@@ -186,11 +192,13 @@ EduMind.AI.sln (11 projects)
 - **No dependencies** - foundation layer
 
 **Key Types:**
+
 - `Student`, `Assessment`, `Question`, `StudentAssessment`
 - `IAssessmentRepository`, `IStudentRepository`
 - `Subject`, `GradeLevel`, `DifficultyLevel`, `AssessmentType`
 
 #### 2. **Infrastructure** (`AcademicAssessment.Infrastructure`)
+
 - Entity Framework Core `DbContext`
 - Repository implementations
 - Database migrations
@@ -198,17 +206,20 @@ EduMind.AI.sln (11 projects)
 - Caching implementations
 
 **Key Types:**
+
 - `AcademicDbContext` - EF Core context
 - `StudentRepository`, `AssessmentRepository`
 - `PostgreSqlHealthCheck`, `RedisHealthCheck`
 
 #### 3. **Agents** (`AcademicAssessment.Agents`)
+
 - Subject-specific AI agents
 - Semantic Kernel integration
 - LLM prompt engineering
 - A2A (Agent-to-Agent) protocol
 
 **Key Agents:**
+
 - `MathematicsAssessmentAgent`
 - `PhysicsAssessmentAgent`
 - `ChemistryAssessmentAgent`
@@ -217,28 +228,33 @@ EduMind.AI.sln (11 projects)
 - `A2ABaseAgent` - Shared functionality
 
 #### 4. **Orchestration** (`AcademicAssessment.Orchestration`)
+
 - Multi-agent workflow coordination
 - Assessment scheduling
 - Progress tracking
 - Adaptive learning engine
 
 **Key Types:**
+
 - `StudentProgressOrchestrator`
 - `AssessmentScheduler`
 - `AdaptiveLearningEngine`
 
 #### 5. **Analytics** (`AcademicAssessment.Analytics`)
+
 - Performance metrics calculation
 - Statistical analysis
 - Predictive modeling
 - Reporting generation
 
 **Key Types:**
+
 - `PerformanceAnalyticsAgent`
 - `StatisticalAnalysisService`
 - `LearningAnalyticsEngine`
 
 #### 6. **Web API** (`AcademicAssessment.Web`)
+
 - RESTful endpoints
 - SignalR hubs for real-time
 - Authentication/authorization
@@ -246,21 +262,25 @@ EduMind.AI.sln (11 projects)
 - Health checks
 
 **Controllers:**
+
 - `AssessmentController` - Assessment CRUD
 - `OrchestrationController` - Agent coordination
 - `StudentAnalyticsController` - Student metrics
 
 **SignalR Hubs:**
+
 - `StudentProgressHub`
 - `ClassMonitoringHub`
 
 #### 7. **Student App** (`AcademicAssessment.StudentApp`)
+
 - Blazor Server interactive UI
 - Assessment browsing and taking
 - Progress visualization
 - Real-time feedback
 
 **Pages:**
+
 - `Home.razor` - Landing page
 - `AssessmentDashboard.razor` - Assessment list
 - `AssessmentDetail.razor` - Assessment info
@@ -268,23 +288,27 @@ EduMind.AI.sln (11 projects)
 - `AssessmentResults.razor` - Results view
 
 #### 8. **Dashboard** (`AcademicAssessment.Dashboard`)
+
 - Blazor Server admin interface
 - Class management
 - Analytics dashboards
 - Student oversight
 
 **Pages:**
+
 - Admin views (to be expanded)
 - Analytics dashboards
 - Student management
 
 #### 9. **AppHost** (`EduMind.AppHost`)
+
 - .NET Aspire orchestration
 - Service discovery
 - Local development coordination
 - Resource configuration
 
 **Managed Services:**
+
 - PostgreSQL connection
 - Redis connection
 - Ollama connection
@@ -293,6 +317,7 @@ EduMind.AI.sln (11 projects)
 - Dashboard
 
 #### 10. **ServiceDefaults** (`EduMind.ServiceDefaults`)
+
 - Shared Aspire configuration
 - OpenTelemetry setup
 - Health check defaults
@@ -400,10 +425,11 @@ EduMind.AI.sln (11 projects)
 ```
 
 **Access Points:**
-- Web API: http://localhost:5103
-- Student App: http://localhost:5049
-- Dashboard: http://localhost:5091
-- Aspire Dashboard: http://localhost:15888
+
+- Web API: <http://localhost:5103>
+- Student App: <http://localhost:5049>
+- Dashboard: <http://localhost:5091>
+- Aspire Dashboard: <http://localhost:15888>
 
 ### Azure Production
 
@@ -440,6 +466,7 @@ EduMind.AI.sln (11 projects)
 ```
 
 **Azure Resources:**
+
 - Resource Group: `rg-{environmentName}`
 - Container Apps Environment: `cae-{environmentName}`
 - PostgreSQL: `psql-{environmentName}-{suffix}`
@@ -449,18 +476,21 @@ EduMind.AI.sln (11 projects)
 ### Deployment Models
 
 #### Development
+
 - Local Docker containers
 - .NET Aspire orchestration
 - Hot reload enabled
 - Debug logging
 
 #### Staging
+
 - Azure Container Apps
 - Scaled-down replicas (1-2)
 - Test data
 - Full monitoring
 
 #### Production
+
 - Azure Container Apps
 - Auto-scaling (1-10 replicas)
 - Production data
@@ -580,12 +610,14 @@ System (Root)
 ### Data Isolation Strategy
 
 #### Physical Isolation
+
 - **One database per school** (for B2B deployments)
 - Absolute data separation
 - Independent backups
 - Regulatory compliance (FERPA, GDPR)
 
 #### Logical Isolation
+
 - **Row-Level Security** via EF Core query filters
 - Every entity tagged with `SchoolId` and/or `ClassId`
 - Automatic filtering based on user claims
@@ -636,6 +668,7 @@ System (Root)
 | System Admin       | ✅ Full  | ✅ Full    | ✅ Full     | ✅ Full      | ✅ Full|
 
 **Legend:**
+
 - ✅ Full Access
 - ❌ No Access  
 - 📊 Anonymized/Aggregated Only
@@ -648,6 +681,7 @@ System (Root)
 ### External Service Integration
 
 #### Ollama LLM
+
 - **Connection:** HTTP REST API
 - **Model:** llama3.2:3b
 - **Timeout:** 120 seconds
@@ -655,6 +689,7 @@ System (Root)
 - **Fallback:** Azure OpenAI (if configured)
 
 #### Azure Services
+
 - **Application Insights:** Telemetry and monitoring
 - **Key Vault:** Secrets management (planned)
 - **Blob Storage:** Document storage (planned)
@@ -663,12 +698,14 @@ System (Root)
 ### Inter-Service Communication
 
 #### HTTP REST
+
 - Service-to-service calls via HTTP
 - JSON payloads
 - Versioned APIs
 - Resilience policies (Polly)
 
 #### SignalR
+
 - Real-time bidirectional communication
 - WebSocket with fallbacks
 - Hub-based messaging
@@ -677,12 +714,14 @@ System (Root)
 ### Caching Strategy
 
 #### Redis Usage
+
 - **Session state:** 30-minute sliding expiration
 - **Question cache:** 1-hour absolute expiration
 - **Rate limiting:** Token bucket algorithm
 - **Real-time state:** Assessment session data
 
 #### Cache Invalidation
+
 - Time-based expiration
 - Event-driven invalidation on updates
 - Cache-aside pattern

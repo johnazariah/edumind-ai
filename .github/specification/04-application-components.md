@@ -79,6 +79,7 @@ EduMind.AI is organized into **10 application components** following Clean Archi
 **Purpose:** Contains all domain models, interfaces, and enumerations. This is the foundation layer with zero external dependencies.
 
 **Key Responsibilities:**
+
 - Define domain entities (Student, Assessment, Question, etc.)
 - Define service interfaces (IStudentRepository, IAssessmentService, etc.)
 - Define enumerations (Subject, GradeLevel, AssessmentType, etc.)
@@ -86,6 +87,7 @@ EduMind.AI is organized into **10 application components** following Clean Archi
 - Define `Result<T>` pattern for error handling
 
 **Internal Structure:**
+
 ```
 Core/
 ├── Models/              # Domain entities
@@ -122,6 +124,7 @@ Core/
 **Dependencies:** None (foundation layer)
 
 **Key Technologies:**
+
 - .NET 9.0 Records (immutability)
 - C# 13 features (`required` keyword)
 - Functional patterns (`Result<T>`)
@@ -137,6 +140,7 @@ Core/
 **Purpose:** Implements all external concerns including database access, external service integrations, and repository implementations.
 
 **Key Responsibilities:**
+
 - Entity Framework Core database context
 - Repository implementations (Student, Assessment, Question, etc.)
 - External service clients (LLM providers)
@@ -145,6 +149,7 @@ Core/
 - Caching strategies
 
 **Internal Structure:**
+
 ```
 Infrastructure/
 ├── Context/
@@ -171,13 +176,15 @@ Infrastructure/
     └── Migrations/                     # EF Core migrations
 ```
 
-**Dependencies:** 
+**Dependencies:**
+
 - Core (interfaces and models)
 - Entity Framework Core 9.0
 - Npgsql (PostgreSQL driver)
 - Redis client libraries
 
 **Key Technologies:**
+
 - Entity Framework Core 9.0
 - PostgreSQL 16+
 - Redis 7+
@@ -194,6 +201,7 @@ Infrastructure/
 **Purpose:** Subject-specific assessment agents implementing the Agent-to-Agent (A2A) protocol for distributed assessment generation and evaluation.
 
 **Key Responsibilities:**
+
 - Generate subject-specific assessment questions
 - Evaluate student responses using LLMs
 - Provide detailed feedback and explanations
@@ -201,6 +209,7 @@ Infrastructure/
 - Support both Ollama (local) and Azure OpenAI
 
 **Internal Structure:**
+
 ```
 Agents/
 ├── Shared/
@@ -222,16 +231,19 @@ Agents/
 ```
 
 **Agent Capabilities:**
+
 - **generate_assessment:** Create questions based on student level
 - **evaluate_response:** Grade student answers with LLM
 - **provide_feedback:** Generate detailed explanations
 - **suggest_topics:** Recommend study areas
 
 **Dependencies:**
+
 - Core (models and interfaces)
 - Microsoft.AspNetCore.SignalR.Client (for progress broadcasting)
 
 **Key Technologies:**
+
 - Agent-to-Agent (A2A) protocol
 - SignalR client for real-time updates
 - LLM integration (abstracted via Core interfaces)
@@ -247,6 +259,7 @@ Agents/
 **Purpose:** Central coordinator that manages student assessment workflows and routes tasks to appropriate subject agents.
 
 **Key Responsibilities:**
+
 - Coordinate multi-agent workflows
 - Track student progress across assessments
 - Implement intelligent agent routing
@@ -255,6 +268,7 @@ Agents/
 - Schedule assessments and recommend study paths
 
 **Internal Structure:**
+
 ```
 Orchestration/
 ├── StudentProgressOrchestrator.cs     # Main orchestrator
@@ -269,6 +283,7 @@ Orchestration/
 ```
 
 **Orchestration Logic:**
+
 1. Receive student assessment request
 2. Determine which subject needs assessment
 3. Route task to best available agent
@@ -278,11 +293,13 @@ Orchestration/
 7. Broadcast updates to UI
 
 **Dependencies:**
+
 - Core (models and interfaces)
 - Agents (A2A protocol and agent cards)
 - Microsoft.AspNetCore.SignalR (for broadcasting)
 
 **Key Technologies:**
+
 - Agent routing algorithm (skill + subject + grade + load)
 - SignalR for real-time progress
 - State machine for assessment workflows
@@ -298,6 +315,7 @@ Orchestration/
 **Purpose:** Performance analytics, statistical analysis, and predictive modeling for student outcomes.
 
 **Key Responsibilities:**
+
 - Aggregate student performance data
 - Calculate class-level statistics
 - Identify struggling students (early intervention)
@@ -306,6 +324,7 @@ Orchestration/
 - Track mastery levels by topic
 
 **Internal Structure:**
+
 ```
 Analytics/
 └── Services/
@@ -316,6 +335,7 @@ Analytics/
 ```
 
 **Key Metrics:**
+
 - Average score by class, subject, topic
 - Question difficulty calibration (IRT)
 - Student mastery levels
@@ -323,9 +343,11 @@ Analytics/
 - Intervention alerts
 
 **Dependencies:**
+
 - Core (models and interfaces)
 
 **Key Technologies:**
+
 - Statistical analysis algorithms
 - K-anonymity (minimum 5 students for aggregation)
 - IRT (Item Response Theory) calculations
@@ -341,6 +363,7 @@ Analytics/
 **Purpose:** Primary backend REST API serving all clients with versioned endpoints, SignalR hubs, and health checks.
 
 **Key Responsibilities:**
+
 - Expose REST API endpoints
 - Host SignalR hubs for real-time communication
 - Implement authentication and authorization
@@ -350,6 +373,7 @@ Analytics/
 - Implement health checks
 
 **Internal Structure:**
+
 ```
 Web/
 ├── Controllers/
@@ -370,15 +394,18 @@ Web/
 ```
 
 **API Versioning:**
+
 - `/api/v1/assessments`
 - `/api/v1/orchestration`
 - `/api/v1/analytics`
 
 **SignalR Hubs:**
+
 - `/hubs/agent-progress` - Agent progress updates
 - `/hubs/orchestration` - Orchestration events
 
 **Dependencies:**
+
 - Core (models and interfaces)
 - Infrastructure (repositories)
 - Orchestration (orchestrator service)
@@ -387,6 +414,7 @@ Web/
 - EduMind.ServiceDefaults (Aspire integration)
 
 **Key Technologies:**
+
 - ASP.NET Core 9.0
 - SignalR for WebSocket communication
 - JWT authentication via Azure AD B2C
@@ -406,6 +434,7 @@ Web/
 **Purpose:** Teacher and administrator interface for managing students, viewing analytics, and reviewing assessments.
 
 **Key Responsibilities:**
+
 - Teacher dashboard with class overview
 - Student progress visualization
 - Assessment review and grading
@@ -414,6 +443,7 @@ Web/
 - Real-time updates via SignalR
 
 **Internal Structure:**
+
 ```
 Dashboard/
 ├── Pages/
@@ -432,17 +462,20 @@ Dashboard/
 ```
 
 **User Personas Supported:**
+
 - Teachers (view assigned classes)
 - School Administrators (school-wide analytics)
 - Course Administrators (curriculum management)
 - Business/System Administrators (multi-school overview)
 
 **Dependencies:**
+
 - Core (models for display)
 - Analytics (analytics client)
 - EduMind.ServiceDefaults (Aspire integration)
 
 **Key Technologies:**
+
 - Blazor Server (interactive UI)
 - SignalR (automatic real-time updates)
 - Chart.js via Blazor wrappers
@@ -459,6 +492,7 @@ Dashboard/
 **Purpose:** Student-facing application for taking assessments, viewing progress, and receiving personalized recommendations.
 
 **Key Responsibilities:**
+
 - Assessment-taking interface
 - Real-time question display
 - Submit answers and receive immediate feedback
@@ -467,6 +501,7 @@ Dashboard/
 - View past assessments and scores
 
 **Internal Structure:**
+
 ```
 StudentApp/
 ├── Pages/
@@ -486,6 +521,7 @@ StudentApp/
 ```
 
 **User Flow:**
+
 1. Student logs in (Azure AD B2C or self-service OAuth)
 2. View available assessments
 3. Start assessment (connects to orchestrator)
@@ -494,11 +530,13 @@ StudentApp/
 6. View final score and recommendations
 
 **Dependencies:**
+
 - Core (models for display)
 - EduMind.ServiceDefaults (Aspire integration)
 - Markdig (Markdown rendering for questions)
 
 **Key Technologies:**
+
 - Blazor Server (interactive UI)
 - SignalR (real-time question delivery)
 - Markdown rendering for rich content
@@ -515,6 +553,7 @@ StudentApp/
 **Purpose:** Orchestrates all services for local development and deployment using .NET Aspire.
 
 **Key Responsibilities:**
+
 - Service discovery and registration
 - Dependency injection configuration
 - Environment variable management
@@ -523,6 +562,7 @@ StudentApp/
 - Local development orchestration
 
 **Configuration:**
+
 ```csharp
 // PostgreSQL reference
 var postgres = builder.AddConnectionString("postgres", 
@@ -549,10 +589,12 @@ builder.AddProject<Projects.AcademicAssessment_StudentApp>("studentapp")
 ```
 
 **Dependencies:**
+
 - All source projects
 - Aspire.Hosting package
 
 **Key Technologies:**
+
 - .NET Aspire 9.5.1
 - Service discovery
 - Distributed tracing (OpenTelemetry)
@@ -568,6 +610,7 @@ builder.AddProject<Projects.AcademicAssessment_StudentApp>("studentapp")
 **Purpose:** Shared configuration and cross-cutting concerns for all Aspire-integrated services.
 
 **Key Responsibilities:**
+
 - OpenTelemetry configuration (tracing, metrics, logging)
 - Health check defaults
 - Service discovery client configuration
@@ -575,6 +618,7 @@ builder.AddProject<Projects.AcademicAssessment_StudentApp>("studentapp")
 - Common middleware registration
 
 **Shared Configurations:**
+
 - Distributed tracing with Jaeger/Zipkin
 - Prometheus metrics export
 - Health check endpoints
@@ -582,10 +626,12 @@ builder.AddProject<Projects.AcademicAssessment_StudentApp>("studentapp")
 - HTTP client resilience policies
 
 **Dependencies:**
+
 - Microsoft.Extensions.* packages
 - OpenTelemetry packages
 
 **Key Technologies:**
+
 - .NET Aspire ServiceDefaults pattern
 - OpenTelemetry (OTEL)
 - Polly (resilience)
@@ -658,6 +704,7 @@ builder.AddProject<Projects.AcademicAssessment_StudentApp>("studentapp")
 ### Communication Patterns
 
 #### 4.1 HTTP REST API
+
 **Used By:** Dashboard → Web API, StudentApp → Web API
 
 ```
@@ -669,6 +716,7 @@ Dashboard/StudentApp  →  [HTTP/HTTPS]  →  Web API
 ```
 
 **Example Flow:**
+
 1. Student clicks "Start Assessment" in StudentApp
 2. StudentApp calls `POST /api/v1/orchestration/start`
 3. Web API invokes Orchestrator
@@ -677,6 +725,7 @@ Dashboard/StudentApp  →  [HTTP/HTTPS]  →  Web API
 6. Results returned via HTTP response
 
 #### 4.2 SignalR WebSockets
+
 **Used By:** Web API → Dashboard, Web API → StudentApp
 
 ```
@@ -685,16 +734,19 @@ Orchestrator  →  [SignalR Hub]  →  Connected Clients
 ```
 
 **Example Flow:**
+
 1. Orchestrator broadcasts progress: "Generating question 3 of 10..."
 2. SignalR hub receives message
 3. Hub pushes to all connected clients (filtered by StudentId)
 4. StudentApp UI updates in real-time
 
 **Hubs:**
+
 - `AgentProgressHub` - Agent execution updates
 - `OrchestrationHub` - Orchestration lifecycle events
 
 #### 4.3 Agent-to-Agent (A2A) Protocol
+
 **Used By:** Orchestrator ↔ Subject Agents
 
 ```
@@ -703,6 +755,7 @@ Orchestrator  →  [Task Queue/Direct Call]  →  Agent
 ```
 
 **A2A Protocol:**
+
 1. **Registration:** Agents publish `AgentCard` with capabilities
 2. **Task Creation:** Orchestrator creates `AgentTask` with requirements
 3. **Routing:** Orchestrator selects agent via skill + subject + grade + load
@@ -710,6 +763,7 @@ Orchestrator  →  [Task Queue/Direct Call]  →  Agent
 5. **Completion:** Agent returns result, broadcasts progress
 
 #### 4.4 Repository Pattern
+
 **Used By:** All application components → Infrastructure
 
 ```
@@ -721,6 +775,7 @@ Orchestration/Agents  →  [IRepository]  →  Infrastructure
 ```
 
 **Example:**
+
 ```csharp
 var studentResult = await _studentRepository.GetByIdAsync(studentId);
 ```

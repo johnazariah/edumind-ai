@@ -26,6 +26,7 @@
 Students use EduMind.AI to take assessments, review their performance, track progress over time, and receive personalized learning recommendations. The platform provides an intuitive, distraction-free assessment experience with real-time feedback and progress visualization.
 
 **Key Student Capabilities:**
+
 - Browse and start available assessments
 - Complete assessments with various question types (MCQ, FRQ, essay, coding, etc.)
 - Auto-save progress to prevent data loss
@@ -121,6 +122,7 @@ sequenceDiagram
 ### Database Updates
 
 **Students Table:**
+
 ```sql
 INSERT INTO students (
     student_id,
@@ -237,18 +239,21 @@ sequenceDiagram
 ### API Calls
 
 **List Assessments:**
+
 ```http
 GET /api/v1/assessments?gradeLevel=Grade10&subject=Mathematics&status=NotStarted
 Authorization: Bearer {jwt-token}
 ```
 
 **Get Assessment Details:**
+
 ```http
 GET /api/v1/assessments/a1b2c3d4-e5f6-7890-1234-567890abcdef
 Authorization: Bearer {jwt-token}
 ```
 
 **Start Assessment Session:**
+
 ```http
 GET /api/v1/assessments/a1b2c3d4-e5f6-7890-1234-567890abcdef/session
 Authorization: Bearer {jwt-token}
@@ -312,6 +317,7 @@ Authorization: Bearer {jwt-token}
    - Triggered immediately after answering a question
    - API call: `POST /api/v1/assessments/{id}/session/save`
    - Payload:
+
      ```json
      {
        "sessionId": "session-guid",
@@ -325,6 +331,7 @@ Authorization: Bearer {jwt-token}
        ]
      }
      ```
+
    - Success: Display "All changes saved" indicator
    - Failure: Display "Save failed - retrying..." and retry with exponential backoff
 
@@ -416,6 +423,7 @@ sequenceDiagram
 ### Database Updates
 
 **Assessment Sessions:**
+
 ```sql
 UPDATE assessment_sessions
 SET status = 'Completed',
@@ -426,6 +434,7 @@ WHERE session_id = 'session-guid';
 ```
 
 **Assessment Responses:**
+
 ```sql
 INSERT INTO assessment_responses (
     response_id,
@@ -465,6 +474,7 @@ INSERT INTO assessment_responses (
 
 2. **Subject Performance Breakdown**
    - Table showing performance by topic:
+
      | Topic | Questions | Correct | Accuracy | Mastery |
      |-------|-----------|---------|----------|---------|
      | Algebra - Linear Equations | 5 | 5 | 100% | Advanced |
@@ -548,12 +558,14 @@ sequenceDiagram
 ### API Calls
 
 **Get Assessment Results:**
+
 ```http
 GET /api/v1/assessments/results/session-guid
 Authorization: Bearer {jwt-token}
 ```
 
 **Get Peer Comparison:**
+
 ```http
 GET /api/v1/students/a1b2c3d4-e5f6-7890-1234-567890abcdef/analytics/peer-comparison?gradeLevel=Grade10&subject=Mathematics
 Authorization: Bearer {jwt-token}
@@ -580,6 +592,7 @@ Authorization: Bearer {jwt-token}
      - Current streak: 5 days
      - Total time spent: 45 hours 30 minutes
    - **Subject Breakdown**:
+
      | Subject | Assessments | Avg Score | Mastery | Trend |
      |---------|-------------|-----------|---------|-------|
      | Mathematics | 12 | 82.3% | 0.78 | ↑ +5% |
@@ -698,6 +711,7 @@ Authorization: Bearer {jwt-token}
 ```
 
 **Response:**
+
 ```json
 [
   {
@@ -874,6 +888,7 @@ sequenceDiagram
 (Screenshots would be inserted here showing actual UI components)
 
 **Key Screens:**
+
 1. Student Dashboard with assessment feed
 2. Assessment details page
 3. Assessment session page with question and palette
@@ -890,6 +905,7 @@ sequenceDiagram
 **Problem:** Time limit expires before student completes assessment
 
 **System Behavior:**
+
 1. Display warning at 5 minutes remaining
 2. Auto-submit when time expires
 3. Save all answered questions
@@ -904,6 +920,7 @@ sequenceDiagram
 **Problem:** Network disconnected during assessment
 
 **System Behavior:**
+
 1. Display "Connection lost" warning banner
 2. Continue allowing student to answer questions (offline mode)
 3. Store responses in browser local storage
@@ -918,6 +935,7 @@ sequenceDiagram
 **Problem:** Browser closed with assessment in progress
 
 **System Behavior:**
+
 1. Last auto-save stored in Redis cache (TTL: 4 hours)
 2. Student returns and logs in again
 3. Dashboard displays "Resume Assessment" button for incomplete session
@@ -932,6 +950,7 @@ sequenceDiagram
 **Problem:** Student unsure about some answers
 
 **System Behavior:**
+
 1. Student flags questions for review (yellow badge in palette)
 2. Before submission, click "Review Flagged Questions"
 3. Navigate through only flagged questions
@@ -948,6 +967,7 @@ sequenceDiagram
 **Cause:** Session expired (TTL exceeded 4 hours)
 
 **Solution:**
+
 1. Start new assessment session
 2. Previous responses not recovered
 3. Contact teacher if assessment was critical
@@ -959,6 +979,7 @@ sequenceDiagram
 **Cause:** Network issues or server problems
 
 **Solution:**
+
 1. Check internet connection
 2. Responses stored locally in browser
 3. Retry save when connection restored
@@ -971,6 +992,7 @@ sequenceDiagram
 **Cause:** Character limit exceeded or formatting issues
 
 **Solution:**
+
 1. Check character count (max: 5000 characters)
 2. Remove excessive formatting
 3. Simplify answer to fit within limit
@@ -983,6 +1005,7 @@ sequenceDiagram
 **Cause:** Browser timezone mismatch or JavaScript error
 
 **Solution:**
+
 1. Refresh page (auto-save preserves progress)
 2. Check browser console for errors
 3. Disable browser extensions that might interfere

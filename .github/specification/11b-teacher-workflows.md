@@ -26,6 +26,7 @@
 Teachers use EduMind.AI to manage classes, create assessments, monitor student progress, provide feedback, and generate performance reports. The platform provides comprehensive class-level analytics and individual student insights to support differentiated instruction.
 
 **Key Teacher Capabilities:**
+
 - Create and manage classes
 - Design custom assessments with 9 question types
 - Assign assessments to individual students or entire classes
@@ -72,14 +73,14 @@ Teachers use EduMind.AI to manage classes, create assessments, monitor student p
      - Enter student email addresses (one per line)
      - System sends invitation emails
      - Students accept invites and join class
-   
+
    - **Option 2: CSV Import**
      - Download CSV template
      - Fill in student data (name, email, student ID)
      - Upload CSV file
      - System validates and imports students
      - Send bulk invitation emails
-   
+
    - **Option 3: Class Code**
      - Generate unique 6-digit class code
      - Share code with students
@@ -147,6 +148,7 @@ sequenceDiagram
 ### Database Updates
 
 **Classes Table:**
+
 ```sql
 INSERT INTO classes (
     class_id,
@@ -170,6 +172,7 @@ INSERT INTO classes (
 ```
 
 **Class_Teachers Association:**
+
 ```sql
 INSERT INTO class_teachers (
     class_id,
@@ -217,21 +220,21 @@ INSERT INTO class_teachers (
      - Coding
      - Matching
      - Ordering
-   
+
    - **For Multiple Choice:**
      - Enter question text (supports Markdown, KaTeX math)
      - Add options (minimum 2, maximum 10)
      - Mark correct answer(s)
      - Set points value (default: 1 point)
      - Add explanation/solution (shown after submission)
-   
+
    - **For Essay:**
      - Enter prompt
      - Set character limits (e.g., 500-2000 characters)
      - Define grading rubric (for LLM evaluation)
      - Set maximum points
      - Add sample answer (for reference)
-   
+
    - **For Coding:**
      - Enter problem description
      - Select programming language (Python, JavaScript, Java, C++)
@@ -326,6 +329,7 @@ sequenceDiagram
 ### Database Updates
 
 **Assessments Table:**
+
 ```sql
 INSERT INTO assessments (
     assessment_id,
@@ -359,6 +363,7 @@ INSERT INTO assessments (
 ```
 
 **Questions Table:**
+
 ```sql
 INSERT INTO questions (
     question_id,
@@ -417,12 +422,12 @@ INSERT INTO questions (
      - Select one or more classes from dropdown
      - Preview student list
      - Optionally exclude specific students
-   
+
    - **For Individual Assignment:**
      - Search students by name or email
      - Select students from list
      - Can select across multiple classes
-   
+
    - **For Group Assignment:**
      - Create student groups (e.g., "Advanced", "Remedial")
      - Assign to existing groups
@@ -490,6 +495,7 @@ sequenceDiagram
 ### Database Updates
 
 **Assignments Table:**
+
 ```sql
 INSERT INTO assignments (
     assignment_id,
@@ -517,6 +523,7 @@ INSERT INTO assignments (
 ```
 
 **Student_Assignments (Many-to-Many):**
+
 ```sql
 INSERT INTO student_assignments (
     assignment_id,
@@ -554,12 +561,13 @@ INSERT INTO student_assignments (
 2. **Real-Time Progress Monitoring**
    - Click on specific assessment
    - View live student progress table:
+
      | Student Name | Status | Progress | Time Spent | Last Activity |
      |--------------|--------|----------|------------|---------------|
      | Alice Johnson | In Progress | 15/30 | 22 min | 2 min ago |
      | Bob Smith | Submitted | 30/30 | 38 min | 1 hour ago |
      | Carol White | Not Started | 0/30 | 0 min | - |
-   
+
    - Status indicators:
      - 🔴 Not Started (red)
      - 🟡 In Progress (yellow)
@@ -574,7 +582,7 @@ INSERT INTO student_assignments (
      - Questions flagged for review
      - Time spent per question
      - Current score (if objective questions auto-graded)
-   
+
    - **For In-Progress Sessions:**
      - Real-time updates via SignalR
      - See which question student is currently on
@@ -656,18 +664,21 @@ sequenceDiagram
 ### API Calls
 
 **Get Class Assignments:**
+
 ```http
 GET /api/v1/classes/class-guid/assignments
 Authorization: Bearer {jwt-token}
 ```
 
 **Get Assignment Progress:**
+
 ```http
 GET /api/v1/assignments/assignment-guid/progress
 Authorization: Bearer {jwt-token}
 ```
 
 **Get Student Session Details:**
+
 ```http
 GET /api/v1/sessions/session-guid/details
 Authorization: Bearer {jwt-token}
@@ -705,14 +716,15 @@ Authorization: Bearer {jwt-token}
      - Strengths identified
      - Areas for improvement
      - Comparison to rubric criteria
-   
+
    - Teacher reviews and:
      - Accepts LLM score (click "Approve")
      - Adjusts score manually (e.g., 85% → 90%)
      - Adds personalized feedback comments
      - Highlights specific sections (inline comments)
-   
+
    - Grading rubric displayed:
+
      | Criteria | Points | LLM Score | Teacher Score |
      |----------|--------|-----------|---------------|
      | Thesis Statement | 20 | 18 | 20 |
@@ -804,6 +816,7 @@ sequenceDiagram
 ### Database Updates
 
 **Assessment_Responses (After Grading):**
+
 ```sql
 UPDATE assessment_responses
 SET score = 92.0,
@@ -815,6 +828,7 @@ WHERE response_id = 'response-guid';
 ```
 
 **Assessment_Sessions (Recalculate Total):**
+
 ```sql
 UPDATE assessment_sessions
 SET total_score = (
@@ -856,27 +870,27 @@ WHERE session_id = 'session-guid';
      - Name, grade level, class
      - Profile photo
      - Current GPA or average score
-   
+
    - **Performance Summary:**
      - Total assessments taken: 12
      - Average score: 82.3%
      - Overall mastery: 78%
      - Current streak: 5 days
      - Total time: 15 hours
-   
+
    - **Subject Breakdown:**
      - Chart showing scores by subject
      - Trend lines (improving/declining)
      - Comparison to class average
-   
+
    - **Strengths & Weaknesses:**
      - Top 3 strong areas with mastery levels
      - Top 5 weak areas with recommendations
-   
+
    - **Learning Objective Mastery:**
      - Table of objectives with progress bars
      - Color-coded by mastery level
-   
+
    - **Detailed Assessment History:**
      - Chronological list of all assessments
      - Scores, dates, time spent
@@ -887,23 +901,23 @@ WHERE session_id = 'session-guid';
      - Class name, subject, grade level
      - Total students: 28
      - Active students (took ≥1 assessment): 26
-   
+
    - **Aggregate Statistics:**
      - Average class score: 74.5%
      - Median score: 76.0%
      - Score distribution histogram
      - Standard deviation: 12.3%
-   
+
    - **Top Performers:**
      - Top 5 students by average score
      - Students with 100% completion rate
      - Students with perfect scores
-   
+
    - **Students Needing Support:**
      - Students with average < 60%
      - Students with declining trends
      - Students who haven't started recent assignments
-   
+
    - **Learning Objective Analysis:**
      - Which objectives are well-mastered (class avg > 80%)
      - Which objectives need reteaching (class avg < 60%)
@@ -913,12 +927,12 @@ WHERE session_id = 'session-guid';
    - **Preview Report:**
      - View report in browser
      - Interactive charts and tables
-   
+
    - **Export Formats:**
      - PDF (for printing or email)
      - Excel/CSV (for data analysis)
      - PowerPoint (for presentations)
-   
+
    - **Share Report:**
      - Email to parents
      - Share with school administrators
@@ -975,6 +989,7 @@ sequenceDiagram
 ### API Calls
 
 **Generate Individual Report:**
+
 ```http
 POST /api/v1/reports/generate
 Authorization: Bearer {jwt-token}
@@ -997,6 +1012,7 @@ Content-Type: application/json
 ```
 
 **Generate Class Report:**
+
 ```http
 POST /api/v1/reports/generate
 Authorization: Bearer {jwt-token}
@@ -1030,7 +1046,7 @@ Content-Type: application/json
      - Completion rate: 93% (26/28 students)
      - Total assessments completed: 312
      - Average time per assessment: 38 minutes
-   
+
    - **Performance Trends:**
      - Line chart showing average scores over time
      - Compare to previous semester/year
@@ -1042,14 +1058,15 @@ Content-Type: application/json
        - Avg score vs. expected score
        - Questions with <40% accuracy (too difficult)
        - Questions with >95% accuracy (too easy)
-     
+
      - **Question-Level Statistics:**
+
        | Question | Type | Avg Score | Accuracy | Time Spent |
        |----------|------|-----------|----------|------------|
        | Q1 | MCQ | 4.2/5 | 84% | 1:32 |
        | Q2 | Essay | 21.5/30 | 72% | 8:45 |
        | Q3 | Coding | 8.1/15 | 54% | 12:20 |
-     
+
      - **Common Mistakes:**
        - Most frequently selected wrong answers (MCQ)
        - Common misconceptions identified by LLM
@@ -1060,7 +1077,7 @@ Content-Type: application/json
      - Rows: Students
      - Columns: Learning objectives
      - Color: Green (mastered), Yellow (developing), Red (struggling)
-   
+
    - Identify:
      - Objectives needing class-wide review
      - Students needing individualized support
@@ -1071,12 +1088,12 @@ Content-Type: application/json
      - Students likely to fail based on current trajectory
      - Early warning alerts
      - Recommended interventions
-   
+
    - **Optimal Pacing Recommendations:**
      - Suggested timeline for curriculum coverage
      - Based on current mastery rates
      - Adjust for class pace (ahead/behind schedule)
-   
+
    - **Differentiation Suggestions:**
      - Students ready for advanced topics
      - Students needing remediation
@@ -1087,7 +1104,7 @@ Content-Type: application/json
      - Same grade, different periods
      - Same teacher, different years
      - Different teachers, same curriculum
-   
+
    - **Compare to Benchmarks:**
      - School average
      - District average
@@ -1096,12 +1113,14 @@ Content-Type: application/json
 ### API Calls
 
 **Get Class Analytics:**
+
 ```http
 GET /api/v1/classes/class-guid/analytics?dateRange=2025-01-01,2025-01-31
 Authorization: Bearer {jwt-token}
 ```
 
 **Get Assessment Question Statistics:**
+
 ```http
 GET /api/v1/assessments/assessment-guid/question-statistics
 Authorization: Bearer {jwt-token}
@@ -1175,6 +1194,7 @@ sequenceDiagram
 (Screenshots would be inserted here showing actual UI components)
 
 **Key Screens:**
+
 1. Teacher dashboard with class list
 2. Class detail page with student roster
 3. Assessment creation wizard
@@ -1194,6 +1214,7 @@ sequenceDiagram
 **Problem:** Student needs more time due to technical issues
 
 **Teacher Actions:**
+
 1. Navigate to assignment progress page
 2. Find student in list
 3. Click "Grant Extension" button
@@ -1209,6 +1230,7 @@ sequenceDiagram
 **Problem:** Question has wrong correct answer marked
 
 **Teacher Actions:**
+
 1. Cannot edit after students have started (locked)
 2. Options:
    - **Option A**: Manually override all affected student scores
@@ -1224,6 +1246,7 @@ sequenceDiagram
 **Problem:** CSV import shows errors for some students
 
 **System Behavior:**
+
 1. Validation errors displayed:
    - "Row 5: Invalid email format"
    - "Row 12: Student already in class"
@@ -1239,6 +1262,7 @@ sequenceDiagram
 ### Scenario 4: Need to Grade 50 Essay Responses
 
 **Teacher Optimization:**
+
 1. Use LLM auto-grading as baseline
 2. Review LLM scores for outliers (very high or very low)
 3. Batch review: Accept LLM scores for responses that:
@@ -1260,6 +1284,7 @@ sequenceDiagram
 **Cause:** Validation errors in questions
 
 **Solution:**
+
 1. Check error messages in validation panel
 2. Common issues:
    - No correct answer marked (MCQ)
@@ -1275,6 +1300,7 @@ sequenceDiagram
 **Cause:** Email not configured or student opted out
 
 **Solution:**
+
 1. Verify student email in profile
 2. Check notification settings for student
 3. Resend notification manually
@@ -1288,10 +1314,12 @@ sequenceDiagram
 **Cause:** OLLAMA service overloaded or slow
 
 **Expected Behavior:**
+
 - 20-25 seconds per essay (normal)
 - >60 seconds indicates issue
 
 **Solution:**
+
 1. Check OLLAMA service health status
 2. Review system logs for errors
 3. Queue essays for later processing (async)
@@ -1305,6 +1333,7 @@ sequenceDiagram
 **Cause:** SignalR connection failed
 
 **Solution:**
+
 1. Check browser console for WebSocket errors
 2. Refresh page to reconnect
 3. Fallback: Manual refresh every 30 seconds

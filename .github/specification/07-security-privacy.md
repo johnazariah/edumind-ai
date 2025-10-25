@@ -71,6 +71,7 @@ Every architectural decision must prioritize student privacy and data protection
 **Requirement:** Protect student educational records
 
 **Implementation:**
+
 - Student data classified as confidential educational records
 - Access strictly limited to legitimate educational interest
 - Parental consent required for data sharing (under 18)
@@ -78,6 +79,7 @@ Every architectural decision must prioritize student privacy and data protection
 - Annual notification of privacy rights
 
 **Technical Controls:**
+
 - Role-based access control (RBAC) enforcing "need to know"
 - Audit logging of all access to student records
 - Secure data export for parent/student review
@@ -88,6 +90,7 @@ Every architectural decision must prioritize student privacy and data protection
 **Requirement:** Enhanced protections for students under 13
 
 **Implementation:**
+
 - Age verification during account creation
 - Parental notification and verifiable consent
 - Limited data collection (only educationally necessary)
@@ -96,6 +99,7 @@ Every architectural decision must prioritize student privacy and data protection
 - Right to delete child's data
 
 **Technical Controls:**
+
 - Age field required in Student entity
 - Parental consent flags in database
 - Consent timestamp and method tracking
@@ -107,6 +111,7 @@ Every architectural decision must prioritize student privacy and data protection
 **Requirement:** EU data protection regulation
 
 **Implementation:**
+
 - **Right to be forgotten**: Complete data deletion capability
 - **Data portability**: Export all student data in machine-readable format
 - **Privacy by design**: Security built into every feature
@@ -115,6 +120,7 @@ Every architectural decision must prioritize student privacy and data protection
 - **Breach notification**: 72-hour breach reporting
 
 **Technical Controls:**
+
 - Student data deletion service
 - JSON export of all student records
 - Encrypted data storage
@@ -125,6 +131,7 @@ Every architectural decision must prioritize student privacy and data protection
 #### Ethical Data Stewardship
 
 **Principles:**
+
 1. **Collect only what's necessary** - No extraneous data fields
 2. **Use only for educational purposes** - No marketing or sale
 3. **Never sell or share student data** - Zero third-party sharing
@@ -426,6 +433,7 @@ Comprehensive permission table showing what each role can do:
 | System settings | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 **Legend:**
+
 - ✅ Full Access
 - ❌ No Access
 - 🔒 Limited/Scoped Access
@@ -534,11 +542,13 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
 ```
 
 **Benefits:**
+
 - ✅ Simple implementation
 - ✅ Shared schema migrations
 - ✅ Cross-tenant queries possible (for admins)
 
 **Limitations:**
+
 - ⚠️ Requires careful query filter maintenance
 - ⚠️ Risk of filter bypass bugs
 - ⚠️ No hard guarantee of isolation
@@ -588,6 +598,7 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
 ```
 
 **Benefits:**
+
 - ✅ **Absolute isolation** - Impossible to query wrong school
 - ✅ **Regulatory compliance** - Clear data custody
 - ✅ **Performance isolation** - Heavy usage doesn't impact others
@@ -897,6 +908,7 @@ if (builder.Environment.IsProduction())
 #### Personally Identifiable Information (PII)
 
 **Fields Classified as PII:**
+
 - Student name (first, last)
 - Student email
 - Student date of birth
@@ -904,6 +916,7 @@ if (builder.Environment.IsProduction())
 - User authentication credentials
 
 **Protection Measures:**
+
 - ✅ Excluded from logs (custom log formatter)
 - ✅ Encrypted in database (TDE)
 - ✅ Not cached in Redis
@@ -938,6 +951,7 @@ Log.Logger = new LoggerConfiguration()
 ```
 
 **Secrets Stored:**
+
 - Database connection strings (per school)
 - Azure AD B2C client secrets
 - OLLAMA API keys (if applicable)
@@ -1046,6 +1060,7 @@ public class DataAccessAuditMiddleware
 ### 8.4 Audit Log Retention
 
 **Retention Policy:**
+
 - **Active logs:** 90 days in primary database
 - **Archive:** 7 years in cold storage (FERPA requirement)
 - **Compliance exports:** Available on demand
@@ -1111,6 +1126,7 @@ public class DataAccessAuditMiddleware
 **Risk:** Attacker injects malicious SQL to access unauthorized data.
 
 **Mitigation:**
+
 - ✅ **Parameterized Queries** - EF Core uses parameterized queries exclusively
 - ✅ **ORM Abstraction** - No raw SQL in application code
 - ✅ **Input Validation** - All user input validated
@@ -1132,6 +1148,7 @@ var student = await _context.Students
 **Risk:** Attacker injects malicious scripts into web pages.
 
 **Mitigation:**
+
 - ✅ **Blazor Auto-Escaping** - Razor syntax escapes output by default
 - ✅ **Content Security Policy (CSP)** - HTTP headers restrict script sources
 - ✅ **Input Sanitization** - User input sanitized before storage
@@ -1141,6 +1158,7 @@ var student = await _context.Students
 **Risk:** Attacker tricks user into executing unwanted actions.
 
 **Mitigation:**
+
 - ✅ **Anti-Forgery Tokens** - ASP.NET Core generates tokens for forms
 - ✅ **SameSite Cookies** - Prevents cross-site cookie usage
 - ✅ **JWT Bearer Tokens** - State less authentication
@@ -1150,6 +1168,7 @@ var student = await _context.Students
 **Risk:** User accesses data outside their tenant scope.
 
 **Mitigation:**
+
 - ✅ **Tenant Context Enforcement** - Automatic query filters
 - ✅ **Authorization Checks** - Method-level tenant validation
 - ✅ **Audit Logging** - All access attempts logged
@@ -1167,6 +1186,7 @@ var students = await _context.Students.ToListAsync(); // Only current school's s
 **Risk:** Attacker steals JWT token and impersonates user.
 
 **Mitigation:**
+
 - ✅ **Short Token Lifetime** - 1 hour expiration
 - ✅ **HTTPS Only** - Tokens never transmitted over HTTP
 - ⚠️ **Token Rotation** - Planned refresh token mechanism
@@ -1177,6 +1197,7 @@ var students = await _context.Students.ToListAsync(); // Only current school's s
 **Risk:** Attacker overwhelms system with requests.
 
 **Mitigation:**
+
 - ✅ **Rate Limiting** - Per-user request limits
 - ⚠️ **Azure DDoS Protection** - Basic tier (Standard planned)
 - ✅ **Auto-Scaling** - Azure Container Apps scale on demand
@@ -1187,6 +1208,7 @@ var students = await _context.Students.ToListAsync(); // Only current school's s
 **Risk:** Authorized user misuses access to student data.
 
 **Mitigation:**
+
 - ✅ **Audit Logging** - All data access logged
 - ✅ **Least Privilege** - Roles grant minimum necessary access
 - ✅ **Separation of Duties** - BusinessAdmin can't access student data
@@ -1334,6 +1356,7 @@ EduMind.AI implements a comprehensive, defense-in-depth security architecture pr
 ---
 
 **Related Documentation:**
+
 - [RBAC Architecture](../../docs/architecture/RBAC_ARCHITECTURE.md)
 - [Privacy and Security Architecture](../../docs/architecture/PRIVACY_AND_SECURITY.md)
 - [Authentication Setup Guide](../../docs/deployment/AUTHENTICATION_SETUP.md)

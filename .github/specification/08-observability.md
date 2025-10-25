@@ -107,7 +107,7 @@ This document defines the comprehensive observability strategy for EduMind.AI, e
 EduMind.AI uses **.NET Aspire** for streamlined observability:
 
 - **Automatic instrumentation** - No manual OpenTelemetry setup per service
-- **Unified dashboard** - All services visible in one place (https://localhost:17191)
+- **Unified dashboard** - All services visible in one place (<https://localhost:17191>)
 - **Built-in resilience** - Polly policies integrated
 - **Service discovery** - Automatic endpoint resolution
 
@@ -201,7 +201,7 @@ info: OpenTelemetry.Trace.TraceExporter[0]
 
 #### Aspire Dashboard (Development)
 
-**URL:** https://localhost:17191
+**URL:** <https://localhost:17191>
 
 **Features:**
 
@@ -269,6 +269,7 @@ rate(http_server_request_duration_count{http_response_status_code=~"5.."}[5m])
 | `http.client.active_requests` | UpDownCounter | Active outgoing requests | `http.request.method`, `server.address` |
 
 **Tracks:**
+
 - OLLAMA LLM API calls (`server.address = localhost:11434`)
 - Azure OpenAI calls (planned)
 - Internal service calls
@@ -526,6 +527,7 @@ _logger.LogInformation($"LLM evaluation started for {agentName} with {providerNa
 ### 5.6 Logging Best Practices
 
 **DO:**
+
 - ✅ Use structured logging with named properties: `{PropertyName}`
 - ✅ Log at appropriate levels (Info for normal flow, Warning for issues)
 - ✅ Include exception object: `_logger.LogError(ex, "Message")`
@@ -533,6 +535,7 @@ _logger.LogInformation($"LLM evaluation started for {agentName} with {providerNa
 - ✅ Log entry and exit of critical operations (LLM calls, DB queries)
 
 **DON'T:**
+
 - ❌ Use string interpolation: `$"Message {variable}"`
 - ❌ Log sensitive data: passwords, tokens, full PII
 - ❌ Over-log in tight loops (use Debug level sparingly)
@@ -853,7 +856,7 @@ APPLICATIONINSIGHTS_CONNECTION_STRING=InstrumentationKey=***
 
 ### 9.3 Aspire Dashboard
 
-**Local Development URL:** https://localhost:17191
+**Local Development URL:** <https://localhost:17191>
 
 **Features:**
 
@@ -927,10 +930,12 @@ curl http://localhost:5103/metrics
 #### Issue: No Logs in Console
 
 **Symptoms:**
+
 - Console output empty
 - Application appears to start but no log messages
 
 **Investigation:**
+
 ```bash
 # Check Serilog configuration
 grep "MinimumLevel" appsettings.json
@@ -940,6 +945,7 @@ grep "WriteTo.Console" Program.cs
 ```
 
 **Resolution:**
+
 - Ensure `builder.Host.UseSerilog()` is called
 - Check log level not set too high (e.g., `Error`)
 - Verify console sink configuration
@@ -947,10 +953,12 @@ grep "WriteTo.Console" Program.cs
 #### Issue: Traces Not Appearing in Aspire Dashboard
 
 **Symptoms:**
+
 - Aspire Dashboard shows no traces
 - Service appears healthy
 
 **Investigation:**
+
 ```bash
 # Check OpenTelemetry configuration
 grep "AddServiceDefaults" Program.cs
@@ -960,6 +968,7 @@ curl https://localhost:17191
 ```
 
 **Resolution:**
+
 - Ensure `builder.AddServiceDefaults()` is called before `builder.Build()`
 - Restart Aspire AppHost
 - Check firewall/port binding
@@ -967,10 +976,12 @@ curl https://localhost:17191
 #### Issue: Health Check Always Unhealthy
 
 **Symptoms:**
+
 - `/health/ready` returns `Unhealthy`
 - PostgreSQL or Redis check fails
 
 **Investigation:**
+
 ```bash
 # Check database connectivity
 psql -h localhost -U edumind_user -d edumind_dev
@@ -983,6 +994,7 @@ curl http://localhost:5103/health/ready | jq
 ```
 
 **Resolution:**
+
 - Verify connection strings in `appsettings.json`
 - Ensure PostgreSQL and Redis containers are running
 - Check network connectivity
@@ -1016,6 +1028,7 @@ EduMind.AI implements comprehensive observability using modern .NET technologies
 ---
 
 **Related Documentation:**
+
 - [Observability Strategy](../../docs/architecture/OBSERVABILITY_STRATEGY.md)
 - [Azure Deployment Strategy](../../docs/deployment/AZURE_DEPLOYMENT_STRATEGY.md)
 - [.NET Aspire Analysis](../../docs/deployment/ASPIRE_ANALYSIS.md)

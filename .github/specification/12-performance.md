@@ -24,6 +24,7 @@
 This document defines performance requirements, optimization strategies, and scalability targets for EduMind.AI. The platform must support 1000+ concurrent students while maintaining sub-second response times for most operations.
 
 **Key Performance Goals:**
+
 - **Responsive User Experience**: < 2 seconds for assessment loading
 - **Real-Time Collaboration**: < 500ms API response times
 - **AI-Powered Grading**: < 30 seconds for LLM-based essay evaluation
@@ -53,6 +54,7 @@ This document defines performance requirements, optimization strategies, and sca
 | **Health Check** | < 100ms | > 300ms | > 1s | ✅ < 50ms |
 
 **Target Throughput:**
+
 - 1000 requests/second sustained
 - 2000 requests/second peak (burst)
 - < 0.1% error rate under normal load
@@ -87,6 +89,7 @@ This document defines performance requirements, optimization strategies, and sca
 | Short answer grading | < 1s | > 2s | > 4s | 🎯 0.5-1s |
 
 **Optimization Strategy:**
+
 - Cache common evaluations (Redis TTL: 7 days)
 - Batch process non-urgent grading (overnight background jobs)
 - Use StubLLMService for development/testing
@@ -106,6 +109,7 @@ This document defines performance requirements, optimization strategies, and sca
 | Bulk INSERT (100 rows) | < 500ms | > 1.5s | > 5s | Batch operations, COPY command |
 
 **Connection Pool Configuration:**
+
 ```json
 {
   "ConnectionStrings": {
@@ -115,6 +119,7 @@ This document defines performance requirements, optimization strategies, and sca
 ```
 
 **Indexing Strategy:**
+
 - Primary keys: Automatic B-tree indexes
 - Foreign keys: Explicit indexes on all FK columns
 - Query filters: Composite indexes on frequently filtered columns
@@ -157,6 +162,7 @@ This document defines performance requirements, optimization strategies, and sca
 | Reconnection time | < 2s | > 5s | > 10s |
 
 **Redis Backplane Configuration (for horizontal scaling):**
+
 ```csharp
 builder.Services.AddSignalR()
     .AddStackExchangeRedis(configuration.GetConnectionString("Redis"), options => {
@@ -215,6 +221,7 @@ scale:
 | **API requests/day** | 5M | 25M | 100M | 500M |
 
 **Scaling Strategies:**
+
 - **Horizontal scaling**: Add more container replicas (API, Student App)
 - **Database partitioning**: Partition by school_id for large deployments
 - **Read replicas**: Use PostgreSQL read replicas for analytics queries
@@ -233,6 +240,7 @@ scale:
 | **Asia-Pacific (Southeast Asia)** | APAC users | < 150ms | Independent deployment |
 
 **Traffic Routing:**
+
 - Azure Front Door for global load balancing
 - GeoDNS routing to nearest region
 - Cross-region replication for critical data
@@ -245,24 +253,28 @@ scale:
 ### 1. Compute Resources (per replica)
 
 **Web API (AcademicAssessment.Web):**
+
 - **CPU**: 1.0 vCPU (burst to 2.0)
 - **Memory**: 2 GB
 - **Disk**: 10 GB (ephemeral)
 - **Estimated cost**: $50-100/month per replica (Azure Container Apps)
 
 **Student App (Blazor Server):**
+
 - **CPU**: 0.5 vCPU (burst to 1.0)
 - **Memory**: 1 GB
 - **Disk**: 5 GB (ephemeral)
 - **Estimated cost**: $25-50/month per replica
 
 **Dashboard/Admin Apps (Blazor Server):**
+
 - **CPU**: 0.25 vCPU
 - **Memory**: 512 MB
 - **Disk**: 5 GB
 - **Estimated cost**: $10-25/month per replica
 
 **Agent Orchestrator:**
+
 - **CPU**: 0.5 vCPU
 - **Memory**: 1 GB
 - **Disk**: 5 GB
@@ -280,6 +292,7 @@ scale:
 | **Enterprise** | 16 | 64 GB | 1 TB | 25,600 | ~$1,200 |
 
 **Backup Strategy:**
+
 - Automated daily backups (7-day retention)
 - Point-in-time restore (last 35 days)
 - Geo-redundant backup for production
@@ -294,6 +307,7 @@ scale:
 | **Enterprise** | 120 GB | 200,000 | ~$4,500 |
 
 **Blob Storage (Azure Storage Account):**
+
 - **Standard tier**: $0.02/GB/month
 - **Hot access tier** for recent files
 - **Cool access tier** for archived files (> 1 year old)
@@ -302,12 +316,14 @@ scale:
 ### 3. Bandwidth
 
 **Network Egress:**
+
 - **Intra-region**: Free
 - **Inter-region (Azure)**: $0.02/GB
 - **Internet egress**: $0.087/GB (first 10 TB)
 - **Estimated**: $100-500/month for medium scale
 
 **CDN (Azure CDN):**
+
 - Static assets served from CDN edge locations
 - Reduces origin load by 80-90%
 - **Estimated**: $50-150/month
@@ -324,6 +340,7 @@ scale:
 | **Enterprise (100K users)** | $10,000 | $1,200 | $4,500 | $1,000 | ~$16,700/month |
 
 **Cost Optimization:**
+
 - Scale to zero during off-hours (nights, weekends)
 - Reserved instances for production (30-50% savings)
 - Azure Hybrid Benefit for SQL licenses
@@ -336,6 +353,7 @@ scale:
 ### Test Environment
 
 **Development Environment:**
+
 - **OS**: Linux (Debian 12 in Dev Container)
 - **CPU**: Varies (20 threads available)
 - **Memory**: Varies
@@ -348,6 +366,7 @@ scale:
 #### 1. API Response Times (Stub Data)
 
 **Assessment API:**
+
 - `GET /api/v1/assessments`: **< 100ms** ✅
 - `GET /api/v1/assessments/{id}`: **< 80ms** ✅
 - `GET /api/v1/assessments/{id}/session`: **< 120ms** ✅
@@ -356,6 +375,7 @@ scale:
 - `GET /api/v1/assessments/{id}/results`: **< 90ms** ✅
 
 **Student Analytics API:**
+
 - `GET /api/v1/students/{id}/analytics/performance-summary`: **< 100ms** ✅
 - `GET /api/v1/students/{id}/analytics/subject-performance`: **< 100ms** ✅
 - `GET /api/v1/students/{id}/analytics/learning-objectives`: **Not tested** ⏳
@@ -365,6 +385,7 @@ scale:
 - `GET /api/v1/students/{id}/analytics/peer-comparison`: **Not tested** ⏳
 
 **System Health API:**
+
 - `GET /health`: **< 50ms** ✅
 - `GET /alive`: **< 30ms** ✅
 
@@ -373,6 +394,7 @@ scale:
 #### 2. LLM Performance (Development)
 
 **OLLAMA (llama3.2:3b on CPU):**
+
 - **First request**: 4.5s model load + 17s evaluation = **21.5s total**
 - **Subsequent requests**: **17-22s per evaluation**
 - **Tokens processed**: 36 prompt tokens (47.6 tokens/sec), 259 response tokens (15.0 tokens/sec)
@@ -380,32 +402,38 @@ scale:
 - **Verdict**: ✅ Acceptable for development, ⚠️ too slow for production (use GPU or Azure OpenAI)
 
 **Expected with GPU (RTX 4090):**
+
 - **First request**: 1s model load + 2s evaluation = **3s total**
 - **Subsequent requests**: **2-3s per evaluation**
 - **Improvement**: **8-10x faster**
 
 **Expected with Azure OpenAI GPT-4o:**
+
 - **All requests**: **1.5-3s per evaluation**
 - **Improvement**: **6-8x faster than CPU OLLAMA**
 
 #### 3. Build and Test Performance
 
 **Build Time:**
+
 - Clean build: **20-30 seconds**
 - Incremental build: **5-10 seconds**
 
 **Test Execution:**
+
 - Unit tests: **< 5 seconds** (57 tests)
 - Integration tests: **3-5 minutes** (with TestContainers)
 - Integration test infrastructure startup: **10-15 seconds** (optimized with tmpfs)
 
 **CI/CD Pipeline:**
+
 - Total time: **~10 minutes** (build + test + deploy)
 - Improvement from previous: **50% faster** (optimized test database)
 
 #### 4. Database Performance (Development)
 
 **PostgreSQL in Docker (with tmpfs for tests):**
+
 - Simple SELECT by ID: **< 5ms**
 - Assessment list (paginated): **< 20ms**
 - Complex join (3 tables): **< 50ms**
@@ -416,6 +444,7 @@ scale:
 #### 5. Cache Performance (Development)
 
 **Redis in Docker:**
+
 - GET operation: **< 3ms**
 - SET operation: **< 5ms**
 - Cache hit rate: **92%** (admin dashboard queries)
@@ -425,6 +454,7 @@ scale:
 #### 6. Agent Orchestration Performance
 
 **StudentProgressOrchestrator:**
+
 - Agent registration: **< 3 seconds** (all 5 subject agents)
 - Task assignment: **< 100ms** (routing with scoring algorithm)
 - Workflow execution: **45 seconds average** (includes LLM calls)
@@ -442,6 +472,7 @@ scale:
 **Problem**: N+1 query problem (loading related entities)
 
 **Solution**: Batch loading with dictionary caching
+
 ```csharp
 // ❌ BAD: N+1 queries
 public async Task<Subject> GetAssessmentSubject(Guid assessmentId)
@@ -470,6 +501,7 @@ public Subject GetAssessmentSubject(Guid assessmentId)
 #### Indexing Strategy
 
 **Create indexes on frequently filtered columns:**
+
 ```sql
 -- Foreign keys
 CREATE INDEX idx_assessment_responses_session_id ON assessment_responses(session_id);
@@ -491,6 +523,7 @@ CREATE INDEX idx_sessions_student_status ON assessment_sessions(student_id, stat
 #### Connection Pooling
 
 **Configure EF Core for optimal connection pooling:**
+
 ```csharp
 services.AddDbContextPool<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString, npgsqlOptions => {
@@ -505,6 +538,7 @@ services.AddDbContextPool<ApplicationDbContext>(options =>
 #### Compiled Queries
 
 **For frequently executed queries, use compiled queries:**
+
 ```csharp
 private static readonly Func<ApplicationDbContext, Guid, Task<Assessment>> GetAssessmentByIdCompiled =
     EF.CompileAsyncQuery((ApplicationDbContext context, Guid id) =>
@@ -523,6 +557,7 @@ public async Task<Assessment> GetByIdAsync(Guid id)
 #### Multi-Level Caching
 
 **Layer 1: In-Memory Cache (Fast, per-instance)**
+
 ```csharp
 services.AddMemoryCache(options => {
     options.SizeLimit = 1024;  // MB
@@ -531,6 +566,7 @@ services.AddMemoryCache(options => {
 ```
 
 **Layer 2: Distributed Cache (Shared, Redis)**
+
 ```csharp
 services.AddStackExchangeRedisCache(options => {
     options.Configuration = configuration.GetConnectionString("Redis");
@@ -539,6 +575,7 @@ services.AddStackExchangeRedisCache(options => {
 ```
 
 **Caching Pattern:**
+
 ```csharp
 public async Task<StudentPerformanceSummary> GetPerformanceSummaryAsync(Guid studentId)
 {
@@ -573,6 +610,7 @@ public async Task<StudentPerformanceSummary> GetPerformanceSummaryAsync(Guid stu
 #### Cache Invalidation
 
 **Invalidate cache on data updates:**
+
 ```csharp
 public async Task SubmitAssessmentAsync(Guid sessionId)
 {
@@ -592,6 +630,7 @@ public async Task SubmitAssessmentAsync(Guid sessionId)
 #### Caching LLM Results
 
 **Cache essay evaluations to avoid redundant LLM calls:**
+
 ```csharp
 public async Task<LLMEvaluationResult> EvaluateEssayAsync(string essayText, string rubric)
 {
@@ -621,6 +660,7 @@ public async Task<LLMEvaluationResult> EvaluateEssayAsync(string essayText, stri
 #### Batch Processing
 
 **Process non-urgent grading in background:**
+
 ```csharp
 public async Task QueueEssayForGradingAsync(Guid responseId)
 {
@@ -644,6 +684,7 @@ public async Task ProcessBatchAsync(IEnumerable<GradeEssayJob> jobs)
 #### Fallback to Stub Service
 
 **Use StubLLMService for development/testing:**
+
 ```csharp
 // appsettings.Development.json
 {
@@ -667,6 +708,7 @@ public async Task ProcessBatchAsync(IEnumerable<GradeEssayJob> jobs)
 #### Parallel Task Execution
 
 **Execute independent tasks in parallel:**
+
 ```csharp
 public async Task<StudentDashboard> LoadDashboardAsync(Guid studentId)
 {
@@ -689,6 +731,7 @@ public async Task<StudentDashboard> LoadDashboardAsync(Guid studentId)
 #### Streaming Responses
 
 **Stream large datasets to reduce memory usage:**
+
 ```csharp
 public async IAsyncEnumerable<AssessmentResponse> GetResponsesAsync(Guid sessionId, [EnumeratorCancellation] CancellationToken ct = default)
 {
@@ -705,6 +748,7 @@ public async IAsyncEnumerable<AssessmentResponse> GetResponsesAsync(Guid session
 ### 5. Response Compression
 
 **Enable response compression for large payloads:**
+
 ```csharp
 builder.Services.AddResponseCompression(options =>
 {
@@ -725,6 +769,7 @@ builder.Services.Configure<GzipCompressionProviderOptions>(options =>
 ### 6. Pagination and Filtering
 
 **Always paginate large result sets:**
+
 ```csharp
 public async Task<PagedResult<Assessment>> GetAssessmentsAsync(int page = 1, int pageSize = 20, string? subject = null)
 {
@@ -772,6 +817,7 @@ public async Task<PagedResult<Assessment>> GetAssessmentsAsync(int page = 1, int
 **Scenario**: Measure API response times under load
 
 **Test Cases:**
+
 ```bash
 # Test 1: Assessment list endpoint (100 concurrent users, 1000 requests)
 k6 run --vus 100 --iterations 1000 test-assessment-list.js
@@ -784,6 +830,7 @@ k6 run --vus 200 --iterations 2000 test-auto-save.js
 ```
 
 **Expected Results:**
+
 - P50 latency: < 300ms
 - P95 latency: < 700ms
 - P99 latency: < 1.5s
@@ -795,11 +842,13 @@ k6 run --vus 200 --iterations 2000 test-auto-save.js
 **Scenario**: Simulate 1000 students taking assessments simultaneously
 
 **Test Parameters:**
+
 - Ramp-up: 0 → 1000 users over 5 minutes
 - Duration: 30 minutes sustained load
 - Think time: 10-30 seconds between actions (realistic student behavior)
 
 **Expected Results:**
+
 - All 1000 students complete assessments successfully
 - No session timeouts
 - Auto-save works reliably
@@ -811,11 +860,13 @@ k6 run --vus 200 --iterations 2000 test-auto-save.js
 **Scenario**: Grade 100 essays concurrently with OLLAMA
 
 **Test Parameters:**
+
 - 100 essay submissions queued
 - OLLAMA processing capacity: 20 concurrent requests (configured limit)
 - Expected processing time: 20-25 seconds per essay
 
 **Expected Results:**
+
 - All 100 essays graded successfully
 - Average time to grade: < 30 seconds
 - Queue depth remains manageable (< 50)
@@ -827,11 +878,13 @@ k6 run --vus 200 --iterations 2000 test-auto-save.js
 **Scenario**: Monitor 500 concurrent students taking assessments with real-time progress updates
 
 **Test Parameters:**
+
 - 500 SignalR connections established
 - Progress updates sent every 5 seconds
 - Test duration: 10 minutes
 
 **Expected Results:**
+
 - All connections remain stable
 - Message delivery latency < 200ms
 - No dropped connections
@@ -842,21 +895,21 @@ k6 run --vus 200 --iterations 2000 test-auto-save.js
 
 **Recommended Tools:**
 
-1. **k6** (https://k6.io/):
+1. **k6** (<https://k6.io/>):
    - JavaScript-based load testing
    - Excellent for HTTP/REST APIs
    - Great reporting and visualization
-   
+
 2. **NBomber** (.NET):
    - Native .NET integration
    - Supports HTTP, WebSockets, gRPC
    - Good for SignalR testing
-   
+
 3. **Apache Bench** (ab):
    - Simple HTTP benchmarking
    - Built-in to most Linux distributions
    - Good for quick tests
-   
+
 4. **Grafana K6 Cloud**:
    - Cloud-based load testing
    - Distributed load generation
@@ -869,6 +922,7 @@ k6 run --vus 200 --iterations 2000 test-auto-save.js
 ### 1. Application Performance Monitoring (APM)
 
 **OpenTelemetry Integration:**
+
 ```csharp
 builder.Services.AddOpenTelemetry()
     .WithMetrics(metrics =>
@@ -901,11 +955,13 @@ builder.Services.AddOpenTelemetry()
 ### 2. Distributed Tracing
 
 **Trace Request Flow Across Services:**
+
 - Client request → Web API → Database query → Cache lookup → LLM call
 - Identify bottlenecks (slow spans)
 - Correlate logs and metrics using trace IDs
 
 **Example Trace:**
+
 ```
 Request: POST /api/v1/assessments/123/submit
   ├─ Span: ValidateSubmission (50ms)
@@ -987,6 +1043,7 @@ groups:
 **Impact**: Students wait 20+ seconds for essay grading
 
 **Solutions**:
+
 1. ✅ **Immediate**: Use StubLLMService for development (instant response)
 2. 🎯 **Short-term**: Add GPU to OLLAMA deployment (2-3s per evaluation)
 3. 🎯 **Long-term**: Migrate to Azure OpenAI GPT-4o (1.5-2s per evaluation)
@@ -1002,6 +1059,7 @@ groups:
 **Impact**: API response times may exceed targets with real data
 
 **Solutions**:
+
 1. 🎯 **Add indexes** on frequently queried columns
 2. 🎯 **Optimize N+1 queries** with batch loading
 3. 🎯 **Use compiled queries** for hot paths
@@ -1017,6 +1075,7 @@ groups:
 **Impact**: Cache misses → more database queries → higher latency
 
 **Solutions**:
+
 1. ✅ **Increase Redis memory** (scale up tier)
 2. 🎯 **Tune TTLs** (reduce TTL for less-accessed data)
 3. 🎯 **Implement LRU eviction policy** (evict least recently used)
@@ -1031,6 +1090,7 @@ groups:
 **Impact**: Connection limit reached, new users cannot connect
 
 **Solutions**:
+
 1. 🎯 **Redis backplane** for horizontal scaling (share connections across replicas)
 2. 🎯 **Azure SignalR Service** (fully managed, 100,000+ connections)
 3. 🎯 **Connection-based rate limiting** to prevent abuse
