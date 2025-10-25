@@ -161,7 +161,6 @@ publish/
 *.kubeconfig
 
 # Temporary files
-temp/
 tmp/
 *.tmp
 
