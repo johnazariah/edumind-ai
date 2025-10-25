@@ -28,6 +28,7 @@ This is planned for **Weeks 5-6** in the roadmap.
 ### Infrastructure (Bicep)
 
 Current infrastructure in `infra/main.bicep`:
+
 - ✅ Azure Container Apps Environment
 - ✅ 7 Container Apps (webapi, studentapp, 5 admin apps)
 - ✅ Azure Database for PostgreSQL Flexible Server
@@ -37,6 +38,7 @@ Current infrastructure in `infra/main.bicep`:
 - ✅ Managed Identity for service authentication
 
 **Additional Infrastructure Needed:**
+
 - [ ] Azure Key Vault for secrets
 - [ ] Azure CDN for static assets
 - [ ] Azure Storage for file uploads
@@ -73,6 +75,7 @@ psql -h psql-edumind-prod.postgres.database.azure.com \
 ### Configuration
 
 **Production appsettings.json:**
+
 ```json
 {
   "Logging": {
@@ -110,6 +113,7 @@ psql -h psql-edumind-prod.postgres.database.azure.com \
 ### Scaling Configuration
 
 **Container Apps Scaling Rules:**
+
 ```bicep
 properties: {
   template: {
@@ -144,6 +148,7 @@ properties: {
 ### Monitoring and Alerting
 
 **Azure Monitor Alerts:**
+
 ```bicep
 resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
   name: 'high-error-rate'
@@ -175,6 +180,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 ```
 
 **Dashboards:**
+
 - Application performance dashboard
 - User activity dashboard
 - Infrastructure health dashboard
@@ -183,6 +189,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 ## Acceptance Criteria
 
 ### Infrastructure
+
 - [ ] Production resource group created
 - [ ] All Azure resources deployed via Bicep
 - [ ] Key Vault provisioned with all secrets
@@ -193,6 +200,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 - [ ] SSL certificate provisioned
 
 ### Database
+
 - [ ] Production database created with HA
 - [ ] Database migrations applied
 - [ ] Production data seeded
@@ -202,6 +210,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 - [ ] Firewall rules configured
 
 ### Application
+
 - [ ] All container apps deployed
 - [ ] Environment variables configured
 - [ ] Secrets loaded from Key Vault
@@ -211,6 +220,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 - [ ] Distributed tracing working
 
 ### Security
+
 - [ ] All secrets in Key Vault (no hardcoded secrets)
 - [ ] Managed Identity used for service auth
 - [ ] Network isolation configured
@@ -220,6 +230,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 - [ ] Vulnerability scanning passed
 
 ### Performance
+
 - [ ] Load testing completed (500 concurrent users)
 - [ ] Response times <2s for 95th percentile
 - [ ] Caching configured and working
@@ -228,6 +239,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 - [ ] Connection pooling configured
 
 ### Monitoring
+
 - [ ] Application Insights dashboards created
 - [ ] Alerts configured for critical metrics
 - [ ] Log Analytics queries documented
@@ -236,12 +248,14 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 - [ ] Runbooks for common issues
 
 ### Disaster Recovery
+
 - [ ] Backup and restore tested
 - [ ] Failover procedures documented
 - [ ] RTO/RPO defined and achievable
 - [ ] DR drill completed successfully
 
 ### Cost Optimization
+
 - [ ] Autoscaling configured
 - [ ] Reserved instances evaluated
 - [ ] Cost alerts configured
@@ -288,6 +302,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 ## Testing Strategy
 
 **Pre-Production:**
+
 - [ ] Deploy to staging environment
 - [ ] Run full regression test suite
 - [ ] Load testing (simulate production load)
@@ -296,6 +311,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 - [ ] User acceptance testing
 
 **Production Validation:**
+
 - [ ] Smoke tests after deployment
 - [ ] Monitor Application Insights for errors
 - [ ] Verify health checks
@@ -304,6 +320,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 - [ ] Verify monitoring and alerts working
 
 **Post-Deployment:**
+
 - [ ] Monitor for 24 hours
 - [ ] Review logs for errors
 - [ ] Check cost dashboard
@@ -313,6 +330,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 ## Deployment Checklist
 
 **Pre-Deployment:**
+
 - [ ] Code freeze (no new features)
 - [ ] All tests passing
 - [ ] Documentation updated
@@ -321,6 +339,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 - [ ] Rollback plan reviewed
 
 **During Deployment:**
+
 - [ ] Put maintenance page up (optional)
 - [ ] Deploy infrastructure (Bicep)
 - [ ] Deploy applications (Container Apps)
@@ -331,6 +350,7 @@ resource highErrorRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 - [ ] Remove maintenance page
 
 **Post-Deployment:**
+
 - [ ] Monitor metrics for 1 hour
 - [ ] Verify user can complete workflows
 - [ ] Check error logs
