@@ -28,6 +28,10 @@
     <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
     <PackageReference Include="Asp.Versioning.Http" Version="8.1.0" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
+    
+    <!-- Aspire Service Discovery Client Components -->
+    <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.5.1" />
+    <PackageReference Include="Aspire.StackExchange.Redis" Version="9.5.1" />
   </ItemGroup>
 
   <ItemGroup>
