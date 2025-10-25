@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Text.Json;
 using Asp.Versioning;
+using Aspire.Npgsql.EntityFrameworkCore.PostgreSQL;
+using Aspire.StackExchange.Redis;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
@@ -370,16 +372,18 @@ try
     });
 
     // ============================================================
-    // DATABASE CONTEXT
+    // DATABASE CONTEXT - Aspire Service Discovery
     // ============================================================
-    builder.Services.AddDbContext<AcademicAssessment.Infrastructure.Data.AcademicContext>(options =>
-    {
-        // Use Aspire-provided connection string "edumind", fall back to AcademicDatabase or default
-        var connectionString = builder.Configuration.GetConnectionString("edumind")
-            ?? builder.Configuration.GetConnectionString("AcademicDatabase")
-            ?? "Host=localhost;Database=edumind_dev;Username=edumind_user;Password=edumind_dev_password";
-        options.UseNpgsql(connectionString);
-    });
+    // Aspire automatically injects the connection string from AppHost's AddPostgres("postgres").AddDatabase("edumind")
+    // This works identically locally (Aspire-managed container) and in Azure (service bindings)
+    builder.AddNpgsqlDbContext<AcademicAssessment.Infrastructure.Data.AcademicContext>("edumind");
+
+    // ============================================================
+    // REDIS CACHE - Aspire Service Discovery
+    // ============================================================
+    // Aspire automatically injects the Redis connection from AppHost's AddRedis("cache")
+    // This works identically locally (Aspire-managed container) and in Azure (managed Redis or container)
+    builder.AddRedisClient("cache");
 
     // ============================================================
     // APPLICATION SERVICES
