@@ -43,20 +43,39 @@ else
         .WithLifetime(ContainerLifetime.Persistent);  // Keep data between runs
 }
 
-// Ollama (local development only - won't deploy to Azure)
-// Using AddContainer for services not yet supported by Aspire hosting packages
-var ollama = builder.AddContainer("ollama", "ollama/ollama", "latest")
-    .WithHttpEndpoint(port: 11434, targetPort: 11434, name: "ollama-http")
-    .WithLifetime(ContainerLifetime.Persistent)
-    .WithBindMount(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ollama"), "/root/.ollama");
+// AI Service Configuration
+// Local: Ollama (runs in container)
+// Azure: Azure OpenAI (would be configured via environment variables in production)
+IResourceBuilder<ProjectResource> webApi;
 
-// Add the Web API (primary backend)
-var webApi = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
-    .WithExternalHttpEndpoints()  // Make publicly accessible
-    .WithReference(postgres)
-    .WithReference(redis)
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
-    .WithEnvironment("Ollama__BaseUrl", ollama.GetEndpoint("ollama-http"));
+if (builder.ExecutionContext.IsPublishMode)
+{
+    // Azure deployment: Don't include Ollama container
+    // Azure OpenAI configuration would be set via Azure Container Apps environment variables
+    webApi = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
+        .WithExternalHttpEndpoints()  // Make publicly accessible
+        .WithReference(postgres)
+        .WithReference(redis)
+        .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
+    // Note: Azure OpenAI settings (endpoint, key, deployment) would be configured
+    // via Azure Key Vault or Container Apps secrets in production
+}
+else
+{
+    // Local development: Use Ollama container
+    var ollama = builder.AddContainer("ollama", "ollama/ollama", "latest")
+        .WithHttpEndpoint(port: 11434, targetPort: 11434, name: "ollama-http")
+        .WithLifetime(ContainerLifetime.Persistent)
+        .WithBindMount(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ollama"), "/root/.ollama");
+
+    // Add the Web API with Ollama reference
+    webApi = builder.AddProject<Projects.AcademicAssessment_Web>("webapi")
+        .WithExternalHttpEndpoints()  // Make publicly accessible
+        .WithReference(postgres)
+        .WithReference(redis)
+        .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
+        .WithEnvironment("Ollama__BaseUrl", ollama.GetEndpoint("ollama-http"));
+}
 
 // Add the Dashboard (Admin interface)
 builder.AddProject<Projects.AcademicAssessment_Dashboard>("dashboard")
