@@ -381,15 +381,30 @@ try
     });
 
     // ============================================================
-    // DATABASE CONTEXT - Aspire Service Discovery
+    // DATABASE - Aspire Service Discovery
     // ============================================================
     // Skip Aspire service discovery when running under WebApplicationFactory (integration tests)
     if (!isWebApplicationFactory && !builder.Environment.IsEnvironment("Testing"))
     {
-        Console.WriteLine($"[DEBUG] Environment is '{builder.Environment.EnvironmentName}' - Using Aspire service discovery");
-        // Aspire automatically injects the connection string from AppHost's AddPostgres("postgres").AddDatabase("edumind")
-        // This works identically locally (Aspire-managed container) and in Azure (service bindings)
-        builder.AddNpgsqlDbContext<AcademicAssessment.Infrastructure.Data.AcademicContext>("edumind");
+        // IMPORTANT: Cannot use AddNpgsqlDbContext (DbContext pooling) because AcademicContext 
+        // depends on ITenantContext which is scoped. DbContext pooling tries to resolve from root provider.
+        // Solution: Use AddDbContext (no pooling) and manually configure Npgsql with Aspire enrichment
+        var aspireConnectionString = builder.Configuration.GetConnectionString("edumind");
+        if (string.IsNullOrEmpty(aspireConnectionString))
+        {
+            throw new InvalidOperationException("Database connection string 'edumind' not found. Ensure Aspire AppHost is configured correctly.");
+        }
+        
+        builder.Services.AddDbContext<AcademicAssessment.Infrastructure.Data.AcademicContext>(options =>
+        {
+            options.UseNpgsql(aspireConnectionString);
+            options.EnableSensitiveDataLogging(builder.Environment.IsDevelopment());
+            options.EnableDetailedErrors(builder.Environment.IsDevelopment());
+        });
+        
+        // Manually add Npgsql data source for Aspire telemetry/health checks
+        builder.Services.AddNpgsqlDataSource(aspireConnectionString);
+    }
 
         // ============================================================
         // REDIS CACHE - Aspire Service Discovery

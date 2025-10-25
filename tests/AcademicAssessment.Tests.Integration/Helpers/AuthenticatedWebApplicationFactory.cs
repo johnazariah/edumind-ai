@@ -57,15 +57,8 @@ public class AuthenticatedWebApplicationFactory<TProgram> : WebApplicationFactor
                 services.Remove(descriptor);
             }
 
-            // Remove pooled DbContext registration if it exists
-            var poolDescriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(AcademicContext));
-            if (poolDescriptor != null)
-            {
-                services.Remove(poolDescriptor);
-            }
-
-            // Add in-memory database for testing
+            // Add in-memory database for testing WITHOUT pooling (matches production pattern)
+            // NOTE: Cannot use AddDbContextPool because AcademicContext depends on scoped ITenantContext
             services.AddDbContext<AcademicContext>(options =>
             {
                 options.UseInMemoryDatabase(_databaseName);

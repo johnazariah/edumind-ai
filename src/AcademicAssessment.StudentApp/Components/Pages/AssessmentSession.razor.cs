@@ -6,6 +6,7 @@ using AcademicAssessment.Core.Models.Dtos;
 using AcademicAssessment.StudentApp.Components.AssessmentSession;
 using AcademicAssessment.StudentApp.Components.Shared;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 namespace AcademicAssessment.StudentApp.Components.Pages;
 
@@ -24,6 +25,9 @@ public partial class AssessmentSession : IDisposable
 
     [Inject]
     private NavigationManager Navigation { get; set; } = default!;
+
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; } = default!;
 
     private AssessmentSessionDto? session;
     private bool isLoading = true;
@@ -85,7 +89,7 @@ public partial class AssessmentSession : IDisposable
 
         try
         {
-            session = await Http.GetFromJsonAsync<AssessmentSessionDto>($"api/v1/assessment/{AssessmentId}/session");
+            session = await Http.GetFromJsonAsync<AssessmentSessionDto>($"api/v1.0/Assessment/{AssessmentId}/session");
             if (session is null)
             {
                 errorMessage = "We could not start this assessment session.";
@@ -283,24 +287,39 @@ public partial class AssessmentSession : IDisposable
 
     private void NextQuestion()
     {
+        Console.WriteLine($"NextQuestion called. Current index: {currentQuestionIndex}, Total: {session?.Questions.Count}");
+
         if (session is null)
         {
+            Console.WriteLine("Session is null, returning");
             return;
         }
 
         if (currentQuestionIndex < session.Questions.Count - 1)
         {
             currentQuestionIndex++;
+            Console.WriteLine($"Moving to question {currentQuestionIndex + 1}");
             StateHasChanged();
+        }
+        else
+        {
+            Console.WriteLine("Already at last question");
         }
     }
 
     private void PreviousQuestion()
     {
+        Console.WriteLine($"PreviousQuestion called. Current index: {currentQuestionIndex}");
+
         if (currentQuestionIndex > 0)
         {
             currentQuestionIndex--;
+            Console.WriteLine($"Moving to question {currentQuestionIndex + 1}");
             StateHasChanged();
+        }
+        else
+        {
+            Console.WriteLine("Already at first question");
         }
     }
 
@@ -655,6 +674,21 @@ public partial class AssessmentSession : IDisposable
     {
         showToast = visible;
         return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        // Render math notation using KaTeX after each render
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("assessmentUi.enhanceContent", new object[] { });
+        }
+        catch (JSException)
+        {
+            // Silently ignore if JavaScript is not available
+        }
     }
 
     public void Dispose()

@@ -7,10 +7,10 @@ Console.WriteLine($"DOTNET_ENVIRONMENT: {Environment.GetEnvironmentVariable("DOT
 
 // PostgreSQL with Aspire service discovery
 // For now, using local containers only - Azure mode will be tested separately
+// Using default 'postgres' user to avoid authentication issues with health checks
 var postgres = builder.AddPostgres("postgres", port: 5432)
     .WithLifetime(ContainerLifetime.Persistent)  // Keep data between runs
     .WithEnvironment("POSTGRES_DB", "edumind_dev")
-    .WithEnvironment("POSTGRES_USER", "edumind_user")
     .AddDatabase("edumind");
 
 // Redis cache with Aspire service discovery  

@@ -174,10 +174,11 @@ Every story specification includes:
 
 **Examples:**
 
-- Story 001: Fix integration test serialization bug
+- Story 001: Fix integration test serialization bug ✅
 - Story 002: Implement k-anonymity privacy enforcement
 - Story 003: Implement COPPA compliance
 - Story 004: Implement GDPR data deletion
+- **Story 019: Student App UI/UX Overhaul** 🎯 **ACTIVE**
 
 **Timeline:** Complete first (weeks 1-5)
 
@@ -191,6 +192,7 @@ Every story specification includes:
 - Story 006: Student onboarding with Google OAuth
 - Story 007: Multi-tenant physical isolation
 - Story 008: Dedicated audit logging
+- **Story 018: Aspire Deployment Parity** ✅ **COMPLETE**
 
 **Timeline:** After P0 (weeks 6-11)
 

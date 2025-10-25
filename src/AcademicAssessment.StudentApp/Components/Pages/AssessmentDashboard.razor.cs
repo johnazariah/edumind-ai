@@ -36,8 +36,8 @@ public partial class AssessmentDashboard
     {
         try
         {
-            // Use relative path since base address is configured in Program.cs
-            assessments = await Http.GetFromJsonAsync<List<AssessmentSummary>>("api/v1/assessment");
+            // Call the versioned Assessment API endpoint (v1.0)
+            assessments = await Http.GetFromJsonAsync<List<AssessmentSummary>>("api/v1.0/Assessment");
         }
         catch (Exception ex)
         {
