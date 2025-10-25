@@ -35,7 +35,9 @@ else
         <div class="col-lg-8">
             @if (CurrentQuestion is not null)
             {
-                <QuestionRenderer Question="@CurrentQuestion" />
+                <div @ref="questionContainer">
+                    <QuestionRenderer Question="@CurrentQuestion" />
+                </div>
 
                 <section class="answer-section mt-4">
                     @switch (CurrentQuestion.QuestionType)

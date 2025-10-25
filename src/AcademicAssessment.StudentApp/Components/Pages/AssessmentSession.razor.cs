@@ -33,6 +33,7 @@ public partial class AssessmentSession : IDisposable
     private bool isLoading = true;
     private string? errorMessage;
     private int currentQuestionIndex;
+    private ElementReference questionContainer;
     private TimeSpan timeRemaining;
     private DateTimeOffset? lastSavedAt;
     private bool isAutoSaving;
@@ -680,10 +681,12 @@ public partial class AssessmentSession : IDisposable
     {
         await base.OnAfterRenderAsync(firstRender);
 
-        // Render math notation using KaTeX after each render
+        // Render math notation using KaTeX after each render. Prefer rendering
+        // the question container only (more efficient) and fall back to global
+        // rendering in the JS helper if the element is not provided.
         try
         {
-            await JSRuntime.InvokeVoidAsync("assessmentUi.enhanceContent", new object[] { });
+            await JSRuntime.InvokeVoidAsync("assessmentUi.enhanceContent", questionContainer);
         }
         catch (JSException)
         {
