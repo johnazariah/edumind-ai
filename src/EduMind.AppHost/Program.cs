@@ -6,17 +6,42 @@ Console.WriteLine($"ASPNETCORE_ENVIRONMENT: {Environment.GetEnvironmentVariable(
 Console.WriteLine($"DOTNET_ENVIRONMENT: {Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")}");
 
 // PostgreSQL with Aspire service discovery
-// Aspire manages the container lifecycle and connection strings automatically
-var postgres = builder.AddPostgres("postgres", port: 5432)
-    .WithLifetime(ContainerLifetime.Persistent)  // Keep data between runs
-    .WithEnvironment("POSTGRES_DB", "edumind_dev")
-    .WithEnvironment("POSTGRES_USER", "edumind_user")
-    .WithEnvironment("POSTGRES_PASSWORD", "password123")
-    .AddDatabase("edumind");
+// Local: Aspire manages a containerized Postgres instance
+// Azure: Uses Azure Database for PostgreSQL Flexible Server
+var postgresPassword = builder.AddParameter("postgres-password", secret: true);
+
+IResourceBuilder<IResourceWithConnectionString> postgres;
+if (builder.ExecutionContext.IsPublishMode)
+{
+    // Azure deployment: Use Azure PostgreSQL Flexible Server
+    postgres = builder.AddAzurePostgresFlexibleServer("postgres")
+        .AddDatabase("edumind");
+}
+else
+{
+    // Local development: Use containerized Postgres
+    postgres = builder.AddPostgres("postgres", password: postgresPassword, port: 5432)
+        .WithLifetime(ContainerLifetime.Persistent)  // Keep data between runs
+        .WithEnvironment("POSTGRES_DB", "edumind_dev")
+        .WithEnvironment("POSTGRES_USER", "edumind_user")
+        .AddDatabase("edumind");
+}
 
 // Redis cache with Aspire service discovery
-var redis = builder.AddRedis("cache", port: 6379)
-    .WithLifetime(ContainerLifetime.Persistent);  // Keep data between runs
+// Local: Aspire manages a containerized Redis instance
+// Azure: Uses Azure Cache for Redis
+IResourceBuilder<IResourceWithConnectionString> redis;
+if (builder.ExecutionContext.IsPublishMode)
+{
+    // Azure deployment: Use Azure Cache for Redis
+    redis = builder.AddAzureRedis("cache");
+}
+else
+{
+    // Local development: Use containerized Redis
+    redis = builder.AddRedis("cache", port: 6379)
+        .WithLifetime(ContainerLifetime.Persistent);  // Keep data between runs
+}
 
 // Ollama (local development only - won't deploy to Azure)
 // Using AddContainer for services not yet supported by Aspire hosting packages

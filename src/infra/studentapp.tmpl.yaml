@@ -22,9 +22,7 @@ properties:
         identity: {{ .Env.AZURE_CONTAINER_REGISTRY_MANAGED_IDENTITY_ID }}
     secrets:
       - name: connectionstrings--cache
-        value: cache:6379,password={{ securedParameter "cache_password" }}
-      - name: connectionstrings--edumind
-        value: Host=postgres;Port=5432;Username=postgres;Password={{ securedParameter "postgres_password" }};Database=edumind
+        value: '{{ .Env.CACHE_CONNECTIONSTRING }}'
   template:
     containers:
       - image: {{ .Image }}
@@ -50,8 +48,6 @@ properties:
             value: https://webapi.{{ .Env.AZURE_CONTAINER_APPS_ENVIRONMENT_DEFAULT_DOMAIN }}
           - name: ConnectionStrings__cache
             secretRef: connectionstrings--cache
-          - name: ConnectionStrings__edumind
-            secretRef: connectionstrings--edumind
     scale:
       minReplicas: 1
 tags:

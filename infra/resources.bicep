@@ -3,11 +3,9 @@ param location string = resourceGroup().location
 @description('Id of the user or app to assign application roles')
 param principalId string = ''
 
+
 @description('Tags that will be applied to all resources')
 param tags object = {}
-@description('PostgreSQL administrator password')
-@secure()
-param postgres_password string
 
 var resourceToken = uniqueString(resourceGroup().id)
 
@@ -27,19 +25,12 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
 }
 
 resource caeMiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(
-    containerRegistry.id,
-    managedIdentity.id,
-    subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
-  )
+  name: guid(containerRegistry.id, managedIdentity.id, subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d'))
   scope: containerRegistry
   properties: {
     principalId: managedIdentity.properties.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      '7f951dda-4ed3-4680-a7ca-43fe172d538d'
-    )
+    roleDefinitionId:  subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
   }
 }
 
@@ -71,29 +62,14 @@ resource storageVolumeFileService 'Microsoft.Storage/storageAccounts/fileService
   name: 'default'
 }
 resource volumesAccountRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(
-    storageVolume.id,
-    principalId,
-    subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69566ab7-960f-475b-8e7c-b3118f30c6bd')
-  )
+  name: guid(storageVolume.id, principalId, subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69566ab7-960f-475b-8e7c-b3118f30c6bd'))
   scope: storageVolume
   properties: {
     principalId: principalId
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      '69566ab7-960f-475b-8e7c-b3118f30c6bd'
-    )
+    roleDefinitionId:  subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69566ab7-960f-475b-8e7c-b3118f30c6bd')
   }
 }
 
-resource cacheEdumindapphostFc90bfaeb5CacheDataFileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-05-01' = {
-  parent: storageVolumeFileService
-  name: take('${toLower('cache')}-${toLower('edumindapphostfc90bfaeb5cachedata')}', 60)
-  properties: {
-    shareQuota: 1024
-    enabledProtocols: 'SMB'
-  }
-}
 resource ollamaBm0FileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-05-01' = {
   parent: storageVolumeFileService
   name: take('${toLower('ollama')}-${toLower('bm0')}', 60)
@@ -102,73 +78,15 @@ resource ollamaBm0FileShare 'Microsoft.Storage/storageAccounts/fileServices/shar
     enabledProtocols: 'SMB'
   }
 }
-resource postgresEdumindapphostFc90bfaeb5PostgresDataFileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-05-01' = {
-  parent: storageVolumeFileService
-  name: take('${toLower('postgres')}-${toLower('edumindapphostfc90bfaeb5postgresdata')}', 60)
-  properties: {
-    shareQuota: 1024
-    enabledProtocols: 'SMB'
-  }
-}
-
-// PostgreSQL Flexible Server (replaces containerized postgres)
-resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-03-01-preview' = {
-  name: 'psql-${resourceToken}'
-  location: location // Use same location as other resources for optimal networking
-  sku: {
-    name: 'Standard_B1ms'
-    tier: 'Burstable'
-  }
-  properties: {
-    version: '16'
-    administratorLogin: 'edumind_admin'
-    administratorLoginPassword: postgres_password
-    storage: {
-      storageSizeGB: 32
-      autoGrow: 'Disabled'
-    }
-    backup: {
-      backupRetentionDays: 7
-      geoRedundantBackup: 'Disabled'
-    }
-    highAvailability: {
-      mode: 'Disabled'
-    }
-    availabilityZone: ''
-  }
-  tags: tags
-}
-
-// Allow Azure services to access the database
-resource postgresFirewallAllowAzure 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-03-01-preview' = {
-  parent: postgresServer
-  name: 'AllowAllAzureServicesAndResourcesWithinAzureIps'
-  properties: {
-    startIpAddress: '0.0.0.0'
-    endIpAddress: '0.0.0.0'
-  }
-}
-
-// Create the edumind database
-resource postgresDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-03-01-preview' = {
-  parent: postgresServer
-  name: 'edumind'
-  properties: {
-    charset: 'UTF8'
-    collation: 'en_US.utf8'
-  }
-}
 
 resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-preview' = {
   name: 'cae-${resourceToken}'
   location: location
   properties: {
-    workloadProfiles: [
-      {
-        workloadProfileType: 'Consumption'
-        name: 'consumption'
-      }
-    ]
+    workloadProfiles: [{
+      workloadProfileType: 'Consumption'
+      name: 'consumption'
+    }]
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
@@ -185,19 +103,7 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-p
       componentType: 'AspireDashboard'
     }
   }
-}
 
-resource cacheEdumindapphostFc90bfaeb5CacheDataStore 'Microsoft.App/managedEnvironments/storages@2023-05-01' = {
-  parent: containerAppEnvironment
-  name: take('${toLower('cache')}-${toLower('edumindapphostfc90bfaeb5cachedata')}', 32)
-  properties: {
-    azureFile: {
-      shareName: cacheEdumindapphostFc90bfaeb5CacheDataFileShare.name
-      accountName: storageVolume.name
-      accountKey: storageVolume.listKeys().keys[0].value
-      accessMode: 'ReadWrite'
-    }
-  }
 }
 
 resource ollamaBm0Store 'Microsoft.App/managedEnvironments/storages@2023-05-01' = {
@@ -206,19 +112,6 @@ resource ollamaBm0Store 'Microsoft.App/managedEnvironments/storages@2023-05-01' 
   properties: {
     azureFile: {
       shareName: ollamaBm0FileShare.name
-      accountName: storageVolume.name
-      accountKey: storageVolume.listKeys().keys[0].value
-      accessMode: 'ReadWrite'
-    }
-  }
-}
-
-resource postgresEdumindapphostFc90bfaeb5PostgresDataStore 'Microsoft.App/managedEnvironments/storages@2023-05-01' = {
-  parent: containerAppEnvironment
-  name: take('${toLower('postgres')}-${toLower('edumindapphostfc90bfaeb5postgresdata')}', 32)
-  properties: {
-    azureFile: {
-      shareName: postgresEdumindapphostFc90bfaeb5PostgresDataFileShare.name
       accountName: storageVolume.name
       accountKey: storageVolume.listKeys().keys[0].value
       accessMode: 'ReadWrite'
@@ -237,11 +130,6 @@ output AZURE_CONTAINER_REGISTRY_NAME string = containerRegistry.name
 output AZURE_CONTAINER_APPS_ENVIRONMENT_NAME string = containerAppEnvironment.name
 output AZURE_CONTAINER_APPS_ENVIRONMENT_ID string = containerAppEnvironment.id
 output AZURE_CONTAINER_APPS_ENVIRONMENT_DEFAULT_DOMAIN string = containerAppEnvironment.properties.defaultDomain
-output SERVICE_CACHE_VOLUME_EDUMINDAPPHOSTFC90BFAEB5CACHEDATA_NAME string = cacheEdumindapphostFc90bfaeb5CacheDataStore.name
 output SERVICE_OLLAMA_VOLUME_BM0_NAME string = ollamaBm0Store.name
 output SERVICE_OLLAMA_FILE_SHARE_BM0_NAME string = ollamaBm0FileShare.name
-output SERVICE_POSTGRES_VOLUME_EDUMINDAPPHOSTFC90BFAEB5POSTGRESDATA_NAME string = postgresEdumindapphostFc90bfaeb5PostgresDataStore.name
 output AZURE_VOLUMES_STORAGE_ACCOUNT string = storageVolume.name
-output POSTGRES_HOST string = postgresServer.properties.fullyQualifiedDomainName
-output POSTGRES_DATABASE string = 'edumind'
-output POSTGRES_USERNAME string = 'edumind_admin'

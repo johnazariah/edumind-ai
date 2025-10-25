@@ -12,20 +12,6 @@ param location string
 @description('Id of the user or app to assign application roles')
 param principalId string = ''
 
-@metadata({
-  azd: {
-    type: 'generate'
-    config: { length: 22, noSpecial: true }
-  }
-})
-@secure()
-param cache_password string
-@metadata({
-  azd: {
-    type: 'generate'
-    config: { length: 22 }
-  }
-})
 @secure()
 param postgres_password string
 
@@ -38,7 +24,6 @@ resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   location: location
   tags: tags
 }
-
 module resources 'resources.bicep' = {
   scope: rg
   name: 'resources'
@@ -46,7 +31,42 @@ module resources 'resources.bicep' = {
     location: location
     tags: tags
     principalId: principalId
-    postgres_password: postgres_password
+  }
+}
+
+module cache 'cache/cache.module.bicep' = {
+  name: 'cache'
+  scope: rg
+  params: {
+    location: location
+  }
+}
+module cache_roles 'cache-roles/cache-roles.module.bicep' = {
+  name: 'cache-roles'
+  scope: rg
+  params: {
+    cache_outputs_name: cache.outputs.name
+    location: location
+    principalId: resources.outputs.MANAGED_IDENTITY_PRINCIPAL_ID
+    principalName: resources.outputs.MANAGED_IDENTITY_NAME
+  }
+}
+module postgres 'postgres/postgres.module.bicep' = {
+  name: 'postgres'
+  scope: rg
+  params: {
+    location: location
+  }
+}
+module postgres_roles 'postgres-roles/postgres-roles.module.bicep' = {
+  name: 'postgres-roles'
+  scope: rg
+  params: {
+    location: location
+    postgres_outputs_name: postgres.outputs.name
+    principalId: resources.outputs.MANAGED_IDENTITY_PRINCIPAL_ID
+    principalName: resources.outputs.MANAGED_IDENTITY_NAME
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -59,11 +79,8 @@ output AZURE_CONTAINER_REGISTRY_NAME string = resources.outputs.AZURE_CONTAINER_
 output AZURE_CONTAINER_APPS_ENVIRONMENT_NAME string = resources.outputs.AZURE_CONTAINER_APPS_ENVIRONMENT_NAME
 output AZURE_CONTAINER_APPS_ENVIRONMENT_ID string = resources.outputs.AZURE_CONTAINER_APPS_ENVIRONMENT_ID
 output AZURE_CONTAINER_APPS_ENVIRONMENT_DEFAULT_DOMAIN string = resources.outputs.AZURE_CONTAINER_APPS_ENVIRONMENT_DEFAULT_DOMAIN
-output SERVICE_CACHE_VOLUME_EDUMINDAPPHOSTFC90BFAEB5CACHEDATA_NAME string = resources.outputs.SERVICE_CACHE_VOLUME_EDUMINDAPPHOSTFC90BFAEB5CACHEDATA_NAME
 output SERVICE_OLLAMA_VOLUME_BM0_NAME string = resources.outputs.SERVICE_OLLAMA_VOLUME_BM0_NAME
 output SERVICE_OLLAMA_FILE_SHARE_BM0_NAME string = resources.outputs.SERVICE_OLLAMA_FILE_SHARE_BM0_NAME
-output SERVICE_POSTGRES_VOLUME_EDUMINDAPPHOSTFC90BFAEB5POSTGRESDATA_NAME string = resources.outputs.SERVICE_POSTGRES_VOLUME_EDUMINDAPPHOSTFC90BFAEB5POSTGRESDATA_NAME
 output AZURE_VOLUMES_STORAGE_ACCOUNT string = resources.outputs.AZURE_VOLUMES_STORAGE_ACCOUNT
-output POSTGRES_HOST string = resources.outputs.POSTGRES_HOST
-output POSTGRES_DATABASE string = resources.outputs.POSTGRES_DATABASE
-output POSTGRES_USERNAME string = resources.outputs.POSTGRES_USERNAME
+output CACHE_CONNECTIONSTRING string = cache.outputs.connectionString
+output POSTGRES_CONNECTIONSTRING string = postgres.outputs.connectionString

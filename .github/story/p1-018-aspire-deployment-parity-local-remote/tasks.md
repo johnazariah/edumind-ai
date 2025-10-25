@@ -10,31 +10,36 @@
 
 ### Phase 1: Core Aspire Integration (7 hours)
 
-- [ ] **Task 1:** Update AppHost to Use Aspire Resource APIs (4 hours)
+- [x] **Task 1:** Update AppHost to Use Aspire Resource APIs (4 hours)
   - Convert AddConnectionString to AddPostgres/AddRedis
   - Configure service references
   - Test local startup
+  - **Completed:** 2025-10-25
   
-- [ ] **Task 2:** Add Aspire NuGet Packages to AppHost (1 hour)
+- [x] **Task 2:** Add Aspire NuGet Packages to AppHost (1 hour)
   - Install Aspire.Hosting.PostgreSQL
   - Install Aspire.Hosting.Redis
   - Verify builds
+  - **Completed:** 2025-10-25 (packages already present)
 
-- [ ] **Task 3:** Update Web API to Use Aspire Service Discovery (3 hours)
+- [x] **Task 3:** Update Web API to Use Aspire Service Discovery (3 hours)
   - Add Aspire client packages
   - Remove hardcoded connection strings
   - Test database and Redis connections
+  - **Completed:** 2025-10-25
 
 ### Phase 2: Service Communication (6 hours)
 
-- [ ] **Task 4:** Update Dashboard to Use Service Discovery for Web API (2 hours)
+- [x] **Task 4:** Update Dashboard to Use Service Discovery for Web API (2 hours)
   - Add service discovery packages
   - Replace hardcoded API URLs
   - Test HTTP communication
+  - **Completed:** 2025-10-25
 
-- [ ] **Task 5:** Update Student App to Use Service Discovery (2 hours)
+- [x] **Task 5:** Update Student App to Use Service Discovery (2 hours)
   - Same as Task 4 for Student App
   - Test API calls and SignalR
+  - **Completed:** 2025-10-25
 
 - [ ] **Task 8:** Add Environment Detection Logic (2 hours)
   - Ollama for local, Azure OpenAI for production
@@ -80,16 +85,46 @@
 ## Progress Tracking
 
 **Total Tasks:** 12  
-**Completed:** 0  
-**In Progress:** 0  
+**Completed:** 5  
+**In Progress:** 1 (Task 6)  
 **Blocked:** 0  
 
 **Estimated Total Effort:** 39 hours (~2 weeks)  
-**Actual Time Spent:** 0 hours
+**Actual Time Spent:** ~8 hours
 
 ---
 
 ## Notes
+
+### 2025-10-25: Tasks 1-5 Complete
+
+**Completed:**
+
+- Task 1: AppHost converted to Aspire resource APIs (AddPostgres, AddRedis, AddContainer)
+- Task 2: Aspire packages verified (already present in AppHost)
+- Task 3: Web API updated for Aspire service discovery (AddNpgsqlDbContext, AddRedisClient)
+- Task 4: Dashboard updated with Aspire service discovery
+- Task 5: Student App updated with Aspire service discovery
+
+**Key Learnings:**
+
+- Aspire 9.5.1 requires Microsoft.Extensions packages v9.x (upgraded from 8.x)
+- Package version conflicts resolved by explicitly specifying Configuration.Abstractions 9.0.9
+- All builds succeeding with new service discovery configuration
+
+**Pattern Established:**
+
+```csharp
+// AppHost defines resources:
+var postgres = builder.AddPostgres("postgres").AddDatabase("edumind");
+var redis = builder.AddRedis("cache");
+
+// Apps consume via service discovery:
+builder.AddNpgsqlDbContext<AcademicContext>("edumind");
+builder.AddRedisClient("cache");
+builder.Services.AddHttpClient("ApiClient", c => c.BaseAddress = new Uri("http://webapi"))
+    .AddServiceDiscovery();
+```
 
 ### 2025-10-25: Story Created
 
@@ -101,11 +136,11 @@
 
 ## Current Focus
 
-**Next Task:** Task 1 - Update AppHost to Use Aspire Resource APIs
+**Next Task:** Task 6 - Update Bicep Templates for Aspire Azure Deployment (6 hours)
 
 **Blockers:** None
 
 **Questions:**
 
-- Should we keep Ollama for local dev or switch to Azure OpenAI everywhere?
-- PgAdmin for local development - include or skip?
+- Should we keep Ollama for local dev or switch to Azure OpenAI everywhere? → Keeping Ollama local per spec
+- PgAdmin for local development - include or skip? → Skipping for now, can add later

@@ -5,9 +5,6 @@
       "principalId": {
         "value": "${AZURE_PRINCIPAL_ID}"
       },
-      "cache_password": {
-        "value": "${AZURE_CACHE_PASSWORD}"
-      },
       "postgres_password": {
         "value": "${AZURE_POSTGRES_PASSWORD}"
       },
