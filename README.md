@@ -155,28 +155,64 @@ edumind-ai/
 
 ### Quick Start with .NET Aspire (Recommended)
 
-The fastest way to get started is using .NET Aspire, which orchestrates all services with one command:
+**The fastest way to run EduMind.AI is with .NET Aspire:**
 
 ```bash
+# Clone the repository
 git clone https://github.com/johnazariah/edumind-ai.git
 cd edumind-ai
+
+# Start everything with one command:
 dotnet run --project src/EduMind.AppHost
 ```
 
-This automatically starts:
+**What happens automatically:**
 
-- PostgreSQL (database)
-- Redis (cache)
-- OLLAMA (free local LLM for development/testing)
-- Web API
-- Dashboard
-- Student App
+- ✅ PostgreSQL container starts (persistent data)
+- ✅ Redis container starts (persistent cache)
+- ✅ Ollama container starts (free local AI)
+- ✅ Web API builds and runs
+- ✅ Dashboard builds and runs
+- ✅ Student App builds and runs
+- ✅ Service discovery configured
+- ✅ Aspire Dashboard opens with telemetry
 
-The Aspire Dashboard opens at `https://localhost:17191` with full observability.
+**Access the applications:**
 
-### Option 1: Using Dev Container (Also Recommended)
+- 🎛️ **Aspire Dashboard:** <https://localhost:17126> (monitoring & logs)
+- 🌐 **Web API:** <http://localhost:5103/swagger>
+- 📊 **Admin Dashboard:** <http://localhost:5183>
+- 👨‍🎓 **Student App:** <http://localhost:5049>
 
-Alternatively, use our pre-configured development container:
+**Note:** Ports are dynamic - check Aspire Dashboard for actual endpoints.
+
+### Deploy to Azure
+
+**One command deploys the entire stack to Azure:**
+
+```bash
+# Install Azure Developer CLI
+curl -fsSL https://aka.ms/install-azd.sh | bash
+
+# Deploy (prompts for subscription, environment name, location)
+azd up
+```
+
+**What happens automatically:**
+
+- ✅ Creates Azure Container Apps Environment
+- ✅ Provisions Azure PostgreSQL Flexible Server (Entra ID auth)
+- ✅ Provisions Azure Cache for Redis (Entra ID auth)
+- ✅ Builds and pushes container images to Azure Container Registry
+- ✅ Deploys all services to Azure Container Apps
+- ✅ Configures service discovery and bindings
+- ✅ Sets up managed identity authentication
+
+**Same code runs locally (containers) and remotely (Azure managed services)!**
+
+### Option 1: Using Dev Container
+
+Use our pre-configured development container (all tools pre-installed):
 
 1. **Prerequisites:**
    - Docker Desktop
@@ -193,9 +229,15 @@ Alternatively, use our pre-configured development container:
    Then: `F1` → "Dev Containers: Reopen in Container"
 
 3. **Everything is pre-installed:**
-   - .NET 8.0 SDK, GitHub CLI (`gh`), Azure CLI (`az`)
+   - .NET 9 SDK, Aspire workload, Azure CLI, GitHub CLI
    - PostgreSQL, Redis, pgAdmin, Redis Commander
    - All VS Code extensions and tools
+
+4. **Start the stack:**
+
+   ```bash
+   dotnet run --project src/EduMind.AppHost
+   ```
 
 See [.devcontainer/README.md](.devcontainer/README.md) for details.
 
@@ -203,20 +245,22 @@ See [.devcontainer/README.md](.devcontainer/README.md) for details.
 
 EduMind.AI supports multiple LLM providers:
 
-1. **OLLAMA (Default for Development)** - Free, local, privacy-focused
-   - Automatically started by Aspire
+1. **OLLAMA (Default for Local Development)** - Free, local, privacy-focused
+   - Automatically started by Aspire AppHost
    - Zero API costs
    - Works offline
    - Models: llama3.2:3b (2GB) or larger
+   - Container managed with persistent storage
 
-2. **Azure OpenAI** - Production-grade, cloud-based
+2. **Azure OpenAI (Production)** - Cloud-based, production-grade
    - Requires Azure subscription
    - Pay-per-use (~$0.01/evaluation)
    - Best performance and accuracy
+   - Automatically used in Azure deployments
 
-3. **Stub LLM** - Mock service for testing
+3. **Stub LLM (Testing)** - Mock service for CI/CD
    - No AI, exact string matching only
-   - Perfect for CI/CD pipelines
+   - Perfect for automated testing
 
 Configure in `appsettings.json`:
 
@@ -228,9 +272,11 @@ Configure in `appsettings.json`:
 }
 ```
 
-### Option 2: Local Installation
+**Note:** Azure deployments automatically skip Ollama and expect Azure OpenAI configuration via environment variables or Key Vault.
 
-If you prefer manual setup without Aspire:
+### Option 2: Manual Local Setup (Without Aspire)
+
+If you prefer manual setup without Aspire orchestration:
 
 ### Prerequisites
 
