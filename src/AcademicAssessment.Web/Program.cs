@@ -52,6 +52,7 @@ try
 
     // ============================================================
     // ASPIRE SERVICE DEFAULTS - OpenTelemetry, Service Discovery, Health Checks
+    // Skip in Testing environment to allow integration tests to work
     // ============================================================
     // Skip Aspire service defaults when running under WebApplicationFactory (integration tests)
     // Tests will set IsWebApplicationFactory configuration to skip Aspire setup
@@ -128,7 +129,7 @@ try
     // ============================================================
     var authEnabled = builder.Configuration.GetValue<bool>("Authentication:Enabled");
 
-    if (authEnabled && !builder.Environment.IsDevelopment())
+    if (authEnabled && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"))
     {
         // Production: Azure AD B2C with JWT Bearer authentication
         builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)
@@ -152,7 +153,7 @@ try
     }
     else
     {
-        // Development: Test JWT authentication with the same policies as production
+        // Development & Testing: Test JWT authentication with the same policies as production
         builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer();
 
