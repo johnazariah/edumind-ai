@@ -1,7 +1,9 @@
 window.assessmentUi = (function () {
     function enhanceContent(element) {
+        // If no element is provided, default to the document body so callers
+        // can simply call assessmentUi.enhanceContent() after Blazor renders.
         if (!element) {
-            return;
+            element = document.body;
         }
 
         if (window.renderMathInElement) {
