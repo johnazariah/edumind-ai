@@ -103,11 +103,13 @@ dotnet test tests/AcademicAssessment.Tests.Integration/ \
 ### Output Formats
 
 **Cobertura (XML):**
+
 - ✅ Human-readable XML
 - ✅ CI/CD integration
 - ✅ Report generation
 
 **OpenCover (XML):**
+
 - ✅ Detailed line/branch coverage
 - ✅ IDE integration (VS, Rider)
 

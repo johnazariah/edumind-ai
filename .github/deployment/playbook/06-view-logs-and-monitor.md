@@ -168,7 +168,7 @@ az containerapp logs show \
 
 **Step 1: Navigate to Container App**
 
-1. Open Azure Portal: https://portal.azure.com
+1. Open Azure Portal: <https://portal.azure.com>
 2. Go to **Resource Groups** → `rg-dev`
 3. Click on Container App (e.g., `ca-webapi-dev`)
 

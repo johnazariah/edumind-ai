@@ -168,7 +168,7 @@ Add 50% buffer time if you're learning.
 
 1. Check Azure CLI authentication: `az account show`
 2. Verify resource group exists: `az group show --name rg-dev`
-3. Use Azure Portal as backup: https://portal.azure.com
+3. Use Azure Portal as backup: <https://portal.azure.com>
 4. Check Application Insights if Container Apps logs unavailable
 
 ---
@@ -191,7 +191,7 @@ These playbooks are living documents. Update them when:
 
 If playbooks don't solve your issue:
 
-1. **Check GitHub Issues:** https://github.com/johnazariah/edumind-ai/issues
+1. **Check GitHub Issues:** <https://github.com/johnazariah/edumind-ai/issues>
 2. **Review Reference Guide:** [../reference.md](../reference.md)
 3. **Check ADRs:** [../../adr/](../../adr/) for architectural context
 4. **Contact Team:** Create GitHub issue with:
