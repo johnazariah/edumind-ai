@@ -9,6 +9,23 @@ builder.AddServiceDefaults();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// ============================================================
+// REDIS CACHE - Aspire Service Discovery
+// ============================================================
+// Aspire automatically injects the Redis connection from AppHost's AddRedis("cache")
+builder.AddRedisClient("cache");
+
+// ============================================================
+// HTTP CLIENT - Service Discovery for Web API
+// ============================================================
+// Configure HttpClient with service discovery
+// When calling "http://webapi/...", Aspire resolves to actual endpoint
+builder.Services.AddHttpClient("WebApi", client =>
+{
+    client.BaseAddress = new Uri("http://webapi");  // Aspire service discovery
+})
+.AddServiceDiscovery();  // Enable service discovery for this client
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

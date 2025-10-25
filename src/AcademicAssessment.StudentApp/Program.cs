@@ -1,21 +1,24 @@
 using AcademicAssessment.StudentApp.Components;
+using Aspire.StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// For local development, use minimal ServiceDefaults without service discovery
-// Comment this line out for Aspire orchestration
-// builder.AddServiceDefaults();
+builder.AddServiceDefaults();
+
+// Add Aspire service discovery for Redis cache
+builder.AddRedisClient("cache");
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Configure HTTP client for API calls
+// Configure HTTP client for API calls with Aspire service discovery
 builder.Services.AddHttpClient("ApiClient", client =>
 {
-    // For local development, use localhost. In production/Aspire, this will be overridden by service discovery
-    client.BaseAddress = new Uri("http://localhost:5103/");
-});
+    // Service name - Aspire will resolve to actual endpoint
+    client.BaseAddress = new Uri("http://webapi");
+})
+.AddServiceDiscovery();
 
 // Register a default HttpClient using the configured ApiClient
 builder.Services.AddScoped<HttpClient>(serviceProvider =>
