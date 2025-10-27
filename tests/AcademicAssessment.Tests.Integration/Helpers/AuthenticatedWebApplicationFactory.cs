@@ -36,6 +36,7 @@ public class AuthenticatedWebApplicationFactory<TProgram> : WebApplicationFactor
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["IsWebApplicationFactory"] = "true", // Signal to Program.cs to skip Aspire
                 ["Authentication:Enabled"] = "true",
                 // Provide connection strings to prevent Aspire from failing
                 // These will be overridden with in-memory database in ConfigureTestServices

@@ -47,11 +47,15 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
+    // Check if running under WebApplicationFactory (integration tests)
+    var isWebApplicationFactory = builder.Configuration.GetValue<bool>("IsWebApplicationFactory");
+
     // ============================================================
     // ASPIRE SERVICE DEFAULTS - OpenTelemetry, Service Discovery, Health Checks
     // ============================================================
-    // Skip Aspire service defaults in Testing environment (integration tests don't need these)
-    if (!builder.Environment.IsEnvironment("Testing"))
+    // Skip Aspire service defaults when running under WebApplicationFactory (integration tests)
+    // Tests will set IsWebApplicationFactory configuration to skip Aspire setup
+    if (!isWebApplicationFactory && !builder.Environment.IsEnvironment("Testing"))
     {
         builder.AddServiceDefaults();
     }
@@ -378,9 +382,8 @@ try
     // ============================================================
     // DATABASE CONTEXT - Aspire Service Discovery
     // ============================================================
-    // Skip Aspire service discovery in Testing environment (used by integration tests)
-    // Integration tests will configure their own in-memory database
-    if (!builder.Environment.IsEnvironment("Testing"))
+    // Skip Aspire service discovery when running under WebApplicationFactory (integration tests)
+    if (!isWebApplicationFactory && !builder.Environment.IsEnvironment("Testing"))
     {
         Console.WriteLine($"[DEBUG] Environment is '{builder.Environment.EnvironmentName}' - Using Aspire service discovery");
         // Aspire automatically injects the connection string from AppHost's AddPostgres("postgres").AddDatabase("edumind")
@@ -396,8 +399,8 @@ try
     }
     else
     {
-        Console.WriteLine($"[DEBUG] Environment is '{builder.Environment.EnvironmentName}' - Using test configuration");
-        // Testing environment: Use default configuration
+        Console.WriteLine($"[DEBUG] WebApplicationFactory={isWebApplicationFactory}, Environment is '{builder.Environment.EnvironmentName}' - Using test configuration");
+        // Testing environment or WebApplicationFactory: Use default configuration
         // Integration tests will override these with in-memory implementations
         var testConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
             ?? "Host=localhost;Database=edumind_test;Username=test;Password=test";
@@ -727,8 +730,8 @@ try
     // ============================================================
     // INITIALIZE A2A AGENTS (Phase 2 & 3)
     // ============================================================
-    // Skip agent initialization in Testing environment (integration tests don't need agents)
-    if (!app.Environment.IsEnvironment("Testing"))
+    // Skip agent initialization when running under WebApplicationFactory or Testing environment
+    if (!isWebApplicationFactory && !app.Environment.IsEnvironment("Testing"))
     {
         Log.Information("Initializing A2A agents...");
 
@@ -767,8 +770,8 @@ try
     // ============================================================
     // START ORCHESTRATION METRICS MONITORING (Day 5)
     // ============================================================
-    // Skip metrics monitoring in Testing environment (not needed for integration tests)
-    if (!app.Environment.IsEnvironment("Testing"))
+    // Skip metrics monitoring when running under WebApplicationFactory or Testing environment
+    if (!isWebApplicationFactory && !app.Environment.IsEnvironment("Testing"))
     {
         Log.Information("Starting orchestration metrics monitoring...");
         var metricsService = app.Services.GetRequiredService<AcademicAssessment.Web.Services.IOrchestrationMetricsService>();
@@ -781,8 +784,8 @@ try
     Log.Information("Listening on: {Urls}", string.Join(", ", builder.Configuration.GetSection("Urls").Get<string[]>() ?? new[] { "https://localhost:5001" }));
 
     // Map Aspire default endpoints (health checks, OpenTelemetry, etc.)
-    // Skip in Testing environment (integration tests don't need Aspire endpoints)
-    if (!app.Environment.IsEnvironment("Testing"))
+    // Skip when running under WebApplicationFactory or Testing environment
+    if (!isWebApplicationFactory && !app.Environment.IsEnvironment("Testing"))
     {
         app.MapDefaultEndpoints();
     }
