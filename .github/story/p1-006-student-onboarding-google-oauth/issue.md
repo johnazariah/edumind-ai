@@ -5,6 +5,9 @@
 **Effort:** Medium (1-2 weeks)  
 **Dependencies:** Story 003 (COPPA Compliance - for age verification)
 
+
+**GitHub Issue:** https://github.com/johnazariah/edumind-ai/issues/10
+
 ---
 
 ## Problem Statement

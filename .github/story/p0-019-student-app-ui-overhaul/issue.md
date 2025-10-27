@@ -6,6 +6,9 @@
 **Created:** 2025-10-25  
 **Depends On:** Story 018 (Aspire deployment parity)
 
+
+**GitHub Issue:** https://github.com/johnazariah/edumind-ai/issues/8
+
 ---
 
 ## Problem Statement

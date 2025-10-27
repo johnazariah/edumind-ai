@@ -5,6 +5,9 @@
 **Effort:** Small (1-2 weeks)  
 **Dependencies:** None (can start after Story 006)
 
+
+**GitHub Issue:** https://github.com/johnazariah/edumind-ai/issues/22
+
 ---
 
 ## Problem Statement

@@ -4,6 +4,9 @@
 **Estimated Effort:** 2-3 weeks  
 **Status:** Ready for Development
 
+
+**GitHub Issue:** https://github.com/johnazariah/edumind-ai/issues/14
+
 ---
 
 ## Problem Statement

@@ -5,6 +5,9 @@
 **Effort:** Large (2-3 weeks)  
 **Dependencies:** Story 009 (Question Authoring - need question pool with IRT parameters)
 
+
+**GitHub Issue:** https://github.com/johnazariah/edumind-ai/issues/15
+
 ---
 
 ## Problem Statement

@@ -59,6 +59,7 @@
     - `tests/e2e/tests/assessment.spec.ts`
     - `tests/e2e/README.md`
   - How to run locally:
+
     ```bash
     # from repo root
     ./scripts/start-aspire.sh   # ensure Aspire and services are running
@@ -67,6 +68,7 @@
     npm run install-browsers   # already run in dev container once
     npm test
     ```
+
   - Acceptance: Playwright E2E validates full assessment workflow across subjects and question types.
 
 ---
@@ -91,5 +93,3 @@
 ## Change History
 
 - This file was generated / updated by the agent on 2025-10-25 to persist Story 019 task state and context.
-
-

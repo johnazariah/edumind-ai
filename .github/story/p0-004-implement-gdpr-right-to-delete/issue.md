@@ -5,6 +5,9 @@
 **Effort:** Large (1-2 weeks)  
 **Dependencies:** Story 002 (K-Anonymity)
 
+
+**GitHub Issue:** https://github.com/johnazariah/edumind-ai/issues/7
+
 ---
 
 ## Problem Statement

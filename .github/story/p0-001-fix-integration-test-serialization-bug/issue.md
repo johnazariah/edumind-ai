@@ -5,6 +5,9 @@
 **Effort:** Small (4-8 hours)  
 **Dependencies:** None
 
+
+**GitHub Issue:** https://github.com/johnazariah/edumind-ai/issues/28
+
 ---
 
 ## Problem Statement
