@@ -26,27 +26,43 @@ public class AuthenticatedWebApplicationFactory<TProgram> : WebApplicationFactor
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // Use Development environment so that the stub authentication is used
-        // This bypasses Azure AD B2C and uses simple JWT authentication
-        builder.UseEnvironment("Development");
+        // Use Testing environment for integration tests
+        // This skips Aspire service discovery and uses test configuration
+        builder.UseEnvironment("Testing");
 
-        // Set up test configuration
+        // Set up test configuration BEFORE services are configured
+        // This ensures Aspire components get the correct connection strings
         builder.ConfigureAppConfiguration((context, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Authentication:Enabled"] = "true"
+                ["IsWebApplicationFactory"] = "true", // Signal to Program.cs to skip Aspire
+                ["Authentication:Enabled"] = "true",
+                // Provide connection strings to prevent Aspire from failing
+                // These will be overridden with in-memory database in ConfigureTestServices
+                ["ConnectionStrings:edumind"] = "Host=localhost;Database=test;Username=test;Password=test",
+                ["ConnectionStrings:cache"] = "localhost:6379",
+                ["ConnectionStrings:DefaultConnection"] = "Host=localhost;Database=test;Username=test;Password=test",
+                ["ConnectionStrings:Redis"] = "localhost:6379"
             }!);
         });
 
         builder.ConfigureTestServices(services =>
         {
-            // Remove the existing DbContext registration
+            // Remove the existing DbContext registration (from Aspire or normal registration)
             var descriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(DbContextOptions<AcademicContext>));
             if (descriptor != null)
             {
                 services.Remove(descriptor);
+            }
+
+            // Remove pooled DbContext registration if it exists
+            var poolDescriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(AcademicContext));
+            if (poolDescriptor != null)
+            {
+                services.Remove(poolDescriptor);
             }
 
             // Add in-memory database for testing
