@@ -50,7 +50,11 @@ try
     // ============================================================
     // ASPIRE SERVICE DEFAULTS - OpenTelemetry, Service Discovery, Health Checks
     // ============================================================
-    builder.AddServiceDefaults();
+    // Skip Aspire service defaults in Testing environment (integration tests don't need these)
+    if (!builder.Environment.IsEnvironment("Testing"))
+    {
+        builder.AddServiceDefaults();
+    }
 
     // ============================================================
     // LOGGING - Use Serilog
@@ -374,16 +378,38 @@ try
     // ============================================================
     // DATABASE CONTEXT - Aspire Service Discovery
     // ============================================================
-    // Aspire automatically injects the connection string from AppHost's AddPostgres("postgres").AddDatabase("edumind")
-    // This works identically locally (Aspire-managed container) and in Azure (service bindings)
-    builder.AddNpgsqlDbContext<AcademicAssessment.Infrastructure.Data.AcademicContext>("edumind");
+    // Skip Aspire service discovery in Testing environment (used by integration tests)
+    // Integration tests will configure their own in-memory database
+    if (!builder.Environment.IsEnvironment("Testing"))
+    {
+        Console.WriteLine($"[DEBUG] Environment is '{builder.Environment.EnvironmentName}' - Using Aspire service discovery");
+        // Aspire automatically injects the connection string from AppHost's AddPostgres("postgres").AddDatabase("edumind")
+        // This works identically locally (Aspire-managed container) and in Azure (service bindings)
+        builder.AddNpgsqlDbContext<AcademicAssessment.Infrastructure.Data.AcademicContext>("edumind");
 
-    // ============================================================
-    // REDIS CACHE - Aspire Service Discovery
-    // ============================================================
-    // Aspire automatically injects the Redis connection from AppHost's AddRedis("cache")
-    // This works identically locally (Aspire-managed container) and in Azure (managed Redis or container)
-    builder.AddRedisClient("cache");
+        // ============================================================
+        // REDIS CACHE - Aspire Service Discovery
+        // ============================================================
+        // Aspire automatically injects the Redis connection from AppHost's AddRedis("cache")
+        // This works identically locally (Aspire-managed container) and in Azure (managed Redis or container)
+        builder.AddRedisClient("cache");
+    }
+    else
+    {
+        Console.WriteLine($"[DEBUG] Environment is '{builder.Environment.EnvironmentName}' - Using test configuration");
+        // Testing environment: Use default configuration
+        // Integration tests will override these with in-memory implementations
+        var testConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+            ?? "Host=localhost;Database=edumind_test;Username=test;Password=test";
+        
+        builder.Services.AddDbContext<AcademicAssessment.Infrastructure.Data.AcademicContext>(options =>
+            options.UseNpgsql(testConnectionString));
+        
+        // Redis is optional in tests - stub implementation will be used if not available
+        var testRedisConnection = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+        builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
+            StackExchange.Redis.ConnectionMultiplexer.Connect(testRedisConnection));
+    }
 
     // ============================================================
     // APPLICATION SERVICES
@@ -701,53 +727,65 @@ try
     // ============================================================
     // INITIALIZE A2A AGENTS (Phase 2 & 3)
     // ============================================================
-    Log.Information("Initializing A2A agents...");
-
-    // Get TaskService for agent registration
-    var taskService = app.Services.GetRequiredService<AcademicAssessment.Agents.Shared.Interfaces.ITaskService>();
-
-    // Initialize Student Progress Orchestrator (using a scope since it's registered as Scoped)
-    using (var scope = app.Services.CreateScope())
+    // Skip agent initialization in Testing environment (integration tests don't need agents)
+    if (!app.Environment.IsEnvironment("Testing"))
     {
-        var orchestrator = scope.ServiceProvider.GetRequiredService<AcademicAssessment.Orchestration.StudentProgressOrchestrator>();
-        await orchestrator.InitializeAsync();
-        Log.Information("Student Progress Orchestrator initialized: {AgentId}", orchestrator.AgentCard.AgentId);
-    }
+        Log.Information("Initializing A2A agents...");
 
-    // Initialize Mathematics Assessment Agent (Phase 3) - using scope since agents are now Scoped
-    using (var scope = app.Services.CreateScope())
-    {
-        var mathAgent = scope.ServiceProvider.GetRequiredService<AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent>();
-        await mathAgent.InitializeAsync();
+        // Get TaskService for agent registration
+        var taskService = app.Services.GetRequiredService<AcademicAssessment.Agents.Shared.Interfaces.ITaskService>();
 
-        // Register math agent handler with TaskService
-        if (taskService is AcademicAssessment.Agents.Shared.Services.TaskService ts)
+        // Initialize Student Progress Orchestrator (using a scope since it's registered as Scoped)
+        using (var scope = app.Services.CreateScope())
         {
-            ts.RegisterHandler(mathAgent.AgentCard.AgentId, mathAgent.ExecuteTaskAsync);
-            Log.Information("Mathematics Assessment Agent initialized and registered: {AgentId}", mathAgent.AgentCard.AgentId);
+            var orchestrator = scope.ServiceProvider.GetRequiredService<AcademicAssessment.Orchestration.StudentProgressOrchestrator>();
+            await orchestrator.InitializeAsync();
+            Log.Information("Student Progress Orchestrator initialized: {AgentId}", orchestrator.AgentCard.AgentId);
         }
-    }
 
-    // TODO: Initialize additional subject agents (Phase 5)
-    // - PhysicsAssessmentAgent
-    // - ChemistryAssessmentAgent
-    // - BiologyAssessmentAgent
-    // - EnglishAssessmentAgent
+        // Initialize Mathematics Assessment Agent (Phase 3) - using scope since agents are now Scoped
+        using (var scope = app.Services.CreateScope())
+        {
+            var mathAgent = scope.ServiceProvider.GetRequiredService<AcademicAssessment.Agents.Mathematics.MathematicsAssessmentAgent>();
+            await mathAgent.InitializeAsync();
+
+            // Register math agent handler with TaskService
+            if (taskService is AcademicAssessment.Agents.Shared.Services.TaskService ts)
+            {
+                ts.RegisterHandler(mathAgent.AgentCard.AgentId, mathAgent.ExecuteTaskAsync);
+                Log.Information("Mathematics Assessment Agent initialized and registered: {AgentId}", mathAgent.AgentCard.AgentId);
+            }
+        }
+
+        // TODO: Initialize additional subject agents (Phase 5)
+        // - PhysicsAssessmentAgent
+        // - ChemistryAssessmentAgent
+        // - BiologyAssessmentAgent
+        // - EnglishAssessmentAgent
+    }
 
     // ============================================================
     // START ORCHESTRATION METRICS MONITORING (Day 5)
     // ============================================================
-    Log.Information("Starting orchestration metrics monitoring...");
-    var metricsService = app.Services.GetRequiredService<AcademicAssessment.Web.Services.IOrchestrationMetricsService>();
-    metricsService.StartMonitoring(intervalSeconds: 5);
-    Log.Information("Orchestration metrics monitoring started (5s interval)");
+    // Skip metrics monitoring in Testing environment (not needed for integration tests)
+    if (!app.Environment.IsEnvironment("Testing"))
+    {
+        Log.Information("Starting orchestration metrics monitoring...");
+        var metricsService = app.Services.GetRequiredService<AcademicAssessment.Web.Services.IOrchestrationMetricsService>();
+        metricsService.StartMonitoring(intervalSeconds: 5);
+        Log.Information("Orchestration metrics monitoring started (5s interval)");
+    }
 
     Log.Information("EduMind.AI Web API started successfully");
     Log.Information("Environment: {Environment}", app.Environment.EnvironmentName);
     Log.Information("Listening on: {Urls}", string.Join(", ", builder.Configuration.GetSection("Urls").Get<string[]>() ?? new[] { "https://localhost:5001" }));
 
     // Map Aspire default endpoints (health checks, OpenTelemetry, etc.)
-    app.MapDefaultEndpoints();
+    // Skip in Testing environment (integration tests don't need Aspire endpoints)
+    if (!app.Environment.IsEnvironment("Testing"))
+    {
+        app.MapDefaultEndpoints();
+    }
 
     app.Run();
 }
