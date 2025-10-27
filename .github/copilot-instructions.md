@@ -1,7 +1,7 @@
 # GitHub Copilot Agent Instructions
 
-**Version:** 1.0.0  
-**Last Updated:** October 25, 2025
+**Version:** 1.1.0  
+**Last Updated:** October 27, 2025
 
 This document provides instructions for GitHub Copilot agents working on the EduMind.AI Academic Assessment Multi-Agent System.
 
@@ -9,16 +9,82 @@ This document provides instructions for GitHub Copilot agents working on the Edu
 
 ## Table of Contents
 
-1. [Development Workflow](#development-workflow)
-2. [Spec-Driven Development](#spec-driven-development)
-3. [Documentation References](#documentation-references)
-4. [Task Execution Guidelines](#task-execution-guidelines)
+1. [Quick Start](#quick-start)
+2. [Development Workflow](#development-workflow)
+3. [Spec-Driven Development](#spec-driven-development)
+4. [Documentation References](#documentation-references)
+5. [Task Execution Guidelines](#task-execution-guidelines)
 
 ---
 
-## 1. Development Workflow
+## 1. Quick Start
 
-### 1.1 Spec-Driven Development Model
+### Getting Started Commands
+
+Before making any changes, familiarize yourself with the repository:
+
+**Build the solution:**
+```bash
+dotnet restore
+dotnet build
+```
+
+**Run all tests:**
+```bash
+dotnet test
+```
+
+**Run specific test projects:**
+```bash
+# Unit tests only
+dotnet test tests/AcademicAssessment.Tests.Unit
+
+# Integration tests
+dotnet test tests/AcademicAssessment.Tests.Integration
+
+# Performance tests
+dotnet test tests/AcademicAssessment.Tests.Performance
+
+# UI tests
+dotnet test tests/AcademicAssessment.Tests.UI
+```
+
+**Run the application locally:**
+```bash
+# Using .NET Aspire (recommended - orchestrates all services)
+dotnet run --project src/EduMind.AppHost
+
+# Individual services (manual setup required)
+dotnet run --project src/AcademicAssessment.Web
+```
+
+**Check code coverage:**
+```bash
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+### First Steps for New Agents
+
+When starting work on EduMind.AI:
+
+1. **Clone and build:** Ensure the solution builds successfully
+2. **Run existing tests:** Validate the current test suite passes
+3. **Check for active story:** Look in `.github/story/{story-id}/issue.md` for specifications
+4. **Review documentation:** Consult `.github/coding-standards.md` and `.github/testing/` for standards
+5. **Understand the architecture:** Read `.github/specification/README.md` for system overview
+
+### Common Issues
+
+- **Build failures:** Run `dotnet restore` to ensure all packages are restored
+- **Test failures:** Check `.github/testing/12-troubleshooting.md` for known issues
+- **Missing dependencies:** Ensure .NET 9 SDK is installed (`dotnet --version`)
+- **Database issues:** Check connection strings in `appsettings.json`
+
+---
+
+## 2. Development Workflow
+
+### 2.1 Spec-Driven Development Model
 
 **All development work follows a specification-first approach:**
 
@@ -28,7 +94,7 @@ This document provides instructions for GitHub Copilot agents working on the Edu
 4. **Iterative Execution:** Tasks are completed incrementally with frequent commits
 5. **Continuous Documentation:** Work artifacts and decisions are captured
 
-### 1.2 Story Structure
+### 2.2 Story Structure
 
 ```
 .github/story/
@@ -42,7 +108,7 @@ This document provides instructions for GitHub Copilot agents working on the Edu
     └── issue.md
 ```
 
-### 1.3 Your Role as a Copilot Agent
+### 2.3 Your Role as a Copilot Agent
 
 When you receive a request to work on EduMind.AI:
 
@@ -54,9 +120,9 @@ When you receive a request to work on EduMind.AI:
 
 ---
 
-## 2. Spec-Driven Development
+## 3. Spec-Driven Development
 
-### 2.1 What is a Specification?
+### 3.1 What is a Specification?
 
 A specification (`issue.md`) is a **comprehensive blueprint** that contains:
 
@@ -67,7 +133,7 @@ A specification (`issue.md`) is a **comprehensive blueprint** that contains:
 - **Acceptance Criteria:** How to validate the work is complete
 - **Context & Dependencies:** Links to related docs, APIs, requirements
 
-### 2.2 Reading a Specification
+### 3.2 Reading a Specification
 
 When you read a spec, extract:
 
@@ -77,7 +143,7 @@ When you read a spec, extract:
 4. **The "Tasks":** Specific instructions on breaking down work
 5. **The "Done":** Definition of complete and acceptance tests
 
-### 2.3 Creating Tasks from Specifications
+### 3.3 Creating Tasks from Specifications
 
 The specification will instruct you on task creation. Typically:
 
@@ -98,7 +164,7 @@ Create the following tasks in order:
 
 **Your job:** Create a `tasks.md` file with this breakdown, then work through tasks sequentially.
 
-### 2.4 Task Execution Pattern
+### 3.4 Task Execution Pattern
 
 For each task:
 
@@ -113,9 +179,9 @@ For each task:
 
 ---
 
-## 3. Documentation References
+## 4. Documentation References
 
-### 3.1 System Understanding
+### 4.1 System Understanding
 
 For comprehensive system understanding, refer to:
 
@@ -123,21 +189,21 @@ For comprehensive system understanding, refer to:
 - **[Architecture Summary](docs/architecture/ARCHITECTURE_SUMMARY.md)** - High-level system design
 - **[Solution Structure](docs/architecture/SOLUTION_STRUCTURE.md)** - Project organization
 
-### 3.2 Development Standards
+### 4.2 Development Standards
 
 For coding conventions and best practices:
 
 - **[Coding Standards](.github/coding-standards.md)** - C#, API, Blazor, Infrastructure patterns
 - **[Testing Guide](.github/testing/README.md)** - Comprehensive testing documentation
 
-### 3.3 Operational Guides
+### 4.3 Operational Guides
 
 For deployment and operations:
 
 - **[Deployment Reference](.github/deployment/reference.md)** - Technical deployment documentation
 - **[Deployment Playbooks](.github/deployment/playbook/README.md)** - Scenario-based operational guides
 
-### 3.4 When to Consult Documentation
+### 4.4 When to Consult Documentation
 
 | Situation | Reference Document |
 |-----------|-------------------|
@@ -154,9 +220,9 @@ For deployment and operations:
 
 ---
 
-## 4. Task Execution Guidelines
+## 5. Task Execution Guidelines
 
-### 4.1 Code Quality Standards
+### 5.1 Code Quality Standards
 
 All code must follow:
 
@@ -167,7 +233,7 @@ All code must follow:
 - **Required properties** for mandatory fields
 - **XML documentation** for public APIs
 
-### 4.2 Testing Requirements
+### 5.2 Testing Requirements
 
 All new code requires tests (see [Testing Guide](.github/testing/README.md)):
 
@@ -176,7 +242,7 @@ All new code requires tests (see [Testing Guide](.github/testing/README.md)):
 - **E2E tests** for critical user workflows
 - **AI tests** for agent functionality (use stubs for speed)
 
-### 4.3 Git Workflow
+### 5.3 Git Workflow
 
 **Commit Conventions:**
 
@@ -196,7 +262,7 @@ Present tense, imperative mood:
 - Small, focused commits are better than large ones
 - Each commit should pass tests
 
-### 4.4 Communication
+### 5.4 Communication
 
 When working on a story:
 
@@ -205,7 +271,7 @@ When working on a story:
 - **Report blockers** immediately
 - **Suggest improvements** to specifications if you identify issues
 
-### 4.5 Error Handling
+### 5.5 Error Handling
 
 If you encounter issues:
 
@@ -216,9 +282,9 @@ If you encounter issues:
 
 ---
 
-## 5. Project Context
+## 6. Project Context
 
-### 5.1 Technology Stack
+### 6.1 Technology Stack
 
 - **.NET 9.0** with C# 13
 - **Blazor Server** (interactive UI)
@@ -230,7 +296,7 @@ If you encounter issues:
 - **.NET Aspire** (cloud-native orchestration)
 - **Azure Container Apps** (deployment)
 
-### 5.2 System Purpose
+### 6.2 System Purpose
 
 EduMind.AI is a multi-tenant academic assessment platform that:
 
@@ -254,6 +320,6 @@ EduMind.AI is a multi-tenant academic assessment platform that:
 - `.github/deployment/` - Operational procedures
 - `docs/architecture/` - Architectural decisions
 
-**Last Updated:** 2025-10-25  
-**Version:** 1.0.0
+**Last Updated:** 2025-10-27  
+**Version:** 1.1.0
 
