@@ -404,10 +404,10 @@ try
         // Integration tests will override these with in-memory implementations
         var testConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
             ?? "Host=localhost;Database=edumind_test;Username=test;Password=test";
-        
+
         builder.Services.AddDbContext<AcademicAssessment.Infrastructure.Data.AcademicContext>(options =>
             options.UseNpgsql(testConnectionString));
-        
+
         // Redis is optional in tests - stub implementation will be used if not available
         var testRedisConnection = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
         builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
