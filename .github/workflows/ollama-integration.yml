@@ -10,8 +10,6 @@ on:
         description: "OLLAMA model to use"
         required: false
         default: "llama3.2:3b"
-  schedule:
-    - cron: "0 2 * * *" # Run at 2 AM UTC daily
 
 env:
   DOTNET_VERSION: "9.0.x"
